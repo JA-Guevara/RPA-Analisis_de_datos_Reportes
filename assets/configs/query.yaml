@@ -4,7 +4,7 @@
 # Stages: stg_query (raw) -> [mapping + normalize + rules] -> int_query
 #
 # Las definiciones tecnicas (column_renames de las ~57 cols) viven
-# en `src/itacamba_reportes/config/data_sources.py:QUERY_SOURCE`.
+# via config/sources.py (load_all_excel_sources) desde este YAML.
 # Este YAML documenta cleanup, reglas y defaults parametrizables sin
 # tocar Python.
 

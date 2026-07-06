@@ -92,16 +92,9 @@ class DespachoBiIntModel(Base, TimestampsMixin):
     desarrollador                 = Column(String(100))
 
     # ─── Enriquecidas (cols AV:BD del cliente en DESPACHOS BI) ──────────
-    # Mapeo a fórmulas del basepanel:
-    # AV VENDEDOR        = VLOOKUP(codigo_cliente, CARTERA col 33 = 'Vendedor')
-    # AW DESARROLLADOR   = VLOOKUP(vendedor, REF.O:S col 3 = 'VENDEDOR OK')
-    # AX CODIGO CLIENTE  = IF(LEN(destinatario)<=5, lookup centro, destinatario)
-    # AY EQUIPO          = IF "CEMENTO" in producto → via vendedor, else via grupo_vendedores
-    # AZ LOCALIDAD IM    = VLOOKUP(localidad, REF.A:B col 2)
-    # BA INCOTERMS IM    = incoterms + centro_distribucion
-    # BB GERENCIA        = VLOOKUP(equipo, REF.R:S col 2)
-    # BC Semana          = VLOOKUP(dia, REF.U:V col 2)
-    # BD x               = dia (espejo)
+    # Las fórmulas están declaradas y documentadas en el catálogo:
+    #   assets/configs/columnas/despacho_bi.yaml  (ejecuta ColumnEngine)
+    # Cada bloque del catálogo referencia la fórmula original del basepanel.
     codigo_cliente   = Column(BigInteger)
     nombre_cliente   = Column(String(500))
     vendedor_cartera = Column(String(100))   # = AV VENDEDOR del cliente

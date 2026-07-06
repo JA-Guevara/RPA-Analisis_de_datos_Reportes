@@ -6,7 +6,7 @@
 # Change-detection via fingerprint mtime+size — skip si no cambio.
 #
 # Las definiciones tecnicas (column_renames, dedupe_on, sheet, header_row)
-# viven en `src/itacamba_reportes/config/data_sources.py:REFERENCIAS_*_SOURCE`.
+# se construyen via config/sources.py (load_reference_sources) desde este YAML.
 # Este YAML documenta el COMPORTAMIENTO de negocio.
 
 name: referencias

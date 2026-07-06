@@ -5,7 +5,7 @@
 # 49 cols raw del SAP + 25 cols derivadas via cruces y formulas.
 #
 # Las definiciones tecnicas (column_renames Excel -> snake_case) viven
-# en `src/itacamba_reportes/config/data_sources.py:GD20_SOURCE`.
+# via config/sources.py (load_all_excel_sources) desde este YAML.
 # Este YAML documenta lookups, defaults, constantes y reglas de
 # negocio que pueden cambiar sin tocar Python.
 

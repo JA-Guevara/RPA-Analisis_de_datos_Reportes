@@ -1,51 +1,28 @@
 # config
 
-Configuración técnica del runtime: variables de entorno, fuentes de datos parametrizables, settings de logging y mail.
+Configuración del runtime: variables de entorno, rutas y carga de YAMLs.
+(Actualizado 2026-07-06 — la versión anterior describía una arquitectura
+que ya no existe: pydantic-settings, data_sources.py, domain/constants.)
 
-## Qué va aquí
+## Qué hay aquí (real)
 
-- `env_config.py` — `EnvConfig`: lee `.env` y expone `DB_SERVER`, `DB_USER`, `DB_PASSWORD`, `DATA_PATH`, `LOG_LEVEL`. Validado con `pydantic-settings`.
-- `data_sources.py` — instancias concretas de `ExcelSource` (CARTERA_SOURCE, GD20_SOURCE, REFERENCIAS_SOURCE) que combinan el catálogo de dominio con `${DATA_PATH}`.
-- `settings.py` (si existe) — settings transversales (timezone, locale, etc.).
-- `logging.py`, `mail_config.py` — configuración de telemetría y notificaciones.
+- `env_config.py` — `EnvConfig`: lee `.env` con python-dotenv y expone
+  `DB_*`, `DATA_PATH`, `EXPORT_PATH`, `LOG_*`. Validaciones en
+  `validate_config()` / `validate_db_config()` / `validate_data_paths()`.
+- `paths.py` — `DataPaths.from_env()`: inbox/processed/archive/exports.
+- `sources.py` — construye `ExcelSource` desde los YAML de
+  `assets/configs/` (`load_all_excel_sources`, `load_reference_sources`,
+  `excel_source_from_cfg`). Única fuente de verdad de QUÉ archivo/hoja/
+  renames lee cada dataset.
+- `yaml_loader.py` — `YamlDatasetLoader` (spec Pydantic completa, hoy
+  solo cartera), `load_pipeline_config` (dict libre validando `source:`)
+  y `load_column_catalog` (catálogos de columnas de
+  `assets/configs/columnas/`, ejecutados por el ColumnEngine).
+- `dataset_spec.py` — modelos Pydantic de la spec de cartera
+  (source, normalize, mapping, lookups, rules).
 
-## Qué NO va
+## Qué NO va aquí
 
-- Constantes del negocio: van en `domain/constants/`.
-- Lógica que dependa de los valores cargados: usa el config, pero vive en su propia capa.
-
-## Ejemplo
-
-```python
-# config/env_config.py
-from pydantic_settings import BaseSettings
-
-
-class EnvConfig(BaseSettings):
-    DB_SERVER: str
-    DB_USER: str
-    DB_PASSWORD: str
-    DB_NAME: str = "Reportes_Itacamba"
-    DB_PORT: int = 1433
-    DATA_PATH: Path
-    LOG_LEVEL: str = "INFO"
-
-    class Config:
-        env_file = ".env"
-
-
-# config/data_sources.py
-env = EnvConfig()
-CARTERA_SOURCE = ExcelSource(
-    name="cartera",
-    path_template=str(env.DATA_PATH / "dinamicos" / "CARTERA*.xlsx"),
-    sheet=0,
-    metadata_rows_to_skip=6,
-)
-```
-
-## Regla mental
-
-Si el valor cambia entre entornos (DEV, STAGING, PROD), va al `.env` y se expone vía `EnvConfig`. Si es parte del negocio "para Itacamba", va a `domain/constants/`.
-
-> Pendiente de seguridad: rotar `DB_PASSWORD`, crear `.env.example` sin secrets, mover credenciales a un secret manager.
+- Datos de negocio: van en `Referencias.xlsx` → tablas `int_ref_*`, o en
+  los YAML de `assets/configs/` (regla del proyecto).
+- Lógica de transformación: vive en `transforms/`.

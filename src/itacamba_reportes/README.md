@@ -12,7 +12,9 @@ itacamba_reportes/
 ├── pipelines/       ← orquestación: runner común (change-detection) + 1 módulo
 │                      por pipeline + run_all (DAG secuencial fail-fast)
 ├── transforms/      ← normalize / business_rules / mapping por dataset
-│                      (la lógica CALIBRADA de los reportes vive aquí)
+│                      + column_engine (ejecuta catálogos declarativos de
+│                      assets/configs/columnas/ — las fórmulas del cliente
+│                      calibradas viven como YAML, no como código)
 ├── persistence/     ← engine, session, models/, repositorios SQL, export,
 │                      SCD2 de int_ventas_bi, execution tracker
 └── shared/          ← utilidades transversales (pandas, null tokens, logging)
