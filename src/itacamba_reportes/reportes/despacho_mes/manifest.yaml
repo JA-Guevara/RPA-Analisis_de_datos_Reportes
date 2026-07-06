@@ -1,0 +1,37 @@
+# Portada técnica del reporte (validada por tools/verificar.py — Fase 7)
+reporte: despacho_mes
+version: 1
+
+entrada:
+  tipo: tabla
+  tabla: int_despacho_bi
+  filtro: mes_objetivo (auto = ultimo mes con datos; ver config.yaml)
+
+salidas:
+  int: int_despacho_mes
+  excel: DESPACHO_MES
+
+dependencias:
+  - int_despacho_bi
+  - int_cartera
+  - int_ref_almacen
+  - int_ref_semana
+
+modo_carga:
+  int: truncate_insert
+
+llave_natural:
+  - codigo_cliente
+  - producto
+  - dia
+  - centro_distribucion
+  - incoterms
+
+pendientes_negocio:
+  - rf / rf_ajustado_im / proyeccion quedan NULL (fuente candidata
+    PROYECCION-SEMANAL.xlsx, sin llave confirmada)
+  - tipo_venta usa PROXY cartera.canal_distribucion_desc (REFERENCIAS!I:J
+    no existe en Referencias.xlsx)
+
+consumidores:
+  - Power BI (dataset despachos)

@@ -1,0 +1,34 @@
+# Portada técnica del reporte (validada por tools/verificar.py — Fase 7)
+reporte: despacho_bi
+version: 1
+
+entrada:
+  tipo: tabla
+  tabla: int_query          # DB-a-DB: no lee archivos directamente
+  origen_datos: QUERY*.xlsx via pipeline query (dinamicos/)
+
+salidas:
+  int: int_despacho_bi
+  excel: DESPACHO_BI        # export con timestamp via ExcelReportExporter
+
+dependencias:               # tablas que deben estar cargadas antes
+  - int_query
+  - int_cartera
+  - int_ref_equipo
+  - int_ref_almacen
+  - int_ref_localidad
+  - int_ref_centro
+  - int_ref_semana
+
+modo_carga:
+  int: truncate_insert
+
+llave_natural:              # llave de alineacion usada en calibracion
+  - documento_venta
+  - material
+  - dia
+  - cantidad
+
+consumidores:
+  - despacho_mes
+  - Power BI (dataset despachos)

@@ -37,7 +37,7 @@ from itacamba_reportes.persistence.repositories.despacho_bi_repository_sql impor
 )
 from itacamba_reportes.pipelines.runner import PipelineResult, log_summary
 from itacamba_reportes.transforms.column_engine import ColumnEngine
-from itacamba_reportes.transforms.despacho_bi_mapping import apply_despacho_bi_mapping
+from itacamba_reportes.reportes.despacho_bi.mapping import apply_despacho_bi_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -116,3 +116,15 @@ class DespachoBiPipeline:
             LocalidadIntModel, CentroIntModel, SemanaIntModel,
         )
         return {m.__tablename__: load_lookup_df(m) for m in modelos}
+
+
+def build_pipeline(exporter: ExcelReportExporter | None = None) -> DespachoBiPipeline:
+    """Composition root del reporte: carga config + catalogo del slice."""
+    from itacamba_reportes.reportes.despacho_bi import load_catalog, load_config
+
+    return DespachoBiPipeline(
+        despacho_bi_repo=IntDespachoBiRepositoryImpl(),
+        column_catalog=load_catalog(),
+        config=load_config(),
+        exporter=exporter,
+    )

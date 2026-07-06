@@ -23,7 +23,6 @@ from itacamba_reportes.config.sources import (
 )
 from itacamba_reportes.config.yaml_loader import (
     YamlDatasetLoader,
-    load_column_catalog,
     load_pipeline_config,
 )
 from itacamba_reportes.ingestion.excel_reader import ExcelReader
@@ -32,12 +31,6 @@ from itacamba_reportes.persistence.models.stg.stg_gd20_model import StgGd20Model
 from itacamba_reportes.persistence.models.stg.stg_query_model import StgQueryModel
 from itacamba_reportes.persistence.repositories.cartera_repository_sql import (
     CarteraIntRepositoryImpl,
-)
-from itacamba_reportes.persistence.repositories.despacho_bi_repository_sql import (
-    IntDespachoBiRepositoryImpl,
-)
-from itacamba_reportes.persistence.repositories.despacho_mes_repository_sql import (
-    IntDespachoMesRepositoryImpl,
 )
 from itacamba_reportes.persistence.repositories.gd20_repository_sql import (
     Gd20IntRepositoryImpl,
@@ -54,8 +47,14 @@ from itacamba_reportes.persistence.repositories.ventas_bi_repository_sql import 
     VentasBiIntRepositoryImpl,
 )
 from itacamba_reportes.pipelines.cartera import CarteraPipeline
-from itacamba_reportes.pipelines.despacho_bi import DespachoBiPipeline
-from itacamba_reportes.pipelines.despacho_mes import DespachoMesPipeline
+from itacamba_reportes.reportes.despacho_bi.pipeline import (
+    DespachoBiPipeline,
+    build_pipeline as build_despacho_bi,
+)
+from itacamba_reportes.reportes.despacho_mes.pipeline import (
+    DespachoMesPipeline,
+    build_pipeline as build_despacho_mes,
+)
 from itacamba_reportes.pipelines.file_state import FileStateTracker
 from itacamba_reportes.pipelines.gd20 import Gd20Pipeline
 from itacamba_reportes.pipelines.query import QueryPipeline
@@ -160,20 +159,11 @@ def _build_gd20_pipeline() -> Gd20Pipeline:
 
 
 def _build_despacho_bi_pipeline() -> DespachoBiPipeline:
-    return DespachoBiPipeline(
-        despacho_bi_repo=IntDespachoBiRepositoryImpl(),
-        column_catalog=load_column_catalog(_CONFIGS_DIR, "despacho_bi"),
-        config=load_pipeline_config(_CONFIGS_DIR, "despacho_bi"),
-        exporter=_build_exporter(),
-    )
+    return build_despacho_bi(exporter=_build_exporter())
 
 
 def _build_despacho_mes_pipeline() -> DespachoMesPipeline:
-    return DespachoMesPipeline(
-        despacho_mes_repo=IntDespachoMesRepositoryImpl(),
-        config=load_pipeline_config(_CONFIGS_DIR, "despacho_mes"),
-        exporter=_build_exporter(),
-    )
+    return build_despacho_mes(exporter=_build_exporter())
 
 
 def _build_run_all_orchestrator() -> RunAllOrchestrator:

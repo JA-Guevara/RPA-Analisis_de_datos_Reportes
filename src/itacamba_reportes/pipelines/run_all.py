@@ -26,8 +26,8 @@ from time import perf_counter
 
 from itacamba_reportes.persistence.lookups import clear_lookup_cache
 from itacamba_reportes.pipelines.cartera import CarteraPipeline
-from itacamba_reportes.pipelines.despacho_bi import DespachoBiPipeline
-from itacamba_reportes.pipelines.despacho_mes import DespachoMesPipeline
+from itacamba_reportes.reportes.despacho_bi.pipeline import DespachoBiPipeline
+from itacamba_reportes.reportes.despacho_mes.pipeline import DespachoMesPipeline
 from itacamba_reportes.pipelines.gd20 import Gd20Pipeline
 from itacamba_reportes.pipelines.query import QueryPipeline
 from itacamba_reportes.pipelines.references import ReferencesPipeline

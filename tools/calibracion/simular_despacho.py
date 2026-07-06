@@ -138,20 +138,17 @@ def build_int_query(data: Path) -> pd.DataFrame:
 
 def build_despacho_bi(int_query: pd.DataFrame, cartera: pd.DataFrame,
                       refs: dict[str, pd.DataFrame]) -> pd.DataFrame:
-    from itacamba_reportes.config.yaml_loader import (
-        load_column_catalog,
-        load_pipeline_config,
-    )
     from itacamba_reportes.persistence.models.int.despacho_bi_model import (
         DespachoBiIntModel,
     )
-    from itacamba_reportes.transforms.column_engine import ColumnEngine
-    from itacamba_reportes.transforms.despacho_bi_mapping import (
+    from itacamba_reportes.reportes.despacho_bi import load_catalog, load_config
+    from itacamba_reportes.reportes.despacho_bi.mapping import (
         apply_despacho_bi_mapping,
     )
+    from itacamba_reportes.transforms.column_engine import ColumnEngine
 
-    cfg = load_pipeline_config(CONFIGS, "despacho_bi")
-    catalog = load_column_catalog(CONFIGS, "despacho_bi")
+    cfg = load_config()
+    catalog = load_catalog()
 
     # Mismos nombres de tabla que usa el pipeline real en _load_lookups()
     lookups = {
@@ -171,22 +168,24 @@ def build_despacho_bi(int_query: pd.DataFrame, cartera: pd.DataFrame,
 
 def build_despacho_mes(despacho_bi: pd.DataFrame, cartera: pd.DataFrame,
                        refs: dict[str, pd.DataFrame]) -> pd.DataFrame:
-    from itacamba_reportes.config.yaml_loader import load_pipeline_config
     from itacamba_reportes.persistence.models.int.despacho_mes_model import (
         DespachoMesIntModel,
     )
-    from itacamba_reportes.pipelines.despacho_mes import DespachoMesPipeline
-    from itacamba_reportes.transforms.despacho_mes_aggregate import (
+    from itacamba_reportes.reportes.despacho_mes import (
+        load_catalog as load_mes_catalog,
+        load_config as load_mes_config,
+    )
+    from itacamba_reportes.reportes.despacho_mes.agregacion import (
         DespachoMesAggregateUseCase,
     )
-    from itacamba_reportes.transforms.despacho_mes_business_rules import (
+    from itacamba_reportes.reportes.despacho_mes.pipeline import DespachoMesPipeline
+    from itacamba_reportes.reportes.despacho_mes.reglas import (
         DespachoMesBusinessRulesUseCase,
     )
-    from itacamba_reportes.transforms.despacho_mes_normalize import (
-        DespachoMesNormalizeUseCase,
-    )
+    from itacamba_reportes.transforms.column_engine import ColumnEngine
 
-    cfg = load_pipeline_config(CONFIGS, "despacho_mes")
+    cfg = load_mes_config()
+    catalog = load_mes_catalog()
 
     # Filtro de mes objetivo: misma lógica del pipeline, sin BD.
     pipe = DespachoMesPipeline.__new__(DespachoMesPipeline)
@@ -200,10 +199,12 @@ def build_despacho_mes(despacho_bi: pd.DataFrame, cartera: pd.DataFrame,
     print(f"  filtro mes {target}: {len(df)} filas")
 
     df = DespachoMesAggregateUseCase(config=cfg).execute(df)
-    df = DespachoMesNormalizeUseCase(
-        cartera_df=cartera, almacen_df=refs["almacen"],
-        semana_df=refs["semana"], config=cfg,
-    ).execute(df)
+    lookups_mes = {
+        "int_cartera": cartera,
+        "int_ref_almacen": refs["almacen"],
+        "int_ref_semana": refs["semana"],
+    }
+    df = ColumnEngine(lookups=lookups_mes).apply(df, catalog)
     df = DespachoMesBusinessRulesUseCase(config=cfg).execute(df)
     df = as_table(df, DespachoMesIntModel)
     print(f"  int_despacho_mes: {len(df)} filas x {len(df.columns)} cols")

@@ -96,7 +96,7 @@ class NewWorld:
         return apply_gd20_mapping(df, config)
 
     def despacho_bi_mapping(self, df, config):
-        from itacamba_reportes.transforms.despacho_bi_mapping import (
+        from itacamba_reportes.reportes.despacho_bi.mapping import (
             apply_despacho_bi_mapping,
         )
         return apply_despacho_bi_mapping(df, config)
@@ -311,7 +311,8 @@ def compute_scenarios(world) -> dict[str, Any]:
     out["mapping_gd20_cfg"] = df_snapshot(world.gd20_mapping(_mk_gd20_mapping_input(), g_cfg))
     out["mapping_gd20_none"] = df_snapshot(world.gd20_mapping(_mk_gd20_mapping_input(), None))
 
-    d_cfg = world.load_config("despacho_bi")
+    from itacamba_reportes.reportes.despacho_bi import load_config as _dbi_cfg
+    d_cfg = _dbi_cfg()
     dbi_cols = d_cfg.get("source_columns") or []
     out["mapping_despacho_bi_cfg"] = df_snapshot(
         world.despacho_bi_mapping(_mk_despacho_bi_input(list(dbi_cols) or

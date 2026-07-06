@@ -2,6 +2,9 @@
 
 DB-a-DB. El filtro de mes objetivo (auto/current/explícito) y el
 fallback al último mes con datos se preservan tal cual.
+
+Los 5 VLOOKUP vivos de la hoja están declarados en columnas.yaml del
+slice (ColumnEngine); las macros VBA portadas viven en reglas.py.
 """
 
 from __future__ import annotations
@@ -30,15 +33,13 @@ from itacamba_reportes.persistence.repositories.despacho_mes_repository_sql impo
     IntDespachoMesRepositoryImpl,
 )
 from itacamba_reportes.pipelines.runner import PipelineResult, log_summary
-from itacamba_reportes.transforms.despacho_mes_aggregate import (
+from itacamba_reportes.reportes.despacho_mes.agregacion import (
     DespachoMesAggregateUseCase,
 )
-from itacamba_reportes.transforms.despacho_mes_business_rules import (
+from itacamba_reportes.reportes.despacho_mes.reglas import (
     DespachoMesBusinessRulesUseCase,
 )
-from itacamba_reportes.transforms.despacho_mes_normalize import (
-    DespachoMesNormalizeUseCase,
-)
+from itacamba_reportes.transforms.column_engine import ColumnEngine
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ logger = logging.getLogger(__name__)
 class DespachoMesPipeline:
 
     despacho_mes_repo: IntDespachoMesRepositoryImpl
+    column_catalog: dict[str, Any]
     config: dict[str, Any] | None = None
     exporter: ExcelReportExporter | None = None
 
@@ -69,8 +71,8 @@ class DespachoMesPipeline:
         logger.info("Stage 2 - LOAD lookups")
         t = perf_counter()
         lk = self._load_lookups()
-        logger.info("Lookups: cartera=%d, almacen=%d, semana=%d (%.2fs)",
-                    len(lk["cartera"]), len(lk["almacen"]), len(lk["semana"]),
+        logger.info("Lookups: %s (%.2fs)",
+                    ", ".join(f"{tabla}={len(df)}" for tabla, df in lk.items()),
                     perf_counter() - t)
 
         logger.info("Stage 3 - AGGREGATE")
@@ -79,14 +81,9 @@ class DespachoMesPipeline:
         aggregated_rows = len(df)
         logger.info("Agregado: %d filas (%.2fs)", aggregated_rows, perf_counter() - t)
 
-        logger.info("Stage 4 - ENRICH")
+        logger.info("Stage 4 - ENRICH (catálogo de columnas)")
         t = perf_counter()
-        df = DespachoMesNormalizeUseCase(
-            cartera_df=lk["cartera"],
-            almacen_df=lk["almacen"],
-            semana_df=lk["semana"],
-            config=self.config,
-        ).execute(df)
+        df = ColumnEngine(lookups=lk).apply(df, self.column_catalog)
         logger.info("Enrich completo (%.2fs)", perf_counter() - t)
 
         logger.info("Stage 5 - RULES")
@@ -204,8 +201,18 @@ class DespachoMesPipeline:
 
     @staticmethod
     def _load_lookups() -> dict[str, pd.DataFrame]:
-        return {
-            "cartera": load_lookup_df(CarteraIntModel),
-            "almacen": load_lookup_df(AlmacenIntModel),
-            "semana":  load_lookup_df(SemanaIntModel),
-        }
+        """Lookups indexados por nombre de tabla SQL (los que usa el catálogo)."""
+        modelos = (CarteraIntModel, AlmacenIntModel, SemanaIntModel)
+        return {m.__tablename__: load_lookup_df(m) for m in modelos}
+
+
+def build_pipeline(exporter: ExcelReportExporter | None = None) -> DespachoMesPipeline:
+    """Composition root del reporte: carga config + catalogo del slice."""
+    from itacamba_reportes.reportes.despacho_mes import load_catalog, load_config
+
+    return DespachoMesPipeline(
+        despacho_mes_repo=IntDespachoMesRepositoryImpl(),
+        column_catalog=load_catalog(),
+        config=load_config(),
+        exporter=exporter,
+    )

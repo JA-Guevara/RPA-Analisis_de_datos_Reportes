@@ -82,13 +82,18 @@ _CATALOG_OPS: frozenset[str] = frozenset(
 
 
 def load_column_catalog(configs_dir: Path, name: str) -> dict[str, Any]:
-    """Catálogo de columnas de un reporte: configs/columnas/<name>.yaml.
+    """Catálogo de columnas en configs_dir/columnas/<name>.yaml (legacy)."""
+    return load_column_catalog_file(Path(configs_dir) / "columnas" / f"{name}.yaml")
+
+
+def load_column_catalog_file(path: Path) -> dict[str, Any]:
+    """Catálogo de columnas de un reporte (ruta directa al YAML).
 
     Valida la forma mínima (bloque `columns` con `op` conocida en cada
     bloque) para fallar en el arranque, no a mitad del pipeline.
     Las columnas se ejecutan en el orden declarado (ver ColumnEngine).
     """
-    path = Path(configs_dir) / "columnas" / f"{name}.yaml"
+    path = Path(path)
     data = _read_yaml(path)
     columns = data.get("columns")
     if not isinstance(columns, dict) or not columns:
@@ -100,7 +105,7 @@ def load_column_catalog(configs_dir: Path, name: str) -> dict[str, Any]:
                 f"{(spec or {}).get('op')!r} (válidas: {sorted(_CATALOG_OPS)})",
             )
     logger.info(
-        "Catálogo de columnas '%s' cargado desde %s (%d columnas)",
-        name, path.name, len(columns),
+        "Catálogo de columnas cargado desde %s (%d columnas)",
+        path.name, len(columns),
     )
     return data
