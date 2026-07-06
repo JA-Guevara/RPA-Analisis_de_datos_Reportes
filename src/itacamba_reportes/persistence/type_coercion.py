@@ -135,35 +135,12 @@ def _coerce_value(value: Any, column_type: Any) -> Any:
     return None if _is_null(value) else value
 
 
-def coerce_rows_for_model(
-    rows: Iterable[dict[str, Any]],
-    model: type,
-) -> list[dict[str, Any]]:
-    """Normaliza tipos Python de cada dict segun la metadata del modelo SQLAlchemy.
-
-    Las claves no presentes en `model.__table__.columns` se descartan.
-
-    NOTA: Para volumenes >5k filas usar `coerce_dataframe_for_model` que es
-    50-100x mas rapido (vectorizado en pandas vs loop Python con isinstance).
-    """
-    columns = {col.name: col.type for col in model.__table__.columns}
-    coerced: list[dict[str, Any]] = []
-    for row in rows:
-        out: dict[str, Any] = {}
-        for key, value in row.items():
-            col_type = columns.get(key)
-            if col_type is None:
-                continue
-            out[key] = _coerce_value(value, col_type)
-        coerced.append(out)
-    return coerced
-
 
 def coerce_dataframe_for_model(
     df: pd.DataFrame,
     model: type,
 ) -> list[dict[str, Any]]:
-    """Version vectorizada de coerce_rows_for_model. Misma semantica, 50-100x mas rapida.
+    """Coercion vectorizada de filas para insert bulk (50-100x mas rapida que iterar celda a celda).
 
     Aplica la coercion a NIVEL DE COLUMNA con operaciones pandas/numpy (sin
     iterar fila por fila en Python puro). Las cols que no existen en el modelo

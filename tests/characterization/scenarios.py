@@ -6,8 +6,8 @@ Cada escenario produce una estructura JSON-serializable determinística.
 vigente; `test_goldens.py` la recomputa y compara. Si el refactor cambia
 cualquier salida, el test lo detecta.
 
-El World abstrae imports viejo (pre-refactor) / nuevo (post-refactor):
-la MISMA suite corre contra ambos mundos.
+NewWorld encapsula los imports del paquete (historicamente existia un
+OldWorld pre-refactor, eliminado en Fase 2 del plan 2026-07-06).
 """
 
 from __future__ import annotations
@@ -68,102 +68,6 @@ def rows_snapshot(rows: list[dict]) -> list[dict]:
 # ──────────────────────────────────────────────────────────────────────
 # Worlds: viejo (pre-refactor) y nuevo (post-refactor)
 # ──────────────────────────────────────────────────────────────────────
-
-class OldWorld:
-    name = "old"
-
-    def load_cartera_spec(self):
-        from itacamba_reportes.infrastructure.config.yaml_loader import YamlDatasetLoader
-        return YamlDatasetLoader(CONFIGS_DIR).load("cartera")
-
-    def load_config(self, dataset: str) -> dict:
-        from itacamba_reportes.infrastructure.config.pipeline_config import (
-            load_pipeline_config,
-        )
-        return load_pipeline_config(CONFIGS_DIR, dataset)
-
-    def cartera_mapping(self, df, spec):
-        from itacamba_reportes.application.use_cases.mapping.cartera_mapping import (
-            CarteraMappingUseCase,
-        )
-        return CarteraMappingUseCase(spec.to_int_model).execute(df)
-
-    def query_mapping(self, df, config):
-        from itacamba_reportes.application.use_cases.mapping.query_mapping import (
-            QueryMappingUseCase,
-        )
-        return QueryMappingUseCase(config=config).execute(df)
-
-    def gd20_mapping(self, df, config):
-        from itacamba_reportes.application.use_cases.mapping.gd20_mapping import (
-            Gd20MappingUseCase,
-        )
-        return Gd20MappingUseCase(config=config).execute(df)
-
-    def despacho_bi_mapping(self, df, config):
-        from itacamba_reportes.application.use_cases.mapping.despacho_bi_mapping import (
-            DespachoBiMappingUseCase,
-        )
-        return DespachoBiMappingUseCase(config=config).execute(df)
-
-    def normalize_cartera(self, df, spec):
-        from itacamba_reportes.application.use_cases.normalize.cartera_normalize import (
-            NormalizeCarteraFromSpec,
-        )
-        return NormalizeCarteraFromSpec(spec).execute(df)
-
-    def cartera_rules(self, spec):
-        from itacamba_reportes.application.use_cases.business_rules.cartera_business_rules import (
-            ApplyDonationsFromSpecRule,
-            ValidateRegionFromLookupRule,
-        )
-        rules = []
-        if spec.lookups.donaciones is not None:
-            rules.append(ApplyDonationsFromSpecRule(
-                lookup=spec.lookups.donaciones, sap_tokens=spec.sap_tokens))
-        if spec.lookups.regiones_validas is not None:
-            rules.append(ValidateRegionFromLookupRule(
-                lookup=spec.lookups.regiones_validas, strict=False))
-        return rules
-
-    def clean_reference_rows(self, catalog_key: str, df) -> list[dict]:
-        import importlib
-        mod = importlib.import_module(
-            f"itacamba_reportes.infrastructure.persistence.mappers.references.{catalog_key}_mapper"
-        )
-        mapper = next(
-            getattr(mod, n) for n in dir(mod)
-            if n.endswith("Mapper") and n != "BaseMapper"
-        )
-        entities = mapper.from_dataframe(df)
-        return [{f: getattr(e, f) for f in mapper.FIELDS} for e in entities]
-
-    def make_reader(self, source_kwargs: dict, data_path: Path):
-        from itacamba_reportes.domain.catalogs.excel_source import ExcelSource
-        from itacamba_reportes.infrastructure.ingestion.readers.base_reader import (
-            BaseReader,
-        )
-        src = ExcelSource(**source_kwargs)
-
-        class _Reader(BaseReader):
-            source = src
-
-        return _Reader(data_path)
-
-    def excel_sources_snapshot(self) -> dict:
-        from itacamba_reportes.config.data_sources import DATA_SOURCES
-        return {
-            name: _source_to_dict(src) for name, src in sorted(DATA_SOURCES.items())
-        }
-
-    def state_tracker(self, path: Path):
-        from itacamba_reportes.infrastructure.state.file_state import (
-            FileFingerprint,
-            FileStateTracker,
-            StateEntry,
-        )
-        return FileStateTracker(path), FileFingerprint, StateEntry
-
 
 class NewWorld:
     name = "new"
@@ -261,11 +165,9 @@ def _source_to_dict(src) -> dict:
 
 
 def get_world():
-    try:
-        import itacamba_reportes.pipelines.runner  # noqa: F401  (solo existe post-refactor)
-        return NewWorld()
-    except ImportError:
-        return OldWorld()
+    # Post-refactor 2026-06: existe un solo mundo. La clase conserva el
+    # nombre NewWorld para no invalidar goldens/documentacion previa.
+    return NewWorld()
 
 
 # ──────────────────────────────────────────────────────────────────────

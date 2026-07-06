@@ -107,8 +107,3 @@ if DATABASE_URL:
         logger.error("Error creando engine: %s", exc)
 
 
-def validate_database_setup() -> None:
-    validate_db_config()
-    validate_data_paths()
-    if engine is None:
-        raise RuntimeError("No se pudo inicializar el engine de base de datos")
