@@ -1,0 +1,279 @@
+# ─────────────────────────────────────────────────────────────────────
+# Pipeline GD20 — extracto SAP de movimientos + 5 lookups + calculos
+# ─────────────────────────────────────────────────────────────────────
+# Equivale a la hoja BASE PANEL del Excel original.
+# 49 cols raw del SAP + 25 cols derivadas via cruces y formulas.
+#
+# Las definiciones tecnicas (column_renames Excel -> snake_case) viven
+# en `src/itacamba_reportes/config/data_sources.py:GD20_SOURCE`.
+# Este YAML documenta lookups, defaults, constantes y reglas de
+# negocio que pueden cambiar sin tocar Python.
+
+name: gd20
+description: |
+  GD20 SAP raw -> stg_gd20 (audit) -> enrich (5 lookups) -> int_gd20
+  -> UPSERT int_ventas_bi (historico consolidado).
+
+  - int_gd20:      snapshot del periodo actual (REPLACE total cada corrida)
+  - int_ventas_bi: historico de TODAS las versiones vigentes por documento
+                   (UPSERT controlado: 1 fila por documento+ejercicio+linea)
+
+source:
+  file_pattern: GD20*.xlsx
+  subdir: dinamicos
+  sheet: Sheet1
+  header_row: 0
+  metadata_rows_to_skip: 0
+  column_renames:
+    Ejercicio: ejercicio
+    Sociedad: sociedad
+    Organización ventas: organizacion_ventas
+    Centro: centro
+    División: division
+    Oficina de ventas: oficina_ventas
+    Canal distribución: canal_distribucion
+    Sector: sector
+    Número de cuenta: numero_cuenta
+    Centro de beneficio: centro_beneficio
+    Material: material
+    Unidad medida base: unidad_medida_base
+    Período contable: periodo_contable
+    Clave de país/región: clave_pais_region
+    Región: region
+    Población: poblacion
+    Grupo de vendedores: grupo_vendedores
+    Cliente: cliente
+    Emisor Orden: emisor_orden
+    Customer number (Bill-to: customer_bill_to
+    Customer number (rebate reci: customer_rebate
+    Grupo de clientes 2: grupo_clientes_2
+    Atributo 6: atributo_6
+    Atributo 7: atributo_7
+    Atributo 10: atributo_10
+    Clase de factura: clase_factura
+    Nombre del usuario: nombre_usuario
+    Texto: texto
+    Nº documento: numero_documento
+    Cantidad: cantidad
+    Moneda de sociedad: moneda_sociedad
+    Fe.contabilización: fe_contabilizacion
+    Fecha de entrada: fecha_entrada
+    Fecha valor: fecha_valor
+    Documento comercial: documento_comercial
+    Hora de entrada: hora_entrada
+    Moneda transacción: moneda_transaccion
+    Clave Moneda transacción: clave_moneda_transaccion
+    Moneda fuerte: moneda_fuerte
+    Clave Moneda fuerte: clave_moneda_fuerte
+    Nº doc.referencia: numero_doc_referencia
+    Nº documento.1: numero_documento_2
+    Incoterms: incoterms
+    Incoterms, parte 2: incoterms_parte_2
+    Clase de documento: clase_documento
+    'Unnamed: 45': cond_pago
+    Días 1: dias_1
+    Nº de transporte: numero_transporte
+    'Unnamed: 48': e
+
+stg_table: stg_gd20
+int_table: int_gd20
+historical_table: int_ventas_bi
+
+historical_strategy:
+  pattern: upsert_scd_type_1
+  description: |
+    Slowly Changing Dimension Type 1: gana la ultima version del documento.
+    NO acumula ejecuciones, acumula versiones finales.
+  unique_key: [documento_comercial, ejercicio]
+
+# ─────────────────────────────────────────────────────────────────────
+# Renombres entre STG (raw SAP) e INT (lenguaje de negocio).
+# ─────────────────────────────────────────────────────────────────────
+renames_stg_to_int:
+  cliente:           pagador
+  emisor_orden:      emisor_solicitante
+  customer_rebate:   destinatario
+  region:            region_sap
+  poblacion:         poblacion_sap
+  clave_pais_region: clave_pais
+
+# ─────────────────────────────────────────────────────────────────────
+# 6 LOOKUPS contra otras tablas (referencia + cartera + query)
+# ─────────────────────────────────────────────────────────────────────
+lookups:
+  cartera:
+    table: int_cartera
+    description: Cruces por destinatario, pagador, solicitante.
+    cruces:
+      - by: destinatario
+        join_on: cliente
+        bring:
+          nombre_cliente: nombre_destinatario
+          vendedor:       vendedor_sap
+          poblacion:      localidad
+          attribute_6:    provincia
+          region_nombre:  dpto
+      - by: pagador
+        join_on: cliente
+        bring:
+          nombre_cliente: nombre_pagador
+          poblacion:      localidad_pagador
+          region_nombre:  dpto_pagador
+      - by: emisor_solicitante
+        join_on: cliente
+        bring:
+          nombre_cliente: nombre_solicitante
+
+  equipo:
+    table: int_ref_equipo
+    description: vendedor_sap -> vendedor_ok/equipo; equipo -> gerencia.
+    cruces:
+      - by: vendedor_sap
+        bring: [vendedor_ok, equipo, vendedor]
+      - by: equipo
+        bring: [gerencia]
+
+  almacen:
+    table: int_ref_almacen
+    description: SUB CANAL = segmento; CANAL = canal del almacen.
+
+  material:
+    table: int_ref_material
+    description: NOMBRE PRODUCTO desde material -> descripcion.
+
+  centro:
+    table: int_ref_centro
+    description: TIPO DE VENTA desde pagador -> tipo de centro.
+
+  query:
+    table: stg_query
+    description: CENTRO DE DISTRIBUCION + ZONA DE ENTREGA desde stg_query.
+
+# ─────────────────────────────────────────────────────────────────────
+# COLUMNAS DERIVADAS (calculos sobre el raw + lookups)
+# ─────────────────────────────────────────────────────────────────────
+derived:
+  tipo_embalaje:
+    type: case
+    on: unidad_medida_base
+    mapping:
+      M3:  Granel M3
+      T:   Granel t
+      S50: Embolsado
+      PC:  Bolsas Vacias
+    default: "0"
+
+  ingreso_bruto:
+    type: formula
+    expression: moneda_sociedad / factor_ingreso_bruto * -1
+
+  volumen_toneladas:
+    type: formula
+    expression: |
+      IF tipo_embalaje == Granel M3:  (cantidad * -1) * factor_volumen_granel_m3
+      IF tipo_embalaje == Granel t:   cantidad * -1
+      IF tipo_embalaje == Embolsado: (cantidad * -1) / factor_volumen_embolsado
+      ELSE: 0
+
+  bonificaciones:
+    type: conditional
+    when: numero_cuenta == numero_cuenta_bonificacion
+    then: volumen_toneladas
+    else: null
+
+  dia:
+    type: extract
+    from: fe_contabilizacion
+    field: day
+
+  mes:
+    type: extract
+    from: fe_contabilizacion
+    field: month
+
+  anio:
+    type: extract
+    from: fe_contabilizacion
+    field: year
+
+# ─────────────────────────────────────────────────────────────────────
+# CONSTANTES DEL NEGOCIO
+# ─────────────────────────────────────────────────────────────────────
+constants:
+  numero_cuenta_bonificacion: 33111020
+  codigo_cliente_invalido:    0
+  factor_ingreso_bruto:       0.87
+  factor_volumen_granel_m3:   1.42
+  factor_volumen_embolsado:   20
+
+# ─────────────────────────────────────────────────────────────────────
+# REGLAS POST-CALCULOS — equivalen a las macros VBA + Power Query
+# ─────────────────────────────────────────────────────────────────────
+
+# Regla 1: macros EliminarMonedaSociedad + CambiarSignoVolumen.
+# Si numero_cuenta == 33111020:
+#   moneda_sociedad → NULL
+#   volumen_toneladas → invertir signo
+bonificacion_cleanup:
+  enabled: true
+  trigger_column: numero_cuenta
+  trigger_value:  33111020
+  actions:
+    - col: moneda_sociedad
+      op:  set_null
+    - col: volumen_toneladas
+      op:  invert_sign
+
+# Regla 2: macro DPTO_0.
+# Si codigo_cliente == 0, los 3 cols cliente se rellenan con pagador.
+codigo_cliente_zero_fill:
+  enabled: true
+  trigger_column: codigo_cliente
+  trigger_value:  0
+  fill_from:      pagador
+  fill_columns:
+    - emisor_solicitante
+    - customer_bill_to
+    - destinatario
+
+# Regla 3 + 4: estandarizacion de strings (Power Query post-combine).
+# Replace de subcadena (Replacer.ReplaceText).
+post_replaces:
+  tipo_venta:
+    AGENCIA: VENTA INDIRECTA
+  dpto:
+    GENERIC: EXPORTACION
+  region_m:
+    GENERIC: EXPORTACION
+  dpto_pagador:
+    GENERIC: EXPORTACION
+
+# ─────────────────────────────────────────────────────────────────────
+# DEFAULTS cuando un lookup no matchea
+# Coinciden con los SI.ERROR(...; 0) o SI.ERROR(...; "OTROS") del Excel.
+# ─────────────────────────────────────────────────────────────────────
+defaults:
+  vendedor_sap:        "0"
+  vendedor_ok:         "0"
+  vendedor:            "0"
+  equipo:              "No encontrado"
+  gerencia:            "0"
+  canal:               "0"
+  sub_canal:           "0"
+  tipo_venta:          VENTA DIRECTA
+  centro_distribucion: OTROS
+  zona_entrega:        OTROS
+  nombre_producto:     "0"
+  nombre_pagador:      "0"
+  nombre_solicitante:  "0"
+  nombre_destinatario: "0"
+  localidad:           "0"
+  provincia:           "0"
+  dpto:                "0"
+  localidad_pagador:   "0"
+  dpto_pagador:        "0"
+
+change_detection:
+  enabled: true
+  state_key: gd20
+  fingerprint: [mtime, size]

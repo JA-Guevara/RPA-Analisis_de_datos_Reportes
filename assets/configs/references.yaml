@@ -1,0 +1,119 @@
+# ─────────────────────────────────────────────────────────────────────
+# Pipeline REFERENCIAS — catalogos SAP estaticos
+# ─────────────────────────────────────────────────────────────────────
+# Lee REFERENCIAS.xlsx (4 hojas) y carga 4 tablas int_ref_*.
+# Cada catalogo es replace_all (TRUNCATE + INSERT atomico).
+# Change-detection via fingerprint mtime+size — skip si no cambio.
+#
+# Las definiciones tecnicas (column_renames, dedupe_on, sheet, header_row)
+# viven en `src/itacamba_reportes/config/data_sources.py:REFERENCIAS_*_SOURCE`.
+# Este YAML documenta el COMPORTAMIENTO de negocio.
+
+name: referencias
+description: |
+  Carga catalogos SAP estaticos desde REFERENCIAS.xlsx
+  (Almacen, Centros, Equipo, Material) hacia int_ref_*.
+
+source:
+  file_pattern: REFERENCIAS.xlsx
+  subdir: fijos
+
+catalogs:
+  almacen:
+    file_pattern: REFERENCIAS.xlsx
+    subdir: fijos
+    sheet: Almacen
+    header_row: 0
+    metadata_rows_to_skip: 0
+    column_renames:
+      DESCRIPCION SAP: descripcion_sap
+      SEGMENTO: segmento
+      CANAL: canal
+    dedupe_on:
+    - descripcion_sap
+    target_table: int_ref_almacen
+    notes: 'Mapping descripcion_sap (atributo SAP) -> segmento + canal.
+
+      Usado por GD20 para derivar SUB CANAL y CANAL.
+
+      '
+  centro:
+    file_pattern: REFERENCIAS.xlsx
+    subdir: fijos
+    sheet: Centros
+    header_row: 0
+    metadata_rows_to_skip: 0
+    column_renames:
+      CENTRO: centro
+      CÓDIGO SAP CLIENTE: codigo_sap_cliente
+      TIPO: tipo
+    target_table: int_ref_centro
+    notes: 'Mapping centro -> codigo_sap_cliente + tipo (VENTA INDIRECTA / DIRECTA).
+
+      Usado por GD20 para derivar TIPO DE VENTA.
+
+      '
+  material:
+    file_pattern: REFERENCIAS.xlsx
+    subdir: fijos
+    sheet: Material
+    header_row: 0
+    metadata_rows_to_skip: 0
+    column_renames:
+      Código: codigo
+      Descripción: descripcion
+    dedupe_on:
+    - codigo
+    target_table: int_ref_material
+    notes: 'Mapping codigo -> descripcion (nombre de producto).
+
+      Usado por GD20 para derivar NOMBRE PRODUCTO.
+
+      '
+  equipo:
+    file_pattern: REFERENCIAS.xlsx
+    subdir: fijos
+    sheet: Equipo
+    header_row: 0
+    metadata_rows_to_skip: 0
+    column_renames:
+      GRUPO VENDEDORES: grupo_vendedores
+      VENDEDOR SAP: vendedor_sap
+      VENDEDOR: vendedor
+      VENDEDOR OK: vendedor_ok
+      EQUIPO: equipo
+      GERENCIA: gerencia
+    target_table: int_ref_equipo
+    notes: 'Tabla unificada de vendedores: 6 cols.
+
+      Usado por GD20 para derivar VENDEDOR_OK, EQUIPO, GERENCIA.
+
+      '
+  localidad:
+    file_pattern: REFERENCIAS.xlsx
+    subdir: fijos
+    sheet: Localidades
+    header_row: 0
+    metadata_rows_to_skip: 0
+    column_renames:
+      LOCALIDAD DESPACHO: localidad_despacho
+      LOCALIDAD IM: localidad_im
+    dedupe_on:
+    - localidad_despacho
+    dedupe_case_insensitive: true
+  semana:
+    file_pattern: REFERENCIAS.xlsx
+    subdir: fijos
+    sheet: Semanas
+    header_row: 0
+    metadata_rows_to_skip: 0
+    column_renames:
+      DIAS: dia
+      SEMANA: semana
+    dedupe_on:
+    - dia
+
+change_detection:
+  enabled: true
+  state_key: references
+  fingerprint: [mtime, size]

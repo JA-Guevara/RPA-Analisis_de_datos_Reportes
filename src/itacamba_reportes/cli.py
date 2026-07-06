@@ -1,0 +1,350 @@
+"""CLI entrypoint - itacamba-reportes.
+
+Composition root: aquí (y solo aquí) se cablean configs, readers,
+repos y pipelines. Agregar un pipeline = un builder + una entry en
+PIPELINES.
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import date, datetime
+from pathlib import Path
+
+from itacamba_reportes.config.env_config import validate_config
+from itacamba_reportes.config.paths import DataPaths
+from itacamba_reportes.config.sources import (
+    excel_source_from_cfg,
+    load_reference_sources,
+)
+from itacamba_reportes.config.yaml_loader import (
+    YamlDatasetLoader,
+    load_column_catalog,
+    load_pipeline_config,
+)
+from itacamba_reportes.ingestion.excel_reader import ExcelReader
+from itacamba_reportes.persistence.excel_report_exporter import ExcelReportExporter
+from itacamba_reportes.persistence.models.stg.stg_gd20_model import StgGd20Model
+from itacamba_reportes.persistence.models.stg.stg_query_model import StgQueryModel
+from itacamba_reportes.persistence.repositories.cartera_repository_sql import (
+    CarteraIntRepositoryImpl,
+)
+from itacamba_reportes.persistence.repositories.despacho_bi_repository_sql import (
+    IntDespachoBiRepositoryImpl,
+)
+from itacamba_reportes.persistence.repositories.despacho_mes_repository_sql import (
+    IntDespachoMesRepositoryImpl,
+)
+from itacamba_reportes.persistence.repositories.gd20_repository_sql import (
+    Gd20IntRepositoryImpl,
+)
+from itacamba_reportes.persistence.repositories.query_repository_sql import (
+    IntQueryRepositoryImpl,
+)
+from itacamba_reportes.persistence.repositories.reference_loader import ReferenceLoader
+from itacamba_reportes.persistence.repositories.stg_cartera_repository_sql import (
+    StgCarteraIntRepositoryImpl,
+)
+from itacamba_reportes.persistence.repositories.stg_repository import StgRepository
+from itacamba_reportes.persistence.repositories.ventas_bi_repository_sql import (
+    VentasBiIntRepositoryImpl,
+)
+from itacamba_reportes.pipelines.cartera import CarteraPipeline
+from itacamba_reportes.pipelines.despacho_bi import DespachoBiPipeline
+from itacamba_reportes.pipelines.despacho_mes import DespachoMesPipeline
+from itacamba_reportes.pipelines.file_state import FileStateTracker
+from itacamba_reportes.pipelines.gd20 import Gd20Pipeline
+from itacamba_reportes.pipelines.query import QueryPipeline
+from itacamba_reportes.pipelines.references import ReferencesPipeline
+from itacamba_reportes.pipelines.run_all import RunAllOrchestrator
+from itacamba_reportes.pipelines.runner import PipelineResult
+from itacamba_reportes.shared.logging_setup import setup_logging
+from itacamba_reportes.transforms.cartera_business_rules import (
+    ApplyDonationsFromSpecRule,
+    ValidateRegionFromLookupRule,
+)
+from itacamba_reportes.transforms.common import BusinessRule
+
+logger = logging.getLogger(__name__)
+
+
+_PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
+_CONFIGS_DIR: Path = _PROJECT_ROOT / "assets" / "configs"
+_STATE_PATH: Path = _PROJECT_ROOT / "storage" / "state" / "pipeline_state.json"
+
+
+# ── Builders ──────────────────────────────────────────────────────────
+
+def _state_tracker() -> FileStateTracker:
+    return FileStateTracker(_STATE_PATH)
+
+
+def _build_exporter() -> ExcelReportExporter:
+    return ExcelReportExporter(output_dir=DataPaths.from_env().exports)
+
+
+def _excel_reader(dataset: str, cfg: dict) -> ExcelReader:
+    source = excel_source_from_cfg(dataset, cfg["source"])
+    return ExcelReader(source=source, data_path=DataPaths.from_env().inbox)
+
+
+def _build_cartera_pipeline() -> CarteraPipeline:
+    spec = YamlDatasetLoader(_CONFIGS_DIR).load("cartera")
+    reader = _excel_reader("cartera", {"source": spec.source.model_dump()})
+
+    rules: list[BusinessRule] = []
+    if spec.lookups.donaciones is not None:
+        rules.append(ApplyDonationsFromSpecRule(
+            lookup=spec.lookups.donaciones, sap_tokens=spec.sap_tokens))
+    if spec.lookups.regiones_validas is not None:
+        rules.append(ValidateRegionFromLookupRule(
+            lookup=spec.lookups.regiones_validas, strict=False))
+
+    return CarteraPipeline(
+        spec=spec,
+        reader=reader,
+        stg_repo=StgCarteraIntRepositoryImpl(),
+        cartera_repo=CarteraIntRepositoryImpl(),
+        rules=rules,
+        source_path=reader.resolve_path(),
+        state_tracker=_state_tracker(),
+    )
+
+
+def _build_references_pipeline() -> ReferencesPipeline:
+    inbox = DataPaths.from_env().inbox
+    sources = load_reference_sources(_CONFIGS_DIR)
+    readers = {
+        key: ExcelReader(source=src, data_path=inbox)
+        for key, src in sources.items()
+    }
+    any_reader = next(iter(readers.values()))
+    return ReferencesPipeline(
+        readers=readers,
+        loader=ReferenceLoader(),
+        source_path=any_reader.resolve_path(),
+        state_tracker=_state_tracker(),
+    )
+
+
+def _build_query_pipeline() -> QueryPipeline:
+    config = load_pipeline_config(_CONFIGS_DIR, "query")
+    reader = _excel_reader("query", config)
+    return QueryPipeline(
+        reader=reader,
+        stg_repo=StgRepository(StgQueryModel),
+        int_repo=IntQueryRepositoryImpl(),
+        source_path=reader.resolve_path(),
+        state_tracker=_state_tracker(),
+        config=config,
+    )
+
+
+def _build_gd20_pipeline() -> Gd20Pipeline:
+    config = load_pipeline_config(_CONFIGS_DIR, "gd20")
+    reader = _excel_reader("gd20", config)
+    return Gd20Pipeline(
+        reader=reader,
+        stg_repo=StgRepository(StgGd20Model),
+        gd20_repo=Gd20IntRepositoryImpl(),
+        ventas_bi_repo=VentasBiIntRepositoryImpl(),
+        source_path=reader.resolve_path(),
+        state_tracker=_state_tracker(),
+        config=config,
+        exporter=_build_exporter(),
+    )
+
+
+def _build_despacho_bi_pipeline() -> DespachoBiPipeline:
+    return DespachoBiPipeline(
+        despacho_bi_repo=IntDespachoBiRepositoryImpl(),
+        column_catalog=load_column_catalog(_CONFIGS_DIR, "despacho_bi"),
+        config=load_pipeline_config(_CONFIGS_DIR, "despacho_bi"),
+        exporter=_build_exporter(),
+    )
+
+
+def _build_despacho_mes_pipeline() -> DespachoMesPipeline:
+    return DespachoMesPipeline(
+        despacho_mes_repo=IntDespachoMesRepositoryImpl(),
+        config=load_pipeline_config(_CONFIGS_DIR, "despacho_mes"),
+        exporter=_build_exporter(),
+    )
+
+
+def _build_run_all_orchestrator() -> RunAllOrchestrator:
+    return RunAllOrchestrator(
+        references_pipeline=_build_references_pipeline(),
+        cartera_pipeline=_build_cartera_pipeline(),
+        query_pipeline=_build_query_pipeline(),
+        gd20_pipeline=_build_gd20_pipeline(),
+        despacho_bi_pipeline=_build_despacho_bi_pipeline(),
+        despacho_mes_pipeline=_build_despacho_mes_pipeline(),
+    )
+
+
+# ── Runners ───────────────────────────────────────────────────────────
+
+def _run_cartera(args: argparse.Namespace):
+    run_id = datetime.combine(args.execution_date, datetime.min.time())
+    return _build_cartera_pipeline().run(run_id=run_id, force=args.force)
+
+
+def _run_referencias(args: argparse.Namespace):
+    return _build_references_pipeline().run(force=args.force)
+
+
+def _run_query(args: argparse.Namespace):
+    return _build_query_pipeline().run(force=args.force)
+
+
+def _run_despacho_bi(args: argparse.Namespace):
+    return _build_despacho_bi_pipeline().run(force=args.force)
+
+
+def _run_despacho_mes(args: argparse.Namespace):
+    return _build_despacho_mes_pipeline().run(force=args.force)
+
+
+def _run_gd20(args: argparse.Namespace):
+    return _build_gd20_pipeline().run(
+        force=args.force,
+        force_rebuild=getattr(args, "force_rebuild", False),
+    )
+
+
+def _run_all(args: argparse.Namespace):
+    run_id = datetime.combine(args.execution_date, datetime.min.time())
+    return _build_run_all_orchestrator().run(run_id=run_id, force=args.force)
+
+
+# ── Extra args ────────────────────────────────────────────────────────
+
+def _date_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--date",
+        dest="execution_date",
+        type=lambda s: datetime.strptime(s, "%Y-%m-%d").date(),
+        default=date.today(),
+        help="Fecha de ejecucion (YYYY-MM-DD). Default: hoy.",
+    )
+
+
+def _gd20_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--force-rebuild",
+        dest="force_rebuild",
+        action="store_true",
+        help=(
+            "Ignora el sticky CD/ZE y re-aplica los derivados a TODAS las filas "
+            "vigentes de int_ventas_bi. Uso administrativo cuando se necesita "
+            "recalcular con datos nuevos de QUERY/CARTERA/REFERENCIAS. "
+            "NO afecta SAP raw (sigue versionando por SCD2)."
+        ),
+    )
+
+
+# ── Registry ──────────────────────────────────────────────────────────
+
+@dataclass(slots=True)
+class PipelineSpec:
+    name: str
+    help: str
+    runner: Callable[[argparse.Namespace], object]
+    extra_args: Callable[[argparse.ArgumentParser], None] | None = None
+
+
+PIPELINES: dict[str, PipelineSpec] = {
+    "run-cartera": PipelineSpec(
+        name="cartera",
+        help="Pipeline CARTERA -> int_cartera.",
+        runner=_run_cartera,
+        extra_args=_date_arg,
+    ),
+    "run-referencias": PipelineSpec(
+        name="referencias",
+        help="Pipeline REFERENCIAS -> tablas int_ref_*.",
+        runner=_run_referencias,
+    ),
+    "run-query": PipelineSpec(
+        name="query",
+        help="Pipeline QUERY -> stg_query + int_query (mes objetivo).",
+        runner=_run_query,
+    ),
+    "run-despacho-bi": PipelineSpec(
+        name="despacho_bi",
+        help="Pipeline DESPACHO BI (int_query + lookups -> int_despacho_bi).",
+        runner=_run_despacho_bi,
+    ),
+    "run-despacho-mes": PipelineSpec(
+        name="despacho_mes",
+        help="Pipeline DESPACHO MES (int_despacho_bi -> agregado mensual).",
+        runner=_run_despacho_mes,
+    ),
+    "run-gd20": PipelineSpec(
+        name="gd20",
+        help="Pipeline GD20 (Excel SAP + lookups -> int_gd20 + int_ventas_bi).",
+        runner=_run_gd20,
+        extra_args=_gd20_args,
+    ),
+    "run-all": PipelineSpec(
+        name="run-all",
+        help="Ejecuta TODOS los pipelines en orden secuencial con fail-fast.",
+        runner=_run_all,
+        extra_args=_date_arg,  # cartera necesita --date
+    ),
+}
+
+
+# ── argparse + main ───────────────────────────────────────────────────
+
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="itacamba-reportes",
+        description="Pipeline ETL declarativo Itacamba Reportes.",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    for cmd, spec in PIPELINES.items():
+        p = sub.add_parser(cmd, help=spec.help)
+        p.add_argument("--force", action="store_true",
+                       help="Forzar ejecucion aunque el archivo no haya cambiado.")
+        if spec.extra_args is not None:
+            spec.extra_args(p)
+
+    return parser.parse_args(argv)
+
+
+def _log_result(name: str, result: object) -> None:
+    if getattr(result, "skipped", False):
+        logger.info("%s skip (sin cambios)", name.upper())
+        return
+    if isinstance(result, PipelineResult):
+        rows = ", ".join(f"{k}={v}" for k, v in result.rows.items())
+        logger.info("OK %s: %s, %.2fs", name.upper(), rows, result.duration_seconds)
+    else:  # RunAllResult
+        logger.info("OK %s: %.2fs total", name.upper(),
+                    getattr(result, "total_seconds", 0.0))
+
+
+def main(argv: list[str] | None = None) -> int:
+    setup_logging()
+    args = _parse_args(argv)
+
+    try:
+        validate_config()
+    except (FileNotFoundError, ValueError) as exc:
+        logger.error("Config invalida: %s", exc)
+        return 1
+
+    spec = PIPELINES[args.command]
+    logger.info("Construyendo pipeline %s", spec.name.upper())
+    try:
+        result = spec.runner(args)
+    except Exception as exc:
+        logger.exception("Pipeline %s fallo: %s", spec.name.upper(), exc)
+     

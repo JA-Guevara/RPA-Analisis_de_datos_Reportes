@@ -1,0 +1,94 @@
+# ─────────────────────────────────────────────────────────────────────
+# Pipeline DESPACHO BI — int_query + 4 lookups -> int_despacho_bi
+# ─────────────────────────────────────────────────────────────────────
+# Equivalente a la hoja DESPACHOS BI del basepanel.xlsm.
+# 41 cols heredadas de int_query + 10 cols enriquecidas via lookups.
+
+name: despacho_bi
+description: |
+  Detalle BI de despachos. Compone int_query con int_cartera,
+  int_ref_equipo, int_ref_almacen, int_ref_localidad para entregar
+  un dataset listo para Power BI.
+
+  Es el insumo de despacho_mes (agregación mensual).
+
+source_table: int_query
+int_table:    int_despacho_bi
+
+consumers:
+  - despacho_mes
+
+# ─────────────────────────────────────────────────────────────────────
+# COLS HEREDADAS DE int_query (subset estable)
+# ─────────────────────────────────────────────────────────────────────
+# Se descartan cols técnicas: nombre, telefono_1, forwagent_accnt_g,
+# placa, tp_vehiculo, punto_entrega, numero_transporte, traslados,
+# distancia_km, ship_to_zkatr7, ship_to_region.
+# Si negocio reporta que alguna de esas SI hace falta, agregarla aqui.
+source_columns:
+  - centro_proveedor
+  - sucursal
+  - material
+  - nombre_material
+  - dia_natural
+  - documento_venta
+  - destinatario_mcia
+  - nombre_centro_destinatario
+  - poblacion
+  - incoterms
+  - clase_doc_ventas
+  - tipo_venta
+  - centro_receptor
+  - nombre_centro_receptor
+  - clase_expedicion
+  - vc_embalaje
+  - transportista
+  - nombre_transportista
+  - ruta
+  - nombre_ruta
+  - distancia
+  - cantidad
+  - fecha
+  - despacho_t
+  - departamento
+  - traslados_t
+  - dia
+  - mes
+  - anio
+  - grupo_producto
+  - tipo_traslado
+  - producto
+  - centro_distribucion
+  - provincia
+  - semana_anio
+  - zona_descarga
+  - cd
+  - localidad
+  - tipo_venta_2
+  # vendedor / desarrollador: NO se heredan. En int_query van siempre
+  # NULL (el QUERY raw de 49 cols no los trae); en el cliente son
+  # formulas AX/AY que el normalize calcula via lookups.
+
+# ─────────────────────────────────────────────────────────────────────
+# COLUMNAS ENRIQUECIDAS (Fase 2)
+# ─────────────────────────────────────────────────────────────────────
+# Las fórmulas del cliente (lookups, concats, espejos, defaults) están
+# declaradas en:  assets/configs/columnas/despacho_bi.yaml
+# y las ejecuta transforms/column_engine.py en el orden del catálogo.
+#
+# Agregar/modificar una columna = editar ese catálogo (+ Column en el
+# modelo y migración alembic si es columna nueva) y recalibrar con
+# tools/calibracion/.
+
+# ─────────────────────────────────────────────────────────────────────
+# NOTAS
+# ─────────────────────────────────────────────────────────────────────
+notes: |
+  - 'semana' = lookup dia -> int_ref_semana.semana ("SEMANA 1..5" del
+    MES), replica del VLOOKUP(dia, REFERENCIAS!U:V, 2) auditado en el
+    basepanel. NO usar semana_anio (semana del AÑO): producia
+    "SEMANA 18..21" y fue la causa de la descalibracion 2026-07.
+
+  - 'incoterms_im' = incoterms + centro_distribucion SIN espacio (ej.
+    "FOBCD GUARACACHI", igual al basepanel segun MAPEO_DESPACHO.md).
+    Pendiente confirmar contra libro cliente si lleva espacio.

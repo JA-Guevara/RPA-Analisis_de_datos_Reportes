@@ -1,0 +1,134 @@
+# ─────────────────────────────────────────────────────────────────────
+# Pipeline QUERY — extracto SAP de tracking de despachos
+# ─────────────────────────────────────────────────────────────────────
+# Stages: stg_query (raw) -> [mapping + normalize + rules] -> int_query
+#
+# Las definiciones tecnicas (column_renames de las ~57 cols) viven
+# en `src/itacamba_reportes/config/data_sources.py:QUERY_SOURCE`.
+# Este YAML documenta cleanup, reglas y defaults parametrizables sin
+# tocar Python.
+
+name: query
+description: |
+  Carga raw del Excel SAP QUERY (tracking de despachos) hacia stg_query,
+  y derivación a int_query con limpieza + filtro de mes.
+  Es la fuente de centro_distribucion + zona_descarga consumidos por
+  GD20, y el insumo principal del pipeline DESPACHO BI.
+
+source:
+  file_pattern: QUERY*.xlsx
+  subdir: dinamicos
+  sheet: base
+  header_row: 1
+  metadata_rows_to_skip: 0
+  column_renames:
+    Centro Proveedor: centro_proveedor
+    Sucursal: sucursal
+    Material: material
+    Producto: nombre_material
+    Día natural: dia_natural
+    Documento venta: documento_venta
+    Destinatario mcía.: destinatario_mcia
+    Nombre del centro destinatario: nombre_centro_destinatario
+    Población: poblacion
+    Incoterms: incoterms
+    Clase doc.ventas: clase_doc_ventas
+    Tipo de venta: tipo_venta
+    Centro Receptor: centro_receptor
+    Nombre del centro receptor: nombre_centro_receptor
+    0SHIP_TO__ZKATR7: ship_to_zkatr7
+    0SHIP_TO__0REGION: ship_to_region
+    Atributo 7: atributo_7
+    Departamento Facturación: departamento_facturacion
+    Nombre: nombre_transportista_persona
+    Teléfono 1: telefono_1
+    Tipo de Servicio Transporte: tipo_servicio_transporte
+    Clase de expedición: clase_expedicion
+    VC - Embalaje: vc_embalaje
+    Transportista: transportista
+    nombre del transportista: nombre_transportista
+    0FORWAGENT__0ACCNT_G: forwagent_accnt_g
+    Placa: placa
+    Tp. vehiculo: tp_vehiculo
+    Ruta: ruta
+    nombre de la ruta: nombre_ruta
+    Nº transporte: numero_transporte
+    distancia: distancia
+    cantidad: cantidad
+    fecha: fecha
+    Despacho(t): despacho_t
+    Departamento: departamento
+    Traslados (t): traslados_t
+    Dia: dia
+    Mes: mes
+    Año: anio
+    Grupo de Producto: grupo_producto
+    Tipo de Traslado: tipo_traslado
+    Producto.1: producto
+    Centro de Distribución: centro_distribucion
+    Provincia: provincia
+    Semana Año: semana_anio
+    Traslados: traslados
+    Zona de descarga: zona_descarga
+    CD: cd
+    Localidad: localidad
+    Distancia KM: distancia_km
+    Tipo de venta2: tipo_venta_2
+
+stg_table: stg_query
+int_table: int_query
+
+consumers:
+  - gd20            # GD20 cruza pagador contra destinatario_mcia para traer
+                    # centro_distribucion y zona_descarga.
+  - despacho_bi     # Próxima fase: lee int_query como fuente principal.
+
+# ─────────────────────────────────────────────────────────────────────
+# MAPPING (STG -> INT)
+# ─────────────────────────────────────────────────────────────────────
+# QUERY_SOURCE ya entrega snake_case correcto, asi que no hace falta
+# renombrar nada. Si en el futuro se necesita, agregar aqui:
+#   renames_stg_to_int:
+#     col_origen: col_destino
+renames_stg_to_int: {}
+
+# ─────────────────────────────────────────────────────────────────────
+# NORMALIZE (equivalente macro VBA `ModificarCentro`)
+# ─────────────────────────────────────────────────────────────────────
+# El SAP marca "Sin asignar" en QUERY.centro_receptor con "#".
+# Para que los lookups posteriores no rompan, se reemplaza por "0".
+hash_sentinel:    "#"
+hash_replacement: "0"
+
+# ─────────────────────────────────────────────────────────────────────
+# BUSINESS RULES (equivalente macro VBA `EliminarMeses`)
+# ─────────────────────────────────────────────────────────────────────
+# Filtra int_query al mes objetivo del reporte.
+#
+# Valores aceptados:
+#   "auto"                  -> ULTIMO mes con datos del Excel (recomendado)
+#                              SAP normalmente cierra mes anterior; "auto"
+#                              detecta automaticamente y elimina el riesgo
+#                              de quedar con 0 filas.
+#   "current"               -> mes y año actuales (legacy, requiere que SAP
+#                              haya cerrado el mes corriente)
+#   {anio: 2026, mes: 5}    -> forzado (útil para reproceso histórico)
+#   null                    -> sin filtro (carga histórico completo)
+#
+# Fallback: si el target deja 0 filas, el pipeline cae automaticamente al
+# ultimo mes con datos y deja un WARNING en el log.
+mes_objetivo: auto
+
+# ─────────────────────────────────────────────────────────────────────
+# CHANGE DETECTION
+# ─────────────────────────────────────────────────────────────────────
+change_detection:
+  enabled: true
+  state_key: query
+  fingerprint: [mtime, size]
+
+notes: |
+  El Excel tiene ~57 cols estables + 14 cols de anotacion manual al
+  final que se ignoran (no estan en QUERY_SOURCE.column_renames).
+  Las cols xx, xx2, xx3, xx4 sí se persisten en stg_query (auditoría
+  del raw) pero NO viajan a int_query.
