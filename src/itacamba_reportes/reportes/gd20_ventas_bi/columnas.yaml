@@ -1,0 +1,225 @@
+# ═════════════════════════════════════════════════════════════════════
+# CATÁLOGO DE COLUMNAS — GD20 / VENTAS BI
+# ═════════════════════════════════════════════════════════════════════
+# Lookups y fórmulas simples del BASE PANEL (antes en
+# gd20_normalize.py). Orden de ejecución = orden del archivo, replica
+# del orden calibrado del use case original.
+#
+# NO están acá (viven en reglas.py, son lógica multi-etapa):
+#   centro_distribucion / zona_entrega  (5 capas sobre stg_query)
+#   overrides por centro                (mecanismo; datos en config.yaml)
+#   ingreso_bruto, fechas, volumen, bonificaciones, post_replaces
+# ═════════════════════════════════════════════════════════════════════
+
+report: gd20_ventas_bi
+
+columns:
+
+  # ── CARTERA por DESTINATARIO (fórmulas nombre/vendedor/ubicación) ───
+  nombre_destinatario:
+    op: lookup
+    table: int_cartera
+    key: destinatario
+    ref_key: cliente
+    returns: nombre_cliente
+    cast_key: int64
+    default: "0"
+
+  vendedor_sap:                  # CARTERA col 33 (insumo del bloque equipo)
+    op: lookup
+    table: int_cartera
+    key: destinatario
+    ref_key: cliente
+    returns: vendedor
+    cast_key: int64
+    default: "0"
+
+  localidad:
+    op: lookup
+    table: int_cartera
+    key: destinatario
+    ref_key: cliente
+    returns: poblacion
+    cast_key: int64
+    default: "0"
+
+  provincia:
+    op: lookup
+    table: int_cartera
+    key: destinatario
+    ref_key: cliente
+    returns: attribute_6
+    cast_key: int64
+    default: "0"
+
+  dpto:
+    op: lookup
+    table: int_cartera
+    key: destinatario
+    ref_key: cliente
+    returns: region_nombre
+    cast_key: int64
+    default: "0"
+
+  # ── CARTERA por PAGADOR ─────────────────────────────────────────────
+  nombre_pagador:
+    op: lookup
+    table: int_cartera
+    key: pagador
+    ref_key: cliente
+    returns: nombre_cliente
+    cast_key: int64
+    default: "0"
+
+  localidad_pagador:
+    op: lookup
+    table: int_cartera
+    key: pagador
+    ref_key: cliente
+    returns: poblacion
+    cast_key: int64
+    default: "0"
+
+  dpto_pagador:
+    op: lookup
+    table: int_cartera
+    key: pagador
+    ref_key: cliente
+    returns: region_nombre
+    cast_key: int64
+    default: "0"
+
+  # ── CARTERA por EMISOR SOLICITANTE ──────────────────────────────────
+  nombre_solicitante:
+    op: lookup
+    table: int_cartera
+    key: emisor_solicitante
+    ref_key: cliente
+    returns: nombre_cliente
+    cast_key: int64
+    default: "0"
+
+  # attribute_10 del destinatario (insumo del doble lookup almacén)
+  _attr10_dest:
+    op: lookup
+    table: int_cartera
+    key: destinatario
+    ref_key: cliente
+    returns: attribute_10
+    cast_key: int64
+
+  # ── MATERIAL: VLOOKUP(material, REFERENCIAS!L:M, 2) ─────────────────
+  # ANTES que equipo: la lógica de equipo depende de "CEMENTO" en producto.
+  nombre_producto:
+    op: lookup
+    table: int_ref_material
+    key: material
+    ref_key: codigo
+    returns: descripcion
+    cast_key: int64
+    default: "0"
+
+  # ── EQUIPO (BASE PANEL cols BC-BG) ──────────────────────────────────
+  vendedor:                      # BD = VLOOKUP(vendedor_sap, REF!O:S, 2)
+    op: lookup
+    table: int_ref_equipo
+    key: vendedor_sap
+    ref_key: vendedor_sap
+    returns: vendedor
+    default: "0"
+
+  vendedor_ok:                   # BE = VLOOKUP(vendedor_sap, REF!O:S, 3)
+    op: lookup
+    table: int_ref_equipo
+    key: vendedor_sap
+    ref_key: vendedor_sap
+    returns: vendedor_ok
+    default: "0"
+
+  # BG = IF(producto contiene CEMENTO, via vendedor_sap, via grupo_vendedores)
+  equipo:
+    op: branch
+    if: {col: nombre_producto, contains: CEMENTO}
+    then:
+      op: lookup
+      table: int_ref_equipo
+      key: vendedor_sap
+      ref_key: vendedor_sap
+      returns: equipo
+    else:
+      op: lookup
+      table: int_ref_equipo
+      key: grupo_vendedores
+      ref_key: grupo_vendedores
+      returns: equipo
+    default: No encontrado
+
+  gerencia:                      # BF = VLOOKUP(equipo, REF!R:S, 2)
+    op: lookup
+    table: int_ref_equipo
+    key: equipo
+    ref_key: equipo
+    returns: gerencia
+    default: "0"
+
+  # ── ALMACÉN (doble lookup attribute_10 → segmento/canal) ───────────
+  sub_canal:
+    op: lookup
+    table: int_ref_almacen
+    key: _attr10_dest
+    ref_key: descripcion_sap
+    returns: segmento
+    default: "0"
+
+  canal:
+    op: lookup
+    table: int_ref_almacen
+    key: _attr10_dest
+    ref_key: descripcion_sap
+    returns: canal
+    default: "0"
+
+  # ── CENTRO: tipo_venta por pagador + codigo_cliente por centro ─────
+  tipo_venta:
+    op: lookup
+    table: int_ref_centro
+    key: pagador
+    ref_key: codigo_sap_cliente
+    returns: tipo
+    cast_key: int64
+    default: VENTA DIRECTA
+
+  codigo_cliente:
+    op: lookup
+    table: int_ref_centro
+    key: centro
+    ref_key: centro
+    returns: codigo_sap_cliente
+    default: 0
+
+  # ── TIPO EMBALAJE (antes en business rules; op case) ────────────────
+  tipo_embalaje:
+    op: case
+    col: unidad_medida_base
+    mapping:
+      M3: Granel M3
+      T: Granel t
+      S50: Embolsado
+      PC: Bolsas Vacias
+    default: "0"
+
+  # ── REGION M: si DPTO=SANTA CRUZ, lookup localidad→IM; sino DPTO ───
+  region_m:
+    op: branch
+    if: {col: dpto, equals: SANTA CRUZ}
+    then:
+      op: lookup
+      table: int_ref_localidad
+      key: localidad
+      ref_key: localidad_despacho
+      returns: localidad_im
+      norm_keys: upper_strip
+      default: RESTO SANTA CRUZ
+    else:
+      op: copy
+      from: dpto

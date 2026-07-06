@@ -11,6 +11,7 @@ Arquitectura_Configuracion_Columnas.md):
 
     copy     copia otra columna                        (col x = dia)
     const    valor literal                             (cd = "CD")
+    case     mapping valor -> valor                    (tipo_embalaje)
     concat   concatena columnas, NA -> ""              (incoterms_im, link)
     lookup   VLOOKUP contra una tabla int_*            (equipo, semana, ...)
              key = col del df, ref_key = col de la tabla lookup
@@ -25,9 +26,10 @@ Contratos:
   - `default` se aplica como fillna DESPUÉS de la operación;
     `default_from` usa otra columna como fallback (ej. localidad_im).
 
-Condiciones de `branch` (las únicas dos que usan los reportes):
+Condiciones de `branch` (las únicas que usan los reportes):
     contains:    {col: producto, contains: CEMENTO}       (case-insensitive)
     str_len_lte: {col: destinatario_mcia, str_len_lte: 5}
+    equals:      {col: dpto, equals: SANTA CRUZ}          (upper+strip)
 """
 
 from __future__ import annotations
@@ -89,6 +91,8 @@ class ColumnEngine:
             return self._op_copy(df, spec)
         if op == "const":
             return pd.Series(spec["value"], index=df.index, dtype="object")
+        if op == "case":
+            return self._op_case(df, spec)
         if op == "concat":
             return self._op_concat(df, spec)
         if op == "lookup":
@@ -104,6 +108,17 @@ class ColumnEngine:
         if src not in df.columns:
             return pd.Series(pd.NA, index=df.index, dtype="object")
         return df[src].copy()
+
+    @staticmethod
+    def _op_case(df: pd.DataFrame, spec: dict[str, Any]) -> pd.Series:
+        """Mapping valor->valor sobre una columna (equivalente a SI anidados
+        del Excel por igualdad exacta). Valores sin mapping quedan NA
+        (aplicar `default:` en el bloque para el fallback)."""
+        col = spec["col"]
+        if col not in df.columns:
+            return pd.Series(pd.NA, index=df.index, dtype="object")
+        mapping = {str(k): v for k, v in (spec.get("mapping") or {}).items()}
+        return df[col].astype("string").map(mapping)
 
     @staticmethod
     def _op_concat(df: pd.DataFrame, spec: dict[str, Any]) -> pd.Series:
@@ -163,10 +178,14 @@ class ColumnEngine:
         elif "str_len_lte" in cond:
             mask = (df[col].astype("string").fillna("")
                     .str.len() <= int(cond["str_len_lte"]))
+        elif "equals" in cond:
+            mask = (df[col].astype("string").str.upper().str.strip()
+                    == str(cond["equals"]).upper().strip())
+            mask = mask.fillna(False)
         else:
             raise ColumnCatalogError(
                 f"branch de '{name}': condición no soportada {cond!r} "
-                "(usar 'contains' o 'str_len_lte')")
+                "(usar 'contains', 'str_len_lte' o 'equals')")
 
         then_s = self._post(df, self._eval(df, spec["then"], name), spec["then"])
         else_s = self._post(df, self._eval(df, spec["else"], name), spec["else"])

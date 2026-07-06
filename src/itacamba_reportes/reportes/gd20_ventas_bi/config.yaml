@@ -277,3 +277,41 @@ change_detection:
   enabled: true
   state_key: gd20
   fingerprint: [mtime, size]
+
+# ─────────────────────────────────────────────────────────────────────
+# OVERRIDES POR CENTRO FÍSICO (antes _HARDCODED_CENTRO_OVERRIDES en
+# gd20_normalize.py — regla del Excel validada contra BASE PANEL 2026-05:
+# resuelve ~287 mismatches de equipo, ~131 gerencia, ~78 vendedor_ok)
+# ─────────────────────────────────────────────────────────────────────
+centro_overrides:
+  "4B05":
+    when: {equipo: LOGISTICA}
+    set:  {equipo: CLINQUER}
+  "4B06":
+    when: {equipo: LOGISTICA}
+    set:  {equipo: CLINQUER}
+  "4B3A":
+    when: null           # aplica siempre
+    set:  {equipo: INSUMOS AGRICOLAS, gerencia: OTROS}
+  "4B94":
+    when: null
+    set:  {equipo: AGREGADOS, gerencia: OTROS, vendedor_ok: AGREGADOS}
+  "4B95":
+    when: {equipo: DESARROLLADORES OTROS DPTOS.}
+    set:  {equipo: DESARROLLADORES SCZ, gerencia: GERENCIA SCZ+CHACO,
+           vendedor_ok: FREDDY ROMAN}
+
+# ─────────────────────────────────────────────────────────────────────
+# CONSTANTES DE NEGOCIO (fórmulas del Excel; consumidas por reglas.py)
+# ─────────────────────────────────────────────────────────────────────
+constants:
+  numero_cuenta_bonificacion: 33111020
+  codigo_cliente_invalido:    0
+  factor_ingreso_bruto:       0.87
+  factor_volumen_granel_m3:   1.42
+  factor_volumen_embolsado:   20
+
+# DEFAULTS de las reglas CD/ZE (reglas.py)
+defaults:
+  centro_distribucion: OTROS
+  zona_entrega:        OTROS

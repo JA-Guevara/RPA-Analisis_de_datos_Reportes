@@ -1,4 +1,22 @@
-"""GD20 Normalize - aplica los 7 lookups contra tablas referencia."""
+"""Reglas complejas del reporte GD20/VENTAS BI (no expresables en YAML).
+
+Contiene EXACTAMENTE la lógica calibrada contra el BASE PANEL del
+cliente, movida verbatim desde transforms/gd20_normalize.py y
+transforms/gd20_business_rules.py (Fase 4 del plan 2026-07-06):
+
+  Gd20CdZeRule            centro_distribucion + zona_entrega (5 capas
+                          sobre stg_query; 82.7%/76.5% match validado)
+  CentroOverridesRule     overrides por centro físico (datos en
+                          config.yaml:centro_overrides, ya no en código)
+  NombreDestQueryRule     override opcional de nombre_destinatario
+                          (desactivado por default; ver config)
+  Gd20BusinessRulesUseCase ingreso_bruto, fechas, volumen,
+                          bonificaciones, post_replaces (fórmulas
+                          numéricas condicionales del Excel)
+
+Los lookups simples (cartera, material, equipo, almacén, centro,
+region_m, tipo_embalaje) están en columnas.yaml (ColumnEngine).
+"""
 
 from __future__ import annotations
 
@@ -12,315 +30,27 @@ from itacamba_reportes.shared.pandas_utils import to_int64
 logger = logging.getLogger(__name__)
 
 
-_HARDCODED_DEFAULTS: dict[str, str] = {
-    "vendedor_sap":        "0",
-    "vendedor_ok":         "0",
-    "vendedor":            "0",
-    "equipo":              "No encontrado",
-    "gerencia":            "0",
-    "canal":               "0",
-    "sub_canal":           "0",
-    "tipo_venta":          "VENTA DIRECTA",
+_RULE_DEFAULTS: dict[str, str] = {
     "centro_distribucion": "OTROS",
     "zona_entrega":        "OTROS",
-    "nombre_producto":     "0",
-    "nombre_pagador":      "0",
-    "nombre_solicitante":  "0",
-    "nombre_destinatario": "0",
-    "localidad":           "0",
-    "provincia":           "0",
-    "dpto":                "0",
-    "localidad_pagador":   "0",
-    "dpto_pagador":        "0",
-    "region_m_sc_default": "RESTO SANTA CRUZ",
-}
-
-
-# Overrides por CENTRO físico — sobreescribe campos cuando un centro
-# específico tiene asignación fija de equipo/gerencia/vendedor_ok,
-# independiente del vendedor_sap (regla del Excel original validada
-# contra BASE PANEL mayo 2026).
-# Estructura: {centro: {when_field: value_match, target_field: new_value}}
-#   - "when": condiciones que deben cumplirse (None = aplica siempre)
-#   - "set":  campos a sobreescribir
-_HARDCODED_CENTRO_OVERRIDES: dict[str, dict] = {
-    "4B05": {
-        "when": {"equipo": "LOGISTICA"},
-        "set":  {"equipo": "CLINQUER"},
-    },
-    "4B06": {
-        "when": {"equipo": "LOGISTICA"},
-        "set":  {"equipo": "CLINQUER"},
-    },
-    "4B3A": {
-        "when": None,  # aplica siempre
-        "set":  {"equipo": "INSUMOS AGRICOLAS", "gerencia": "OTROS"},
-    },
-    "4B94": {
-        "when": None,
-        "set":  {
-            "equipo":      "AGREGADOS",
-            "gerencia":    "OTROS",
-            "vendedor_ok": "AGREGADOS",
-        },
-    },
-    "4B95": {
-        "when": {"equipo": "DESARROLLADORES OTROS DPTOS."},
-        "set":  {
-            "equipo":      "DESARROLLADORES SCZ",
-            "gerencia":    "GERENCIA SCZ+CHACO",
-            "vendedor_ok": "FREDDY ROMAN",
-        },
-    },
 }
 
 
 @dataclass(slots=True)
-class Gd20NormalizeUseCase:
+class Gd20CdZeRule:
+    """CD/ZE cruzando stg_query — ver docstring de _lookup_query."""
 
-    cartera_df: pd.DataFrame
-    equipo_df: pd.DataFrame
-    almacen_df: pd.DataFrame
-    material_df: pd.DataFrame
-    centro_df: pd.DataFrame
     query_df: pd.DataFrame
-    localidad_df: pd.DataFrame
+    centro_df: pd.DataFrame
     config: dict | None = None
 
     def _default(self, key: str) -> str:
         if self.config is None:
-            return _HARDCODED_DEFAULTS[key]
-        return self.config.get("defaults", {}).get(key, _HARDCODED_DEFAULTS[key])
+            return _RULE_DEFAULTS[key]
+        return self.config.get("defaults", {}).get(key, _RULE_DEFAULTS[key])
 
     def execute(self, df: pd.DataFrame) -> pd.DataFrame:
-        # ORDEN IMPORTANTE: material va ANTES que equipo porque la lógica
-        # de equipo del cliente es condicional al producto (si contiene
-        # "CEMENTO" usa vendedor_sap, sino usa grupo_vendedores).
-        df = self._lookup_cartera(df)
-        df = self._lookup_material(df)   # nombre_producto (para condicional CEMENTO)
-        df = self._lookup_equipo(df)     # equipo + vendedor + vendedor_ok + gerencia
-        df = self._lookup_almacen(df)
-        df = self._lookup_centro(df)
-        df = self._lookup_query(df)
-        df = self._lookup_localidad(df)
-        df = self._lookup_centro_equipo_override(df)
-        # NOTA: _lookup_query_nombre_destinatario DESACTIVADO por default.
-        # QUERY.Nombre_del_centro_destinatario contiene el nombre del PUNTO
-        # DE DESCARGA con dirección abreviada (ej. "REGNANS/COTOCA"),
-        # NO el nombre legal/completo del cliente. Pisa el valor correcto
-        # que ya trae cartera (ej. "CONSTRUCTORA REGNANS S.R.L.").
-        # Validado contra BASE PANEL del cliente: BP usa nombre de cartera
-        # (54% mismatch entre cartera y QUERY en GD20 mayo 2026).
-        # El método sigue disponible si en el futuro se necesita activarlo
-        # con target específico (ej. solo para destinatarios = centros 4xxx).
-        if (self.config or {}).get("override_nombre_dest_from_query", False):
-            df = self._lookup_query_nombre_destinatario(df)
-        return df
-
-    def _lookup_cartera(self, df: pd.DataFrame) -> pd.DataFrame:
-        if self.cartera_df.empty:
-            logger.warning("int_cartera vacio")
-            return df
-
-        cart = self.cartera_df[[
-            "cliente", "nombre_cliente", "vendedor",
-            "poblacion", "attribute_6", "region_nombre",
-        ]].drop_duplicates("cliente", keep="first")
-        cart["cliente"] = to_int64(cart["cliente"])
-
-        df["_dest_int"] = to_int64(df["destinatario"])
-        d1 = cart.rename(columns={
-            "nombre_cliente": "nombre_destinatario",
-            "vendedor":       "vendedor_sap",
-            "poblacion":      "localidad",
-            "attribute_6":    "provincia",
-            "region_nombre":  "dpto",
-            "cliente":        "_dest_int",
-        })
-        df = df.merge(d1[["_dest_int", "nombre_destinatario", "vendedor_sap",
-                          "localidad", "provincia", "dpto"]],
-                      on="_dest_int", how="left")
-
-        df["_pag_int"] = to_int64(df["pagador"])
-        d2 = cart.rename(columns={
-            "nombre_cliente": "nombre_pagador",
-            "poblacion":      "localidad_pagador",
-            "region_nombre":  "dpto_pagador",
-            "cliente":        "_pag_int",
-        })
-        df = df.merge(d2[["_pag_int", "nombre_pagador", "localidad_pagador", "dpto_pagador"]],
-                      on="_pag_int", how="left")
-
-        df["_sol_int"] = to_int64(df["emisor_solicitante"])
-        d3 = cart.rename(columns={"nombre_cliente": "nombre_solicitante", "cliente": "_sol_int"})
-        df = df.merge(d3[["_sol_int", "nombre_solicitante"]], on="_sol_int", how="left")
-
-        cart_attr10 = self.cartera_df[["cliente", "attribute_10"]].drop_duplicates(
-            "cliente", keep="first")
-        cart_attr10["cliente"] = to_int64(cart_attr10["cliente"])
-        df = df.merge(
-            cart_attr10.rename(columns={"attribute_10": "_attr10_dest", "cliente": "_dest_int"}),
-            on="_dest_int", how="left",
-        )
-        df = df.drop(columns=["_dest_int", "_pag_int", "_sol_int"], errors="ignore")
-
-        for col in ["nombre_destinatario", "vendedor_sap", "localidad", "provincia",
-                    "dpto", "nombre_pagador", "localidad_pagador", "dpto_pagador",
-                    "nombre_solicitante"]:
-            if col in df.columns:
-                df[col] = df[col].fillna(self._default(col))
-        return df
-
-    def _lookup_equipo(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Replica EXACTA de las 4 formulas del cliente (BASE PANEL cols BC-BG).
-
-        Cliente:
-            BC (vendedor_sap)  = ya viene de _lookup_cartera (CARTERA col 33)
-            BD (vendedor)      = VLOOKUP(BC, REFERENCIAS!O:S, 2, 0)
-            BE (vendedor_ok)   = VLOOKUP(BC, REFERENCIAS!O:S, 3, 0)
-            BF (gerencia)      = VLOOKUP(BG, REFERENCIAS!R:S, 2, 0)      ← por EQUIPO
-            BG (equipo)        = IF(producto contiene "CEMENTO",
-                                    VLOOKUP(BC, REFERENCIAS!O:S, 4, 0),   ← por vendedor_sap
-                                    VLOOKUP(Q,  REFERENCIAS!N:S, 5, 0))   ← por grupo_vendedores
-
-        Es decir:
-          - vendedor, vendedor_ok: SIEMPRE por vendedor_sap.
-          - equipo: CONDICIONAL al producto.
-            * Si producto contiene "CEMENTO" → equipo via vendedor_sap.
-            * Si NO contiene "CEMENTO" → equipo via grupo_vendedores (Q del raw).
-          - gerencia: por equipo (resultado del lookup anterior).
-
-        Requiere que nombre_producto YA este calculado (_lookup_material).
-        """
-        if self.equipo_df.empty:
-            df["vendedor_ok"] = self._default("vendedor_ok")
-            df["equipo"]      = self._default("equipo")
-            df["gerencia"]    = self._default("gerencia")
-            df["vendedor"]    = self._default("vendedor")
-            return df
-
-        # --- 1) vendedor + vendedor_ok: lookup por vendedor_sap (SIEMPRE) ---
-        eq_by_sap = self.equipo_df[["vendedor_sap", "vendedor", "vendedor_ok", "equipo"]].dropna(
-            subset=["vendedor_sap"]).drop_duplicates("vendedor_sap", keep="first")
-        df = df.merge(
-            eq_by_sap.rename(columns={"equipo": "_equipo_por_vendedor"}),
-            on="vendedor_sap", how="left",
-        )
-
-        # --- 2) equipo via grupo_vendedores (fallback cuando NO es cemento) ---
-        eq_by_grupo = self.equipo_df[["grupo_vendedores", "equipo"]].dropna(
-            subset=["grupo_vendedores"]).drop_duplicates("grupo_vendedores", keep="first")
-        df = df.merge(
-            eq_by_grupo.rename(columns={"equipo": "_equipo_por_grupo"}),
-            on="grupo_vendedores", how="left",
-        )
-
-        # --- 3) Aplicar la lógica condicional CEMENTO ---
-        if "nombre_producto" in df.columns:
-            es_cemento = df["nombre_producto"].astype("string").str.contains(
-                "CEMENTO", case=False, na=False,
-            )
-        else:
-            # Si nombre_producto no esta calculado, fallback al vendedor_sap (caso edge)
-            logger.warning("_lookup_equipo: nombre_producto no disponible, "
-                           "usando vendedor_sap como default para equipo")
-            es_cemento = pd.Series(True, index=df.index)
-
-        df["equipo"] = df["_equipo_por_vendedor"].where(
-            es_cemento, df["_equipo_por_grupo"],
-        )
-        n_cemento = int(es_cemento.sum())
-        n_no_cemento = int((~es_cemento).sum())
-        logger.info(
-            "Equipo lookup: %d filas via vendedor_sap (CEMENTO), %d via grupo_vendedores",
-            n_cemento, n_no_cemento,
-        )
-
-        # --- 4) gerencia: VLOOKUP por equipo en REF.Equipo col S ---
-        eq_to_ger = self.equipo_df[["equipo", "gerencia"]].dropna(
-            subset=["equipo"]).drop_duplicates("equipo", keep="first")
-        df = df.merge(eq_to_ger, on="equipo", how="left", suffixes=("", "_ger"))
-
-        # --- 5) Limpieza + defaults ---
-        df["vendedor"]    = df["vendedor"].fillna(self._default("vendedor"))
-        df["vendedor_ok"] = df["vendedor_ok"].fillna(self._default("vendedor_ok"))
-        df["equipo"]      = df["equipo"].fillna(self._default("equipo"))
-        df["gerencia"]    = df["gerencia"].fillna(self._default("gerencia"))
-        df = df.drop(
-            columns=["_equipo_por_vendedor", "_equipo_por_grupo"],
-            errors="ignore",
-        )
-        return df
-
-    def _lookup_almacen(self, df: pd.DataFrame) -> pd.DataFrame:
-        if self.almacen_df.empty:
-            df["sub_canal"] = self._default("sub_canal")
-            df["canal"]     = self._default("canal")
-            df = df.drop(columns=["_attr10_dest"], errors="ignore")
-            return df
-
-        alm = self.almacen_df[["descripcion_sap", "segmento", "canal"]].drop_duplicates(
-            "descripcion_sap", keep="first")
-        df = df.merge(
-            alm.rename(columns={"descripcion_sap": "_attr10_dest", "segmento": "sub_canal"}),
-            on="_attr10_dest", how="left",
-        )
-        df["sub_canal"] = df["sub_canal"].fillna(self._default("sub_canal"))
-        df["canal"]     = df["canal"].fillna(self._default("canal"))
-        df = df.drop(columns=["_attr10_dest"], errors="ignore")
-        return df
-
-    def _lookup_material(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Replica VLOOKUP(material, REFERENCIAS!L:M, 2, 0) → nombre_producto.
-
-        Debe ejecutarse ANTES de _lookup_equipo porque la logica de equipo
-        depende de si nombre_producto contiene 'CEMENTO' o no.
-        """
-        if self.material_df.empty:
-            df["nombre_producto"] = self._default("nombre_producto")
-            return df
-
-        mat = self.material_df[["codigo", "descripcion"]].drop_duplicates("codigo", keep="first")
-        mat["codigo"] = to_int64(mat["codigo"])
-
-        df["_mat_int"] = to_int64(df["material"])
-        df = df.merge(
-            mat.rename(columns={"codigo": "_mat_int", "descripcion": "nombre_producto"}),
-            on="_mat_int", how="left",
-        )
-        df["nombre_producto"] = df["nombre_producto"].fillna(self._default("nombre_producto"))
-        df = df.drop(columns=["_mat_int"], errors="ignore")
-        return df
-
-    def _lookup_centro(self, df: pd.DataFrame) -> pd.DataFrame:
-        default_tv = self._default("tipo_venta")
-        df["codigo_cliente"] = pd.NA
-
-        if self.centro_df.empty or "codigo_sap_cliente" not in self.centro_df.columns:
-            df["tipo_venta"] = default_tv
-            return df
-
-        cen = self.centro_df[["codigo_sap_cliente", "tipo"]].dropna(
-            subset=["codigo_sap_cliente"]).drop_duplicates("codigo_sap_cliente", keep="first")
-        cen["codigo_sap_cliente"] = to_int64(cen["codigo_sap_cliente"])
-        df["_pag_for_tipo"] = to_int64(df["pagador"])
-        df = df.merge(
-            cen.rename(columns={"codigo_sap_cliente": "_pag_for_tipo", "tipo": "tipo_venta"}),
-            on="_pag_for_tipo", how="left",
-        )
-        df["tipo_venta"] = df["tipo_venta"].fillna(default_tv)
-        df = df.drop(columns=["_pag_for_tipo"], errors="ignore")
-
-        if "centro" in self.centro_df.columns and "centro" in df.columns:
-            cen2 = self.centro_df[["centro", "codigo_sap_cliente"]].dropna(
-                subset=["centro"]).drop_duplicates("centro", keep="first")
-            df = df.drop(columns=["codigo_cliente"], errors="ignore")
-            df = df.merge(
-                cen2.rename(columns={"codigo_sap_cliente": "codigo_cliente"}),
-                on="centro", how="left",
-            )
-            df["codigo_cliente"] = df["codigo_cliente"].fillna(0)
-        return df
+        return self._lookup_query(df)
 
     def _lookup_query(self, df: pd.DataFrame) -> pd.DataFrame:
         """Resuelve centro_distribucion + zona_entrega cruzando stg_query.
@@ -614,39 +344,14 @@ class Gd20NormalizeUseCase:
         logger.info("CD capa 3 (pagador→destinatario_mcia BUSCARV): %d filas resueltas", n)
         return df
 
-    def _lookup_localidad(self, df: pd.DataFrame) -> pd.DataFrame:
-        """REGION M: si DPTO=='SANTA CRUZ' lookup case-insensitive
-        LOCALIDAD -> LOCALIDAD IM (int_ref_localidad). Sino, REGION M = DPTO.
-        """
-        df["region_m"] = df["dpto"].astype("string")
-        if self.localidad_df.empty:
-            logger.warning("int_ref_localidad vacio; region_m queda = dpto plano")
-            return df
 
-        is_sc = df["dpto"].astype("string").str.upper().str.strip() == "SANTA CRUZ"
-        if not is_sc.any():
-            return df
+@dataclass(slots=True)
+class CentroOverridesRule:
+    """Overrides por centro físico. Datos: config.yaml:centro_overrides."""
 
-        loc = self.localidad_df[["localidad_despacho", "localidad_im"]].dropna(
-            subset=["localidad_despacho"]).drop_duplicates(
-            "localidad_despacho", keep="first").copy()
-        loc["_loc_norm"] = loc["localidad_despacho"].astype("string").str.upper().str.strip()
-        loc = loc.drop_duplicates("_loc_norm", keep="first")
+    config: dict | None = None
 
-        df["_loc_norm"] = df["localidad"].astype("string").str.upper().str.strip()
-        df = df.merge(
-            loc[["_loc_norm", "localidad_im"]].rename(columns={"localidad_im": "_region_m_lookup"}),
-            on="_loc_norm", how="left",
-        )
-
-        sc_default = self._default("region_m_sc_default")
-        df.loc[is_sc, "region_m"] = (
-            df.loc[is_sc, "_region_m_lookup"].fillna(sc_default)
-        )
-        df = df.drop(columns=["_loc_norm", "_region_m_lookup"], errors="ignore")
-        return df
-
-    def _lookup_centro_equipo_override(self, df: pd.DataFrame) -> pd.DataFrame:
+    def execute(self, df: pd.DataFrame) -> pd.DataFrame:
         """Sobreescribe equipo/gerencia/vendedor_ok segun centro fisico.
 
         Regla del Excel original (validada contra BASE PANEL mayo 2026):
@@ -663,9 +368,11 @@ class Gd20NormalizeUseCase:
         Resuelve ~287 mismatches en equipo, ~131 en gerencia, ~78 en
         vendedor_ok/vendedor del set comparativo BASE PANEL.
         """
-        overrides = (self.config or {}).get(
-            "centro_overrides", _HARDCODED_CENTRO_OVERRIDES,
-        )
+        overrides = (self.config or {}).get("centro_overrides") or {}
+        if not overrides:
+            logger.warning(
+                "CentroOverridesRule sin 'centro_overrides' en config.yaml "
+                "del reporte — no se aplica ningun override")
         if not overrides or "centro" not in df.columns:
             return df
 
@@ -693,7 +400,14 @@ class Gd20NormalizeUseCase:
             logger.info("Centro overrides total: %d filas modificadas", applied_total)
         return df
 
-    def _lookup_query_nombre_destinatario(self, df: pd.DataFrame) -> pd.DataFrame:
+
+@dataclass(slots=True)
+class NombreDestQueryRule:
+    """Override opcional nombre_destinatario desde QUERY (OFF por default)."""
+
+    query_df: pd.DataFrame
+
+    def execute(self, df: pd.DataFrame) -> pd.DataFrame:
         """Override nombre_destinatario con QUERY.Nombre del centro destinatario.
 
         Cruce por documento_comercial = QUERY.documento_venta.
@@ -724,4 +438,189 @@ class Gd20NormalizeUseCase:
             df["nombre_destinatario"] = pd.NA
         df.loc[mask, "nombre_destinatario"] = df.loc[mask, "_nombre_dest_query"]
         df = df.drop(columns=["_doc_q", "_nombre_dest_query"], errors="ignore")
+        return df
+
+
+_HARDCODED_CONSTANTS: dict[str, float | int] = {
+    "numero_cuenta_bonificacion": 33111020,
+    "codigo_cliente_invalido":    0,
+    "factor_ingreso_bruto":       0.87,
+    "factor_volumen_granel_m3":   1.42,
+    "factor_volumen_embolsado":   20,
+}
+
+
+@dataclass(slots=True)
+class Gd20BusinessRulesUseCase:
+
+    config: dict | None = None
+
+    def _const(self, key: str):
+        if self.config is None:
+            return _HARDCODED_CONSTANTS[key]
+        return self.config.get("constants", {}).get(key, _HARDCODED_CONSTANTS[key])
+
+    def execute(self, df: pd.DataFrame) -> pd.DataFrame:
+        # tipo_embalaje se calcula ANTES, en columnas.yaml (op case);
+        # volumen_toneladas lo consume desde el df ya enriquecido.
+        df = self._calc_ingreso_bruto(df)
+        df = self._calc_dates(df)
+        df = self._calc_volumen_y_bonificaciones(df)
+        # NOTA: _calc_region_m REMOVIDO. REGION M ahora la calcula
+        # Gd20NormalizeUseCase._lookup_localidad usando int_ref_localidad.
+        df = self._rule_bonificacion_cleanup(df)
+        # NOTA: _rule_codigo_cliente_zero_fill DESACTIVADO por default.
+        # Pisaba los IDs numericos (destinatario, customer_bill_to,
+        # emisor_solicitante) con el valor de pagador cuando
+        # codigo_cliente=0. Validado contra BASE PANEL del Excel:
+        # BP NO aplica esta sobreescritura sobre los IDs. Resultaba en
+        # 171 filas con destinatario incorrecto (= pagador en vez del
+        # rebate real del raw SAP).
+        # El metodo sigue disponible si en el futuro se necesita activarlo
+        # via gd20.yaml con target_cols especificas (ej: solo nombres).
+        df = self._rule_post_replaces(df)
+        return df
+
+
+
+    def _calc_ingreso_bruto(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Calcula ingreso_bruto replicando la formula EXACTA del Excel cliente:
+
+            =SI( O( Y(DPTO_PAGADOR='Pando'; INCOTERMS='CIF');
+                    Y(DPTO_PAGADOR='GENERIC'; INCOTERMS='FCA') );
+                 moneda_sociedad * -1;
+                 (moneda_sociedad / 0.87) * -1 )
+
+        Es decir:
+        - Si (dpto_pagador='Pando' AND incoterms='CIF') OR
+             (dpto_pagador='GENERIC' AND incoterms='FCA')
+          → moneda_sociedad * -1   (SIN dividir por 0.87, son exportaciones
+            o ventas a Pando CIF donde el monto ya viene neto)
+        - SINO → (moneda_sociedad / 0.87) * -1   (default, descuenta IVA)
+
+        Validado vs BASE PANEL mayo 2026: 0 filas mismatch (1995/1995).
+        """
+        factor = float(self._const("factor_ingreso_bruto"))
+        moneda = pd.to_numeric(df["moneda_sociedad"], errors="coerce")
+
+        # Default: divide por factor e invierte signo
+        df["ingreso_bruto"] = moneda / factor * -1
+
+        # Excepcion: dpto_pagador+incoterms especificos → sin factor
+        if "dpto_pagador" in df.columns and "incoterms" in df.columns:
+            dpto = df["dpto_pagador"].astype("string").str.strip().str.upper()
+            inco = df["incoterms"].astype("string").str.strip().str.upper()
+            cond_pando = (dpto == "PANDO") & (inco == "CIF")
+            cond_generic = (dpto == "GENERIC") & (inco == "FCA")
+            mask = cond_pando | cond_generic
+            n = int(mask.sum())
+            if n > 0:
+                df.loc[mask, "ingreso_bruto"] = moneda.loc[mask] * -1
+                logger.info(
+                    "Rule ingreso_bruto sin factor: %d filas "
+                    "(Pando+CIF=%d, GENERIC+FCA=%d)",
+                    n, int(cond_pando.sum()), int(cond_generic.sum()),
+                )
+        return df
+
+    @staticmethod
+    def _calc_dates(df: pd.DataFrame) -> pd.DataFrame:
+        fe = pd.to_datetime(df["fe_contabilizacion"], errors="coerce")
+        df["dia"]  = fe.dt.day.astype("Int64")
+        df["mes"]  = fe.dt.month.astype("Int64")
+        df["anio"] = fe.dt.year.astype("Int64")
+        return df
+
+    def _calc_volumen_y_bonificaciones(self, df: pd.DataFrame) -> pd.DataFrame:
+        cantidad = pd.to_numeric(df["cantidad"], errors="coerce")
+        emb = df["tipo_embalaje"].astype("string")
+        f_m3 = float(self._const("factor_volumen_granel_m3"))
+        f_emb = float(self._const("factor_volumen_embolsado"))
+
+        vol = pd.Series(0.0, index=df.index, dtype="float64")
+        vol.loc[emb == "Granel M3"] = (cantidad * -1) * f_m3
+        vol.loc[emb == "Granel t"]  = cantidad * -1
+        vol.loc[emb == "Embolsado"] = (cantidad * -1) / f_emb
+        df["volumen_toneladas"] = vol
+
+        bonif_account = int(self._const("numero_cuenta_bonificacion"))
+        nc = pd.to_numeric(df["numero_cuenta"], errors="coerce")
+        df["bonificaciones"] = vol.where(nc == bonif_account, other=pd.NA)
+        return df
+
+    def _rule_bonificacion_cleanup(self, df: pd.DataFrame) -> pd.DataFrame:
+        rule = (self.config or {}).get("bonificacion_cleanup", {})
+        if rule and not rule.get("enabled", True):
+            return df
+        if "numero_cuenta" not in df.columns:
+            logger.warning("Rule bonificacion_cleanup skipped: falta col 'numero_cuenta'")
+            return df
+
+        bonif_account = int(self._const("numero_cuenta_bonificacion"))
+        nc = pd.to_numeric(df["numero_cuenta"], errors="coerce")
+        is_bonif = nc == bonif_account
+        n = int(is_bonif.sum())
+        if n == 0:
+            return df
+
+        if "moneda_sociedad" in df.columns:
+            df.loc[is_bonif, "moneda_sociedad"] = None
+        if "volumen_toneladas" in df.columns:
+            vol = pd.to_numeric(df["volumen_toneladas"], errors="coerce")
+            df.loc[is_bonif, "volumen_toneladas"] = -vol.loc[is_bonif]
+        logger.info("Rule bonificacion_cleanup: %d filas (moneda=NULL, vol invertido)", n)
+        return df
+
+    def _rule_codigo_cliente_zero_fill(self, df: pd.DataFrame) -> pd.DataFrame:
+        rule = (self.config or {}).get("codigo_cliente_zero_fill", {})
+        if rule and not rule.get("enabled", True):
+            return df
+        if "codigo_cliente" not in df.columns:
+            logger.warning("Rule codigo_cliente_zero_fill skipped: falta col 'codigo_cliente'")
+            return df
+
+        invalido = int(self._const("codigo_cliente_invalido"))
+        cc = pd.to_numeric(df["codigo_cliente"], errors="coerce")
+        is_zero = cc == invalido
+        n = int(is_zero.sum())
+        if n == 0:
+            return df
+
+        target_cols = (rule.get("fill_columns")
+                       or ["emisor_solicitante", "customer_bill_to", "destinatario"])
+        fill_from = rule.get("fill_from") or "pagador"
+        if fill_from not in df.columns:
+            logger.warning("Rule codigo_cliente_zero_fill skipped: falta col '%s'", fill_from)
+            return df
+
+        for col in target_cols:
+            if col in df.columns:
+                df.loc[is_zero, col] = df.loc[is_zero, fill_from]
+        logger.info("Rule codigo_cliente_zero_fill: %d filas (cols %s <- %s)",
+                    n, target_cols, fill_from)
+        return df
+
+    def _rule_post_replaces(self, df: pd.DataFrame) -> pd.DataFrame:
+        replaces = (self.config or {}).get("post_replaces", {})
+        if not replaces:
+            # NOTA: removidos GENERIC→EXPORTACION en dpto/region_m/dpto_pagador.
+            # Validado contra BASE PANEL del cliente (1995 filas mayo 2026):
+            # el cliente DEJA 'GENERIC' literal en esos campos. Aplicar el
+            # replace generaba 18 filas mismatch (todas Z4RF exportación).
+            # tipo_venta AGENCIA→VENTA INDIRECTA se mantiene (validado OK).
+            replaces = {
+                "tipo_venta":   {"AGENCIA": "VENTA INDIRECTA"},
+            }
+
+        applied = []
+        for col, mapping in replaces.items():
+            if col not in df.columns:
+                continue
+            series = df[col].astype("string")
+            for old, new in mapping.items():
+                series = series.str.replace(old, new, regex=False)
+            df[col] = series
+            applied.append(col)
+        if applied:
+            logger.info("Rule post_replaces: aplicado en cols %s", applied)
         return df

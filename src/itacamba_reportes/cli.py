@@ -27,13 +27,9 @@ from itacamba_reportes.config.yaml_loader import (
 )
 from itacamba_reportes.ingestion.excel_reader import ExcelReader
 from itacamba_reportes.persistence.excel_report_exporter import ExcelReportExporter
-from itacamba_reportes.persistence.models.stg.stg_gd20_model import StgGd20Model
 from itacamba_reportes.persistence.models.stg.stg_query_model import StgQueryModel
 from itacamba_reportes.persistence.repositories.cartera_repository_sql import (
     CarteraIntRepositoryImpl,
-)
-from itacamba_reportes.persistence.repositories.gd20_repository_sql import (
-    Gd20IntRepositoryImpl,
 )
 from itacamba_reportes.persistence.repositories.query_repository_sql import (
     IntQueryRepositoryImpl,
@@ -43,9 +39,6 @@ from itacamba_reportes.persistence.repositories.stg_cartera_repository_sql impor
     StgCarteraIntRepositoryImpl,
 )
 from itacamba_reportes.persistence.repositories.stg_repository import StgRepository
-from itacamba_reportes.persistence.repositories.ventas_bi_repository_sql import (
-    VentasBiIntRepositoryImpl,
-)
 from itacamba_reportes.pipelines.cartera import CarteraPipeline
 from itacamba_reportes.reportes.despacho_bi.pipeline import (
     DespachoBiPipeline,
@@ -56,7 +49,10 @@ from itacamba_reportes.reportes.despacho_mes.pipeline import (
     build_pipeline as build_despacho_mes,
 )
 from itacamba_reportes.pipelines.file_state import FileStateTracker
-from itacamba_reportes.pipelines.gd20 import Gd20Pipeline
+from itacamba_reportes.reportes.gd20_ventas_bi.pipeline import (
+    Gd20Pipeline,
+    build_pipeline as build_gd20,
+)
 from itacamba_reportes.pipelines.query import QueryPipeline
 from itacamba_reportes.pipelines.references import ReferencesPipeline
 from itacamba_reportes.pipelines.run_all import RunAllOrchestrator
@@ -144,18 +140,7 @@ def _build_query_pipeline() -> QueryPipeline:
 
 
 def _build_gd20_pipeline() -> Gd20Pipeline:
-    config = load_pipeline_config(_CONFIGS_DIR, "gd20")
-    reader = _excel_reader("gd20", config)
-    return Gd20Pipeline(
-        reader=reader,
-        stg_repo=StgRepository(StgGd20Model),
-        gd20_repo=Gd20IntRepositoryImpl(),
-        ventas_bi_repo=VentasBiIntRepositoryImpl(),
-        source_path=reader.resolve_path(),
-        state_tracker=_state_tracker(),
-        config=config,
-        exporter=_build_exporter(),
-    )
+    return build_gd20(exporter=_build_exporter(), state_tracker=_state_tracker())
 
 
 def _build_despacho_bi_pipeline() -> DespachoBiPipeline:

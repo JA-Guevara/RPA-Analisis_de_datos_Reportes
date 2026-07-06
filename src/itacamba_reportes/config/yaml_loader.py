@@ -77,7 +77,7 @@ def load_pipeline_config(configs_dir: Path, name: str) -> dict[str, Any]:
 
 
 _CATALOG_OPS: frozenset[str] = frozenset(
-    {"copy", "const", "concat", "lookup", "branch"},
+    {"copy", "const", "case", "concat", "lookup", "branch"},
 )
 
 

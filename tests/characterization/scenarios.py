@@ -92,7 +92,9 @@ class NewWorld:
         return apply_query_mapping(df, config)
 
     def gd20_mapping(self, df, config):
-        from itacamba_reportes.transforms.gd20_mapping import apply_gd20_mapping
+        from itacamba_reportes.reportes.gd20_ventas_bi.mapping import (
+            apply_gd20_mapping,
+        )
         return apply_gd20_mapping(df, config)
 
     def despacho_bi_mapping(self, df, config):
@@ -307,7 +309,8 @@ def compute_scenarios(world) -> dict[str, Any]:
     out["mapping_query_cfg"] = df_snapshot(world.query_mapping(_mk_query_mapping_input(), q_cfg))
     out["mapping_query_none"] = df_snapshot(world.query_mapping(_mk_query_mapping_input(), None))
 
-    g_cfg = world.load_config("gd20")
+    from itacamba_reportes.reportes.gd20_ventas_bi import load_config as _g20_cfg
+    g_cfg = _g20_cfg()
     out["mapping_gd20_cfg"] = df_snapshot(world.gd20_mapping(_mk_gd20_mapping_input(), g_cfg))
     out["mapping_gd20_none"] = df_snapshot(world.gd20_mapping(_mk_gd20_mapping_input(), None))
 

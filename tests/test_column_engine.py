@@ -191,3 +191,37 @@ def test_op_desconocida(df_base, lookups):
 def test_catalogo_vacio(df_base, lookups):
     with pytest.raises(ColumnCatalogError, match="sin bloque"):
         ColumnEngine(lookups=lookups).apply(df_base, {})
+
+
+# ── case y equals (agregados en Fase 4 para GD20) ────────────────────
+
+def test_case_mapping_con_default(df_base, lookups):
+    df = df_base.assign(umb=["M3", "S50", "XX"])
+    out = _apply(df, lookups, {
+        "tipo_embalaje": {"op": "case", "col": "umb",
+                          "mapping": {"M3": "Granel M3", "T": "Granel t",
+                                      "S50": "Embolsado", "PC": "Bolsas Vacias"},
+                          "default": "0"},
+    })
+    assert out["tipo_embalaje"].tolist() == ["Granel M3", "Embolsado", "0"]
+
+
+def test_case_columna_ausente(df_base, lookups):
+    out = _apply(df_base, lookups, {
+        "z": {"op": "case", "col": "no_existe", "mapping": {"A": "B"},
+              "default": "0"},
+    })
+    assert (out["z"] == "0").all()
+
+
+def test_branch_equals_normaliza(df_base, lookups):
+    df = df_base.assign(dpto=[" santa cruz ", "BENI", None])
+    out = _apply(df, lookups, {
+        "region_m": {"op": "branch",
+                     "if": {"col": "dpto", "equals": "SANTA CRUZ"},
+                     "then": {"op": "const", "value": "SC"},
+                     "else": {"op": "copy", "from": "dpto"}},
+    })
+    assert out["region_m"].tolist()[0] == "SC"
+    assert out["region_m"].tolist()[1] == "BENI"
+    assert pd.isna(out["region_m"].tolist()[2])

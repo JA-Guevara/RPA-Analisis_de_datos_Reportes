@@ -1,9 +1,10 @@
-"""Pipeline GD20 — Excel SAP -> stg_gd20 -> enrich (7 lookups) -> int_gd20
+"""Pipeline GD20 — Excel SAP -> stg_gd20 -> enrich -> int_gd20
 -> UPSERT SCD2 int_ventas_bi (REPORTE VENTAS BI) -> export Excel.
 
-La lógica de enrichment (Gd20NormalizeUseCase) y el merge SCD2
-(VentasBiIntRepositoryImpl) son la parte CALIBRADA del reporte:
-este pipeline solo orquesta.
+La lógica calibrada vive en el slice: columnas.yaml (lookups simples,
+ColumnEngine) + reglas.py (CD/ZE, overrides, fórmulas numéricas),
+orquestadas por enriquecimiento.enrich_gd20. El merge SCD2 es
+mecanismo de persistencia (ventas_bi_repository_sql).
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ from itacamba_reportes.persistence.models.references.localidad_model import (
 from itacamba_reportes.persistence.models.references.material_model import (
     MaterialIntModel,
 )
+from itacamba_reportes.persistence.models.stg.stg_gd20_model import StgGd20Model
 from itacamba_reportes.persistence.models.stg.stg_query_model import StgQueryModel
 from itacamba_reportes.persistence.repositories.gd20_repository_sql import (
     Gd20IntRepositoryImpl,
@@ -41,9 +43,8 @@ from itacamba_reportes.persistence.repositories.ventas_bi_repository_sql import 
 )
 from itacamba_reportes.pipelines.file_state import FileFingerprint, FileStateTracker
 from itacamba_reportes.pipelines.runner import PipelineResult, run_file_pipeline
-from itacamba_reportes.transforms.gd20_business_rules import Gd20BusinessRulesUseCase
-from itacamba_reportes.transforms.gd20_mapping import apply_gd20_mapping
-from itacamba_reportes.transforms.gd20_normalize import Gd20NormalizeUseCase
+from itacamba_reportes.reportes.gd20_ventas_bi.enriquecimiento import enrich_gd20
+from itacamba_reportes.reportes.gd20_ventas_bi.mapping import apply_gd20_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -97,17 +98,16 @@ class Gd20Pipeline:
                     len(lk["material"]), len(lk["centro"]), len(lk["query"]),
                     len(lk["localidad"]), perf_counter() - t)
 
-        logger.info("Stage 4 - ENRICH (mapping + normalize + rules)")
+        logger.info("Stage 4 - ENRICH (catalogo + reglas del slice)")
         t = perf_counter()
         df = apply_gd20_mapping(df_raw, self.config)
-        df = Gd20NormalizeUseCase(
+        df = enrich_gd20(
+            df, self.config,
             cartera_df=lk["cartera"], equipo_df=lk["equipo"],
             almacen_df=lk["almacen"], material_df=lk["material"],
             centro_df=lk["centro"], query_df=lk["query"],
             localidad_df=lk["localidad"],
-            config=self.config,
-        ).execute(df)
-        df = Gd20BusinessRulesUseCase(config=self.config).execute(df)
+        )
         logger.info("Enrich completo: %d filas x %d cols (%.2fs)",
                     *df.shape, perf_counter() - t)
 
@@ -177,3 +177,30 @@ class Gd20Pipeline:
             "query":     load_lookup_df(StgQueryModel),
             "localidad": load_lookup_df(LocalidadIntModel),
         }
+
+
+def build_pipeline(
+    exporter: ExcelReportExporter | None = None,
+    state_tracker: FileStateTracker | None = None,
+) -> Gd20Pipeline:
+    """Composition root del reporte: config + reader del slice."""
+    from itacamba_reportes.config.paths import DataPaths
+    from itacamba_reportes.config.sources import excel_source_from_cfg
+    from itacamba_reportes.reportes.gd20_ventas_bi import SLICE_DIR, load_config
+
+    cfg = load_config()
+    source = excel_source_from_cfg("gd20", cfg["source"])
+    reader = ExcelReader(source=source, data_path=DataPaths.from_env().inbox)
+    if state_tracker is None:
+        state_path = SLICE_DIR.parents[3] / "storage" / "state" / "pipeline_state.json"
+        state_tracker = FileStateTracker(state_path)
+    return Gd20Pipeline(
+        reader=reader,
+        stg_repo=StgRepository(StgGd20Model),
+        gd20_repo=Gd20IntRepositoryImpl(),
+        ventas_bi_repo=VentasBiIntRepositoryImpl(),
+        source_path=reader.resolve_path(),
+        state_tracker=state_tracker,
+        config=cfg,
+        exporter=exporter,
+    )
