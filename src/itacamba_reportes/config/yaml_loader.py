@@ -52,7 +52,7 @@ class YamlDatasetLoader:
         self._configs_dir = Path(configs_dir)
 
     def load(self, dataset: str) -> DatasetSpec:
-        path = self._configs_dir / f"{dataset}.yaml"
+        path = dataset_config_path(self._configs_dir, dataset)
         data = _read_yaml(path)
         data.setdefault("dataset", dataset)
         try:
@@ -63,9 +63,33 @@ class YamlDatasetLoader:
         return spec
 
 
+# Datasets cuya configuración vive en su slice (reportes/<slice>/config.yaml).
+# Al migrar un reporte al patrón por-carpeta se agrega acá; el resto del
+# código sigue llamando load_pipeline_config/YamlDatasetLoader sin cambios.
+_SLICE_DE_DATASET: dict[str, str] = {
+    "cartera":      "cartera",
+    "query":        "query",
+    "gd20":         "gd20_ventas_bi",
+    "despacho_bi":  "despacho_bi",
+    "despacho_mes": "despacho_mes",
+    "references":   "referencias",
+}
+
+
+def dataset_config_path(configs_dir: Path, name: str) -> Path:
+    """Ruta real de la config del dataset (slice si está migrado)."""
+    slice_name = _SLICE_DE_DATASET.get(name)
+    if slice_name is not None:
+        slice_cfg = (Path(__file__).resolve().parents[1]
+                     / "reportes" / slice_name / "config.yaml")
+        if slice_cfg.exists():
+            return slice_cfg
+    return Path(configs_dir) / f"{name}.yaml"
+
+
 def load_pipeline_config(configs_dir: Path, name: str) -> dict[str, Any]:
     """Dict del YAML del pipeline, con `source:` validado si existe."""
-    path = Path(configs_dir) / f"{name}.yaml"
+    path = dataset_config_path(configs_dir, name)
     data = _read_yaml(path)
     if "source" in data and data["source"] is not None:
         try:

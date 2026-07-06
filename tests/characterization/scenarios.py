@@ -88,7 +88,7 @@ class NewWorld:
         )
 
     def query_mapping(self, df, config):
-        from itacamba_reportes.transforms.query_mapping import apply_query_mapping
+        from itacamba_reportes.reportes.query.mapping import apply_query_mapping
         return apply_query_mapping(df, config)
 
     def gd20_mapping(self, df, config):
@@ -104,13 +104,13 @@ class NewWorld:
         return apply_despacho_bi_mapping(df, config)
 
     def normalize_cartera(self, df, spec):
-        from itacamba_reportes.transforms.cartera_normalize import (
+        from itacamba_reportes.reportes.cartera.normalizacion import (
             NormalizeCarteraFromSpec,
         )
         return NormalizeCarteraFromSpec(spec).execute(df)
 
     def cartera_rules(self, spec):
-        from itacamba_reportes.transforms.cartera_business_rules import (
+        from itacamba_reportes.reportes.cartera.reglas import (
             ApplyDonationsFromSpecRule,
             ValidateRegionFromLookupRule,
         )

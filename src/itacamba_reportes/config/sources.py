@@ -28,29 +28,8 @@ def excel_source_from_cfg(name: str, cfg: dict) -> ExcelSource:
     )
 
 
-# Datasets cuya config vive en su slice (reportes/<slice>/config.yaml).
-# Al migrar un reporte al patron por-carpeta, agregarlo aca.
-_SLICE_DE_DATASET: dict[str, str] = {
-    "gd20": "gd20_ventas_bi",
-    "despacho_bi": "despacho_bi",
-    "despacho_mes": "despacho_mes",
-}
-
-
-def _load_dataset_config(configs_dir: Path, dataset: str) -> dict:
-    """Config del dataset: slice si esta migrado, assets/configs si no."""
-    slice_name = _SLICE_DE_DATASET.get(dataset)
-    if slice_name is not None:
-        slice_cfg = (Path(__file__).resolve().parents[1]
-                     / "reportes" / slice_name / "config.yaml")
-        if slice_cfg.exists():
-            from itacamba_reportes.config.yaml_loader import _read_yaml
-            return _read_yaml(slice_cfg)
-    return load_pipeline_config(configs_dir, dataset)
-
-
 def load_excel_source(configs_dir: Path, dataset: str) -> ExcelSource:
-    cfg = _load_dataset_config(configs_dir, dataset)
+    cfg = load_pipeline_config(configs_dir, dataset)
     source = cfg.get("source")
     if not source:
         raise ValueError(f"config de '{dataset}' no define sección 'source'")

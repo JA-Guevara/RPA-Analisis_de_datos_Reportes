@@ -9,14 +9,19 @@ itacamba_reportes/
 ├── config/          ← env, paths, specs Pydantic, loader YAML, sources Excel
 ├── contracts/       ← schemas Pandera de validación de salida
 ├── ingestion/       ← ExcelReader + ExcelSource (lectura configurable)
-├── pipelines/       ← orquestación: runner común (change-detection) + 1 módulo
-│                      por pipeline + run_all (DAG secuencial fail-fast)
-├── transforms/      ← normalize / business_rules / mapping por dataset
-│                      + column_engine (ejecuta catálogos declarativos de
-│                      assets/configs/columnas/ — las fórmulas del cliente
-│                      calibradas viven como YAML, no como código)
-├── persistence/     ← engine, session, models/, repositorios SQL, export,
-│                      SCD2 de int_ventas_bi, execution tracker
+├── pipelines/       ← SOLO infraestructura de orquestación: runner común
+│                      (change-detection), file_state y run_all (DAG)
+├── reportes/        ← UN SLICE POR REPORTE (referencias, cartera, query,
+│                      gd20_ventas_bi, despacho_bi, despacho_mes): cada
+│                      carpeta contiene config.yaml + columnas.yaml
+│                      (fórmulas declarativas) + reglas.py + pipeline.py
+│                      + manifest.yaml + README.md
+├── transforms/      ← motor técnico puro: column_engine (ejecuta los
+│                      catálogos) + utilidades comunes. SIN reglas de
+│                      negocio de ningún reporte
+├── persistence/     ← engine, session, models/ (TODOS los modelos SQL,
+│                      metadata única para Alembic), repositorios, export,
+│                      SCD2 de int_ventas_bi, row_hasher, execution tracker
 └── shared/          ← utilidades transversales (pandas, null tokens, logging)
 ```
 

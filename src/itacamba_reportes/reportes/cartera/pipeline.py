@@ -25,7 +25,7 @@ from itacamba_reportes.persistence.repositories.stg_cartera_repository_sql impor
 )
 from itacamba_reportes.pipelines.file_state import FileStateTracker
 from itacamba_reportes.pipelines.runner import PipelineResult, run_file_pipeline
-from itacamba_reportes.transforms.cartera_normalize import NormalizeCarteraFromSpec
+from itacamba_reportes.reportes.cartera.normalizacion import NormalizeCarteraFromSpec
 from itacamba_reportes.transforms.common import BusinessRule, apply_column_mapping
 
 logger = logging.getLogger(__name__)
@@ -103,3 +103,53 @@ class CarteraPipeline:
         module_path, _, class_name = self.spec.output_contract.rpartition(".")
         contract = getattr(importlib.import_module(module_path), class_name)
         return contract.validate(df)
+
+
+def build_pipeline(state_tracker=None) -> "CarteraPipeline":
+    """Composition root del reporte: spec + reader + reglas del slice."""
+    from itacamba_reportes.config.paths import DataPaths
+    from itacamba_reportes.config.yaml_loader import YamlDatasetLoader
+    from itacamba_reportes.ingestion.excel_source import ExcelSource
+    from itacamba_reportes.persistence.repositories.cartera_repository_sql import (
+        CarteraIntRepositoryImpl,
+    )
+    from itacamba_reportes.persistence.repositories.stg_cartera_repository_sql import (
+        StgCarteraIntRepositoryImpl,
+    )
+    from itacamba_reportes.pipelines.file_state import FileStateTracker
+    from itacamba_reportes.reportes.cartera import SLICE_DIR
+    from itacamba_reportes.reportes.cartera.reglas import (
+        ApplyDonationsFromSpecRule,
+        ValidateRegionFromLookupRule,
+    )
+
+    spec = YamlDatasetLoader(SLICE_DIR).load("cartera")
+    s = spec.source
+    source = ExcelSource(
+        name="cartera", file_pattern=s.file_pattern, subdir=s.subdir,
+        sheet=s.sheet, header_row=s.header_row,
+        metadata_rows_to_skip=s.metadata_rows_to_skip,
+        column_renames={}, dedupe_on=(),
+    )
+    reader = ExcelReader(source=source, data_path=DataPaths.from_env().inbox)
+
+    rules: list[BusinessRule] = []
+    if spec.lookups.donaciones is not None:
+        rules.append(ApplyDonationsFromSpecRule(
+            lookup=spec.lookups.donaciones, sap_tokens=spec.sap_tokens))
+    if spec.lookups.regiones_validas is not None:
+        rules.append(ValidateRegionFromLookupRule(
+            lookup=spec.lookups.regiones_validas, strict=False))
+
+    if state_tracker is None:
+        state_path = SLICE_DIR.parents[3] / "storage" / "state" / "pipeline_state.json"
+        state_tracker = FileStateTracker(state_path)
+    return CarteraPipeline(
+        spec=spec,
+        reader=reader,
+        stg_repo=StgCarteraIntRepositoryImpl(),
+        cartera_repo=CarteraIntRepositoryImpl(),
+        rules=rules,
+        source_path=reader.resolve_path(),
+        state_tracker=state_tracker,
+    )

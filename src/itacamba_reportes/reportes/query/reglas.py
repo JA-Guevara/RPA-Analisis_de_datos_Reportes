@@ -1,23 +1,10 @@
-"""QUERY Business Rules - filtros de periodo sobre los datos normalizados.
+"""Reglas del reporte QUERY — las 2 macros VBA del basepanel.
 
-Equivale a la macro VBA `EliminarMeses` del basepanel.xlsm:
+Movidas verbatim en Fase 5 del plan 2026-07-06:
 
-    Sub EliminarMeses()
-        ' valorReferencia = REFERENCIAS!Y3   (mes objetivo)
-        ' En QUERY, conservar solo filas donde col AJ (mes) = valorReferencia
-    End Sub
-
-Modos soportados (config['mes_objetivo']):
-  - "auto"            -> ULTIMO mes con datos del Excel (recomendado, operacion)
-  - "current"         -> mes y anio del datetime.now()
-  - {anio: 2026, mes: 5}  -> forzado por config
-  - null              -> no filtra (corrida historica completa)
-
-Default cambiado a "auto": el cliente normalmente reporta el mes que SAP
-ya cerro (mayo cuando estamos en junio). "current" fallaba sistematicamente.
-
-Si el modo elegido no matchea ningun dato, hace FALLBACK al ultimo mes
-con filas y deja un WARNING (en vez de tirar 0 filas en silencio).
+  QueryNormalizeUseCase      macro ModificarCentro (centro_receptor '#'->0)
+  QueryBusinessRulesUseCase  macro EliminarMeses (filtro de mes objetivo,
+                             modos auto/current/explicito/null con fallback)
 """
 
 from __future__ import annotations
@@ -30,6 +17,40 @@ from typing import Any
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+
+_HASH_SENTINEL: str = "#"
+_HASH_REPLACEMENT: str = "0"
+
+
+@dataclass(slots=True)
+class QueryNormalizeUseCase:
+
+    config: dict | None = None
+
+    def execute(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = self._centro_receptor_hash_to_zero(df)
+        return df
+
+    def _centro_receptor_hash_to_zero(self, df: pd.DataFrame) -> pd.DataFrame:
+        sentinel = (self.config or {}).get("hash_sentinel", _HASH_SENTINEL)
+        replacement = (self.config or {}).get("hash_replacement", _HASH_REPLACEMENT)
+
+        if "centro_receptor" not in df.columns:
+            logger.warning("Query normalize skipped: falta col 'centro_receptor'")
+            return df
+
+        mask = df["centro_receptor"].astype("string") == sentinel
+        n = int(mask.sum())
+        if n == 0:
+            return df
+
+        df.loc[mask, "centro_receptor"] = replacement
+        logger.info(
+            "Query normalize: centro_receptor '%s' -> '%s' en %d filas",
+            sentinel, replacement, n,
+        )
+        return df
 
 
 _DEFAULT_MES_OBJETIVO: str = "auto"

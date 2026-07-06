@@ -1,0 +1,28 @@
+# Portada técnica del reporte (validada por tools/verificar.py — Fase 7)
+reporte: cartera
+version: 1
+
+entrada:
+  tipo: excel
+  archivo: CARTERA*.xlsx
+  carpeta: dinamicos
+  hoja: Q_VCBO_ZSDI_I03_CAD_CLIENTE_000
+  header_row: 6
+
+salidas:
+  stg: stg_cartera        # con run_id por corrida
+  int: int_cartera
+
+dependencias: []
+
+modo_carga:
+  stg: append_run_id
+  int: replace_all
+
+llave_natural:
+  - cliente
+
+consumidores:
+  - gd20_ventas_bi        # nombres, vendedor, ubicaciones, attribute_10
+  - despacho_bi
+  - despacho_mes

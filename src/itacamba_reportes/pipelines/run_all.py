@@ -25,12 +25,12 @@ from datetime import datetime
 from time import perf_counter
 
 from itacamba_reportes.persistence.lookups import clear_lookup_cache
-from itacamba_reportes.pipelines.cartera import CarteraPipeline
+from itacamba_reportes.reportes.cartera.pipeline import CarteraPipeline
 from itacamba_reportes.reportes.despacho_bi.pipeline import DespachoBiPipeline
 from itacamba_reportes.reportes.despacho_mes.pipeline import DespachoMesPipeline
 from itacamba_reportes.reportes.gd20_ventas_bi.pipeline import Gd20Pipeline
-from itacamba_reportes.pipelines.query import QueryPipeline
-from itacamba_reportes.pipelines.references import ReferencesPipeline
+from itacamba_reportes.reportes.query.pipeline import QueryPipeline
+from itacamba_reportes.reportes.referencias.pipeline import ReferencesPipeline
 from itacamba_reportes.pipelines.runner import PipelineResult
 
 logger = logging.getLogger(__name__)

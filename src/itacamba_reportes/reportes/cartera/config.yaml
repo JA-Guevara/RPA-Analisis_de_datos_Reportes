@@ -101,7 +101,7 @@ to_int_model:
 
   drop: []
 
-output_contract: itacamba_reportes.contracts.cartera_schema.CarteraIntContract
+output_contract: itacamba_reportes.reportes.cartera.contrato.CarteraIntContract
 
 load:
   table: int_cartera

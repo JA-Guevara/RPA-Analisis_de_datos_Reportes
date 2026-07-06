@@ -47,52 +47,24 @@ def build_int_gd20(data: Path, cartera: pd.DataFrame,
     from itacamba_reportes.persistence.row_hasher import add_hashes_to_dataframe
     from simular_despacho import as_table
 
-    # flujo real del pipeline (gd20 slice si existe; legacy transforms si no)
-    try:
-        from itacamba_reportes.reportes.gd20_ventas_bi import (
-            load_config as load_gd20_config,
-        )
-        from itacamba_reportes.reportes.gd20_ventas_bi.enriquecimiento import (
-            enrich_gd20,
-        )
-        from itacamba_reportes.reportes.gd20_ventas_bi.mapping import (
-            apply_gd20_mapping,
-        )
-        cfg = load_gd20_config()
-        modo = "slice"
-    except ImportError:
-        from itacamba_reportes.config.yaml_loader import load_pipeline_config
-        from itacamba_reportes.transforms.gd20_business_rules import (
-            Gd20BusinessRulesUseCase,
-        )
-        from itacamba_reportes.transforms.gd20_mapping import apply_gd20_mapping
-        from itacamba_reportes.transforms.gd20_normalize import Gd20NormalizeUseCase
-        cfg = load_pipeline_config(CONFIGS, "gd20")
-        modo = "legacy"
-
     from itacamba_reportes.config.sources import excel_source_from_cfg
+    from itacamba_reportes.reportes.gd20_ventas_bi import load_config
+    from itacamba_reportes.reportes.gd20_ventas_bi.enriquecimiento import enrich_gd20
+    from itacamba_reportes.reportes.gd20_ventas_bi.mapping import apply_gd20_mapping
+
+    cfg = load_config()
     source = excel_source_from_cfg("gd20", cfg["source"])
     df_raw = ExcelReader(source=source, data_path=data).read()
-    print(f"  GD20 raw: {len(df_raw)} filas x {len(df_raw.columns)} cols (modo {modo})")
+    print(f"  GD20 raw: {len(df_raw)} filas x {len(df_raw.columns)} cols")
 
     df = apply_gd20_mapping(df_raw, cfg)
-    if modo == "slice":
-        df = enrich_gd20(
-            df, cfg,
-            cartera_df=cartera, equipo_df=refs["equipo"],
-            almacen_df=refs["almacen"], material_df=refs["material"],
-            centro_df=refs["centro"], query_df=stg_query,
-            localidad_df=refs["localidad"],
-        )
-    else:
-        df = Gd20NormalizeUseCase(
-            cartera_df=cartera, equipo_df=refs["equipo"],
-            almacen_df=refs["almacen"], material_df=refs["material"],
-            centro_df=refs["centro"], query_df=stg_query,
-            localidad_df=refs["localidad"], config=cfg,
-        ).execute(df)
-        df = Gd20BusinessRulesUseCase(config=cfg).execute(df)
-
+    df = enrich_gd20(
+        df, cfg,
+        cartera_df=cartera, equipo_df=refs["equipo"],
+        almacen_df=refs["almacen"], material_df=refs["material"],
+        centro_df=refs["centro"], query_df=stg_query,
+        localidad_df=refs["localidad"],
+    )
     df = as_table(df, Gd20IntModel)
     df = add_hashes_to_dataframe(df)
     print(f"  int_gd20 (+hashes): {len(df)} filas x {len(df.columns)} cols")

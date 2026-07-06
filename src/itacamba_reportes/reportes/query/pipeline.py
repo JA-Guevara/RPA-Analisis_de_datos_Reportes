@@ -19,9 +19,11 @@ from itacamba_reportes.persistence.repositories.query_repository_sql import (
 from itacamba_reportes.persistence.repositories.stg_repository import StgRepository
 from itacamba_reportes.pipelines.file_state import FileStateTracker
 from itacamba_reportes.pipelines.runner import PipelineResult, run_file_pipeline
-from itacamba_reportes.transforms.query_business_rules import QueryBusinessRulesUseCase
-from itacamba_reportes.transforms.query_mapping import apply_query_mapping
-from itacamba_reportes.transforms.query_normalize import QueryNormalizeUseCase
+from itacamba_reportes.reportes.query.mapping import apply_query_mapping
+from itacamba_reportes.reportes.query.reglas import (
+    QueryBusinessRulesUseCase,
+    QueryNormalizeUseCase,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -75,3 +77,26 @@ class QueryPipeline:
         logger.info("INT load: %d filas (%.2fs)", int_rows, perf_counter() - t)
 
         return {"stg_query": stg_rows, "int_query": int_rows}
+
+
+def build_pipeline(state_tracker=None) -> QueryPipeline:
+    """Composition root del reporte: config + reader del slice."""
+    from itacamba_reportes.config.paths import DataPaths
+    from itacamba_reportes.config.sources import excel_source_from_cfg
+    from itacamba_reportes.pipelines.file_state import FileStateTracker
+    from itacamba_reportes.reportes.query import SLICE_DIR, load_config
+
+    cfg = load_config()
+    source = excel_source_from_cfg("query", cfg["source"])
+    reader = ExcelReader(source=source, data_path=DataPaths.from_env().inbox)
+    if state_tracker is None:
+        state_path = SLICE_DIR.parents[3] / "storage" / "state" / "pipeline_state.json"
+        state_tracker = FileStateTracker(state_path)
+    return QueryPipeline(
+        reader=reader,
+        stg_repo=StgRepository(StgQueryModel),
+        int_repo=IntQueryRepositoryImpl(),
+        source_path=reader.resolve_path(),
+        state_tracker=state_tracker,
+        config=cfg,
+    )

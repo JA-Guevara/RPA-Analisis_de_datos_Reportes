@@ -17,29 +17,11 @@ from pathlib import Path
 
 from itacamba_reportes.config.env_config import validate_config
 from itacamba_reportes.config.paths import DataPaths
-from itacamba_reportes.config.sources import (
-    excel_source_from_cfg,
-    load_reference_sources,
-)
-from itacamba_reportes.config.yaml_loader import (
-    YamlDatasetLoader,
-    load_pipeline_config,
-)
-from itacamba_reportes.ingestion.excel_reader import ExcelReader
 from itacamba_reportes.persistence.excel_report_exporter import ExcelReportExporter
-from itacamba_reportes.persistence.models.stg.stg_query_model import StgQueryModel
-from itacamba_reportes.persistence.repositories.cartera_repository_sql import (
-    CarteraIntRepositoryImpl,
+from itacamba_reportes.reportes.cartera.pipeline import (
+    CarteraPipeline,
+    build_pipeline as build_cartera,
 )
-from itacamba_reportes.persistence.repositories.query_repository_sql import (
-    IntQueryRepositoryImpl,
-)
-from itacamba_reportes.persistence.repositories.reference_loader import ReferenceLoader
-from itacamba_reportes.persistence.repositories.stg_cartera_repository_sql import (
-    StgCarteraIntRepositoryImpl,
-)
-from itacamba_reportes.persistence.repositories.stg_repository import StgRepository
-from itacamba_reportes.pipelines.cartera import CarteraPipeline
 from itacamba_reportes.reportes.despacho_bi.pipeline import (
     DespachoBiPipeline,
     build_pipeline as build_despacho_bi,
@@ -53,15 +35,17 @@ from itacamba_reportes.reportes.gd20_ventas_bi.pipeline import (
     Gd20Pipeline,
     build_pipeline as build_gd20,
 )
-from itacamba_reportes.pipelines.query import QueryPipeline
-from itacamba_reportes.pipelines.references import ReferencesPipeline
+from itacamba_reportes.reportes.query.pipeline import (
+    QueryPipeline,
+    build_pipeline as build_query,
+)
+from itacamba_reportes.reportes.referencias.pipeline import (
+    ReferencesPipeline,
+    build_pipeline as build_referencias,
+)
 from itacamba_reportes.pipelines.run_all import RunAllOrchestrator
 from itacamba_reportes.pipelines.runner import PipelineResult
 from itacamba_reportes.shared.logging_setup import setup_logging
-from itacamba_reportes.transforms.cartera_business_rules import (
-    ApplyDonationsFromSpecRule,
-    ValidateRegionFromLookupRule,
-)
 from itacamba_reportes.transforms.common import BusinessRule
 
 logger = logging.getLogger(__name__)
@@ -82,61 +66,16 @@ def _build_exporter() -> ExcelReportExporter:
     return ExcelReportExporter(output_dir=DataPaths.from_env().exports)
 
 
-def _excel_reader(dataset: str, cfg: dict) -> ExcelReader:
-    source = excel_source_from_cfg(dataset, cfg["source"])
-    return ExcelReader(source=source, data_path=DataPaths.from_env().inbox)
-
-
 def _build_cartera_pipeline() -> CarteraPipeline:
-    spec = YamlDatasetLoader(_CONFIGS_DIR).load("cartera")
-    reader = _excel_reader("cartera", {"source": spec.source.model_dump()})
-
-    rules: list[BusinessRule] = []
-    if spec.lookups.donaciones is not None:
-        rules.append(ApplyDonationsFromSpecRule(
-            lookup=spec.lookups.donaciones, sap_tokens=spec.sap_tokens))
-    if spec.lookups.regiones_validas is not None:
-        rules.append(ValidateRegionFromLookupRule(
-            lookup=spec.lookups.regiones_validas, strict=False))
-
-    return CarteraPipeline(
-        spec=spec,
-        reader=reader,
-        stg_repo=StgCarteraIntRepositoryImpl(),
-        cartera_repo=CarteraIntRepositoryImpl(),
-        rules=rules,
-        source_path=reader.resolve_path(),
-        state_tracker=_state_tracker(),
-    )
+    return build_cartera(state_tracker=_state_tracker())
 
 
 def _build_references_pipeline() -> ReferencesPipeline:
-    inbox = DataPaths.from_env().inbox
-    sources = load_reference_sources(_CONFIGS_DIR)
-    readers = {
-        key: ExcelReader(source=src, data_path=inbox)
-        for key, src in sources.items()
-    }
-    any_reader = next(iter(readers.values()))
-    return ReferencesPipeline(
-        readers=readers,
-        loader=ReferenceLoader(),
-        source_path=any_reader.resolve_path(),
-        state_tracker=_state_tracker(),
-    )
+    return build_referencias(state_tracker=_state_tracker())
 
 
 def _build_query_pipeline() -> QueryPipeline:
-    config = load_pipeline_config(_CONFIGS_DIR, "query")
-    reader = _excel_reader("query", config)
-    return QueryPipeline(
-        reader=reader,
-        stg_repo=StgRepository(StgQueryModel),
-        int_repo=IntQueryRepositoryImpl(),
-        source_path=reader.resolve_path(),
-        state_tracker=_state_tracker(),
-        config=config,
-    )
+    return build_query(state_tracker=_state_tracker())
 
 
 def _build_gd20_pipeline() -> Gd20Pipeline:

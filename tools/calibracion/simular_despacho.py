@@ -51,7 +51,8 @@ def build_references(data: Path) -> dict[str, pd.DataFrame]:
         df_to_clean_rows,
     )
 
-    cfg = yaml.safe_load((CONFIGS / "references.yaml").read_text(encoding="utf-8"))
+    from itacamba_reportes.config.yaml_loader import dataset_config_path
+    cfg = yaml.safe_load(dataset_config_path(CONFIGS, "references").read_text(encoding="utf-8"))
     out: dict[str, pd.DataFrame] = {}
     for cat in CATALOGS:
         c = cfg["catalogs"][cat.key]
@@ -77,11 +78,13 @@ def build_cartera(data: Path) -> pd.DataFrame:
     from itacamba_reportes.config.yaml_loader import YamlDatasetLoader
     from itacamba_reportes.ingestion.excel_reader import ExcelReader
     from itacamba_reportes.ingestion.excel_source import ExcelSource
-    from itacamba_reportes.transforms.cartera_business_rules import (
+    from itacamba_reportes.reportes.cartera.normalizacion import (
+        NormalizeCarteraFromSpec,
+    )
+    from itacamba_reportes.reportes.cartera.reglas import (
         ApplyDonationsFromSpecRule,
         ValidateRegionFromLookupRule,
     )
-    from itacamba_reportes.transforms.cartera_normalize import NormalizeCarteraFromSpec
     from itacamba_reportes.transforms.common import apply_column_mapping
 
     spec = YamlDatasetLoader(CONFIGS).load("cartera")
@@ -116,11 +119,11 @@ def build_int_query(data: Path) -> pd.DataFrame:
     from itacamba_reportes.config.yaml_loader import load_pipeline_config
     from itacamba_reportes.ingestion.excel_reader import ExcelReader
     from itacamba_reportes.persistence.models.int.query_model import IntQueryModel
-    from itacamba_reportes.transforms.query_business_rules import (
+    from itacamba_reportes.reportes.query.mapping import apply_query_mapping
+    from itacamba_reportes.reportes.query.reglas import (
         QueryBusinessRulesUseCase,
+        QueryNormalizeUseCase,
     )
-    from itacamba_reportes.transforms.query_mapping import apply_query_mapping
-    from itacamba_reportes.transforms.query_normalize import QueryNormalizeUseCase
 
     sources = load_all_excel_sources(CONFIGS)
     reader = ExcelReader(source=sources["query"], data_path=data)
