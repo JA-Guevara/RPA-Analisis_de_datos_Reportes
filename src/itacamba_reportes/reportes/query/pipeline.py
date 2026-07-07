@@ -13,6 +13,7 @@ from time import perf_counter
 from typing import Any
 
 from itacamba_reportes.ingestion.excel_reader import ExcelReader
+from itacamba_reportes.persistence.models.stg.stg_query_model import StgQueryModel
 from itacamba_reportes.persistence.repositories.query_repository_sql import (
     IntQueryRepositoryImpl,
 )
