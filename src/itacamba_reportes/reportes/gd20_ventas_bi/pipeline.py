@@ -60,6 +60,7 @@ class Gd20Pipeline:
     state_tracker: FileStateTracker
     config: dict[str, Any] | None = None
     exporter: ExcelReportExporter | None = None
+    _control: dict | None = None
 
     DATASET_KEY: str = "gd20"
 
@@ -111,6 +112,11 @@ class Gd20Pipeline:
         logger.info("Enrich completo: %d filas x %d cols (%.2fs)",
                     *df.shape, perf_counter() - t)
 
+        from itacamba_reportes.shared.control_corrida import resumen_corrida
+        self._control = resumen_corrida(
+            df, (self.config or {}).get("control"), reporte="gd20_ventas_bi")
+        # (la corrida ya queda auditada por el ExecutionTracker del SCD2)
+
         logger.info("Stage 5 - LOAD int_gd20")
         t = perf_counter()
         int_rows = self.gd20_repo.bulk_replace_from_df(df)
@@ -157,7 +163,11 @@ class Gd20Pipeline:
         logger.info("Stage 7 - EXPORT int_ventas_bi -> Excel")
         t = perf_counter()
         try:
-            path = self.exporter.export(VentasBiIntModel.__tablename__, "VENTAS_BI")
+            path = self.exporter.export(
+                VentasBiIntModel.__tablename__, "VENTAS_BI",
+                control=self._control,
+                encabezados=(self.config or {}).get("encabezados"),
+            )
             logger.info("Export OK: %s (%.2fs)", path, perf_counter() - t)
             return str(path)
         except Exception:

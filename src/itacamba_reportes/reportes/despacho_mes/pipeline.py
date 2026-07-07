@@ -96,12 +96,24 @@ class DespachoMesPipeline:
         int_rows = self.despacho_mes_repo.bulk_replace_from_df(df)
         logger.info("INT load: %d filas (%.2fs)", int_rows, perf_counter() - t)
 
+        from itacamba_reportes.shared.control_corrida import (
+            registrar_en_bd,
+            resumen_corrida,
+        )
+        control = resumen_corrida(
+            df, (self.config or {}).get("control"), reporte="despacho_mes")
+        registrar_en_bd("despacho_mes", control)
+
         export_path: str | None = None
         if self.exporter is not None:
             logger.info("Stage 7 - EXPORT int_despacho_mes -> Excel")
             t = perf_counter()
             try:
-                path = self.exporter.export(DespachoMesIntModel.__tablename__, "DESPACHO_MES")
+                path = self.exporter.export(
+                    DespachoMesIntModel.__tablename__, "DESPACHO_MES",
+                    control=control,
+                    encabezados=(self.config or {}).get("encabezados"),
+                )
                 export_path = str(path)
                 logger.info("Export OK: %s (%.2fs)", export_path, perf_counter() - t)
             except Exception:

@@ -315,3 +315,16 @@ constants:
 defaults:
   centro_distribucion: OTROS
   zona_entrega:        OTROS
+
+# ─────────────────────────────────────────────────────────────────────
+# CONTROL DE CORRIDA (% reales mayo-2026 entre paréntesis)
+# tipo_venta NO se monitorea: "VENTA DIRECTA" es el valor mayoritario
+# legítimo (62%), no un default de fallo.
+# ─────────────────────────────────────────────────────────────────────
+control:
+  columnas:
+    equipo:              {defaults: [No encontrado], umbral_pct: 10}  # (0.0%)
+    centro_distribucion: {defaults: [OTROS], umbral_pct: 15}          # (0.5%)
+    zona_entrega:        {defaults: [OTROS], umbral_pct: 35}          # (18.9%)
+    nombre_producto:     {defaults: ["0"], umbral_pct: 10}            # (0.0%)
+    vendedor_ok:         {defaults: ["0"], umbral_pct: 10}            # (0.0%)

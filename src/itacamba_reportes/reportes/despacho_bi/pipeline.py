@@ -88,12 +88,25 @@ class DespachoBiPipeline:
         int_rows = self.despacho_bi_repo.bulk_replace_from_df(df)
         logger.info("INT load: %d filas (%.2fs)", int_rows, perf_counter() - t)
 
+        # Control de corrida: hash de contenido + calidad + registro en BD
+        from itacamba_reportes.shared.control_corrida import (
+            registrar_en_bd,
+            resumen_corrida,
+        )
+        control = resumen_corrida(
+            df, (self.config or {}).get("control"), reporte="despacho_bi")
+        registrar_en_bd("despacho_bi", control)
+
         export_path: str | None = None
         if self.exporter is not None:
             logger.info("Stage 5 - EXPORT int_despacho_bi -> Excel")
             t = perf_counter()
             try:
-                path = self.exporter.export(DespachoBiIntModel.__tablename__, "DESPACHO_BI")
+                path = self.exporter.export(
+                    DespachoBiIntModel.__tablename__, "DESPACHO_BI",
+                    control=control,
+                    encabezados=(self.config or {}).get("encabezados"),
+                )
                 export_path = str(path)
                 logger.info("Export OK: %s (%.2fs)", export_path, perf_counter() - t)
             except Exception:

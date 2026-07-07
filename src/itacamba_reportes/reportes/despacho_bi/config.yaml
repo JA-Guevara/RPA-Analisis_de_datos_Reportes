@@ -92,3 +92,18 @@ notes: |
   - 'incoterms_im' = incoterms + centro_distribucion SIN espacio (ej.
     "FOBCD GUARACACHI", igual al basepanel segun MAPEO_DESPACHO.md).
     Pendiente confirmar contra libro cliente si lleva espacio.
+
+# ─────────────────────────────────────────────────────────────────────
+# CONTROL DE CORRIDA (hoja CONTROL del export + alertas en log)
+# % medidos con datos reales mayo-2026 entre paréntesis; el umbral
+# tiene margen: si se supera es señal de degradación (ej. una hoja de
+# REFERENCIAS.xlsx borrada o cartera desactualizada), no ruido.
+# ─────────────────────────────────────────────────────────────────────
+control:
+  columnas:
+    equipo:          {defaults: [No encontrado], umbral_pct: 15}   # (4.5%)
+    gerencia:        {defaults: [OTROS], umbral_pct: 30}           # (15.6%)
+    desarrollador:   {defaults: [No encontrado], umbral_pct: 15}   # (6.5%)
+    nombre_cliente:  {defaults: [Prospecto], umbral_pct: 15}       # (4.5%)
+    canal:           {defaults: [OTROS], umbral_pct: 25}           # (11.9%)
+    semana:          {defaults: ["<NA>"], umbral_pct: 5}           # (0.0%)

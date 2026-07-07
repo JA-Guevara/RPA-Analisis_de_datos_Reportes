@@ -74,6 +74,16 @@ class QueryPipeline:
         logger.info("Stage 4 - INT LOAD (TRUNCATE + INSERT int_query)")
         t = perf_counter()
         int_rows = self.int_repo.bulk_replace_from_df(df)
+
+        from itacamba_reportes.shared.control_corrida import (
+            registrar_en_bd,
+            resumen_corrida,
+        )
+        registrar_en_bd(
+            "query",
+            resumen_corrida(df, (self.config or {}).get("control"), "query"),
+            source_path=str(self.source_path),
+        )
         logger.info("INT load: %d filas (%.2fs)", int_rows, perf_counter() - t)
 
         return {"stg_query": stg_rows, "int_query": int_rows}

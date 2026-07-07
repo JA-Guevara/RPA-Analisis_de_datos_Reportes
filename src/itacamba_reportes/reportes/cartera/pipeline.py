@@ -87,6 +87,16 @@ class CarteraPipeline:
         logger.info("Stage 7 - LOAD int_cartera")
         loaded = self.cartera_repo.bulk_replace_from_df(validated)
 
+        from itacamba_reportes.shared.control_corrida import (
+            registrar_en_bd,
+            resumen_corrida,
+        )
+        registrar_en_bd(
+            "cartera",
+            resumen_corrida(validated, None, "cartera"),
+            source_path=str(self.source_path),
+        )
+
         return {"stg_cartera": stg_rows, "int_cartera": loaded}
 
     def _persist_stg(self, df: pd.DataFrame, run_id: datetime) -> pd.DataFrame:

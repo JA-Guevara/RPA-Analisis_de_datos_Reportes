@@ -112,3 +112,13 @@ notes: |
 
   - canal usa el doble VLOOKUP cartera.attribute_10 -> int_ref_almacen.
     Si negocio reporta que la ruta es distinta, ajustar el use case.
+
+# ─────────────────────────────────────────────────────────────────────
+# CONTROL DE CORRIDA (% reales mayo-2026 entre paréntesis)
+# ─────────────────────────────────────────────────────────────────────
+control:
+  columnas:
+    nombre_cliente:  {defaults: [Prospecto], umbral_pct: 10}       # (0.1%)
+    vendedor:        {defaults: [Prospecto], umbral_pct: 10}       # (0.1%)
+    canal:           {defaults: [OTROS], umbral_pct: 25}           # (11.1%)
+    semana2:         {defaults: [SEMANA 0], umbral_pct: 5}         # (0.0%)

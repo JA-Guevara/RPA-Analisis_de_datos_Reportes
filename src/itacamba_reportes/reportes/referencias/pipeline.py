@@ -59,6 +59,15 @@ class ReferencesPipeline:
             df = self.readers[catalog.key].read()
             rows = df_to_clean_rows(df, catalog.model)
             rows_loaded[catalog.key] = self.loader.replace_all(catalog.model, rows)
+
+        from itacamba_reportes.shared.control_corrida import registrar_en_bd
+        registrar_en_bd(
+            "referencias",
+            {"filas": sum(rows_loaded.values()),
+             "hash_contenido": "catalogos:" + ",".join(
+                 f"{k}={v}" for k, v in sorted(rows_loaded.items()))[:120]},
+            source_path=str(self.source_path),
+        )
         return rows_loaded
 
 
