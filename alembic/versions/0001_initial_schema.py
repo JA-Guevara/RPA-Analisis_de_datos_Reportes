@@ -1,31 +1,3 @@
-"""Initial schema — esquema completo del DW Itacamba Reportes.
-
-Revision ID: 0001_initial
-Revises:
-Create Date: 2026-06-10
-
-Crea las 16 tablas del proyecto en una sola migracion:
-
-  STG  (Bronze)  : stg_cartera, stg_gd20, stg_query
-
-  REF  (catalogos): int_ref_almacen, int_ref_centro, int_ref_equipo,
-                    int_ref_localidad, int_ref_material, int_ref_semana
-
-  INT VENTAS BI  : int_cartera, int_gd20
-                   int_ventas_bi (FACT TABLE con SCD Type 2 by-hash)
-
-  INT DESPACHOS  : int_query, int_despacho_bi, int_despacho_mes
-
-  AUDIT          : pipeline_executions
-
-Patron aplicado en int_ventas_bi:
-  - SCD Type 2 (versionado por hash)
-  - Sticky semantico en CD/ZE (centro_distribucion, zona_entrega)
-  - Trazabilidad: source_execution_id -> pipeline_executions.id
-
-Idempotente: si una tabla ya existe, se omite.
-"""
-
 from __future__ import annotations
 
 from alembic import op
@@ -39,7 +11,6 @@ depends_on = None
 
 
 def _ts() -> tuple[sa.Column, sa.Column]:
-    """Cols created_at / updated_at NOT NULL DEFAULT CURRENT_TIMESTAMP."""
     return (
         sa.Column("created_at", sa.DateTime(), nullable=False,
                   server_default=sa.text("CURRENT_TIMESTAMP")),
@@ -56,9 +27,6 @@ def upgrade() -> None:
     conn = op.get_bind()
     insp = sa.inspect(conn)
 
-    # ════════════════════════════════════════════════════════════════════
-    # STG — snapshots crudos del Excel SAP
-    # ════════════════════════════════════════════════════════════════════
 
     if not _exists(insp, "stg_cartera"):
         op.create_table(
@@ -233,9 +201,6 @@ def upgrade() -> None:
         op.create_index("ix_stg_query_destinatario_mcia", "stg_query", ["destinatario_mcia"])
         op.create_index("ix_stg_query_documento_venta", "stg_query", ["documento_venta"])
 
-    # ════════════════════════════════════════════════════════════════════
-    # REF — catalogos de lookup (Referencias.xlsx)
-    # ════════════════════════════════════════════════════════════════════
 
     if not _exists(insp, "int_ref_almacen"):
         op.create_table(
@@ -311,9 +276,6 @@ def upgrade() -> None:
         )
         op.create_index("ix_int_ref_semana_dia", "int_ref_semana", ["dia"])
 
-    # ════════════════════════════════════════════════════════════════════
-    # INT VENTAS BI
-    # ════════════════════════════════════════════════════════════════════
 
     if not _exists(insp, "int_cartera"):
         op.create_table(
@@ -459,7 +421,6 @@ def upgrade() -> None:
         op.create_table(
             "int_ventas_bi",
             sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
-            # 49 raw
             sa.Column("ejercicio", sa.Integer()),
             sa.Column("sociedad", sa.Integer()),
             sa.Column("organizacion_ventas", sa.Integer()),
@@ -509,7 +470,6 @@ def upgrade() -> None:
             sa.Column("dias_1", sa.Integer()),
             sa.Column("numero_transporte", sa.BigInteger()),
             sa.Column("e", sa.String(10)),
-            # 26 derivadas
             sa.Column("tipo_embalaje", sa.String(20)),
             sa.Column("nombre_producto", sa.String(200)),
             sa.Column("volumen_toneladas", sa.Numeric(18, 4)),
@@ -538,7 +498,6 @@ def upgrade() -> None:
             sa.Column("centro_distribucion", sa.String(50)),
             sa.Column("zona_entrega", sa.String(50)),
             sa.Column("nombre_destinatario", sa.String(500)),
-            # SCD2 + auditoria
             sa.Column("version", sa.Integer(), nullable=False, server_default=sa.text("1")),
             sa.Column("is_current", sa.Boolean(), nullable=False, server_default=sa.text("1")),
             sa.Column("valid_from", sa.DateTime(), nullable=False,
@@ -572,9 +531,6 @@ def upgrade() -> None:
         op.create_index("ix_int_ventas_bi_execution",
                         "int_ventas_bi", ["source_execution_id"])
 
-    # ════════════════════════════════════════════════════════════════════
-    # INT DESPACHOS BI
-    # ════════════════════════════════════════════════════════════════════
 
     if not _exists(insp, "int_query"):
         op.create_table(
@@ -730,9 +686,6 @@ def upgrade() -> None:
         op.create_index("ix_int_despacho_mes_codigo_cliente", "int_despacho_mes", ["codigo_cliente"])
         op.create_index("ix_int_despacho_mes_fecha", "int_despacho_mes", ["fecha"])
 
-    # ════════════════════════════════════════════════════════════════════
-    # AUDIT — bitacora de corridas del bot
-    # ════════════════════════════════════════════════════════════════════
 
     if not _exists(insp, "pipeline_executions"):
         op.create_table(
@@ -763,27 +716,22 @@ def downgrade() -> None:
     conn = op.get_bind()
     insp = sa.inspect(conn)
 
-    # Audit
     if _exists(insp, "pipeline_executions"):
         op.drop_table("pipeline_executions")
 
-    # INT DESPACHOS
     for tbl in ("int_despacho_mes", "int_despacho_bi", "int_query"):
         if _exists(insp, tbl):
             op.drop_table(tbl)
 
-    # INT VENTAS
     for tbl in ("int_ventas_bi", "int_gd20", "int_cartera"):
         if _exists(insp, tbl):
             op.drop_table(tbl)
 
-    # REF
     for tbl in ("int_ref_semana", "int_ref_material", "int_ref_localidad",
                 "int_ref_equipo", "int_ref_centro", "int_ref_almacen"):
         if _exists(insp, tbl):
             op.drop_table(tbl)
 
-    # STG
     for tbl in ("stg_query", "stg_gd20", "stg_cartera"):
         if _exists(insp, tbl):
             op.drop_table(tbl)

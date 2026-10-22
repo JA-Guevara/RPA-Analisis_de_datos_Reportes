@@ -1,58 +1,44 @@
-# itacamba_reportes
+# Itacamba Reportes - Motor ELT Database-First
 
-Paquete principal del ETL de reportes (VENTAS BI, DESPACHOS BI, DESPACHO MES).
-Organizado por responsabilidad técnica real — capas que el dato atraviesa:
+Sistema automatizado de procesamiento masivo, transformación relacional y versionado histórico de datos comerciales y operativos de Itacamba Cemento S.A.
 
+## 1. Paradigma Arquitectónico
+
+El sistema sigue estrictamente los principios de **Database-First ELT + Vertical Slicing + Screaming Architecture**:
+- **E-L (Extract & Load):** Ingesta cruda y veloz de archivos Excel con motor Rust Calamine directo a tablas de Staging (`stg_*`) sin validaciones pesadas ni cálculos en memoria RAM.
+- **T (Transform):** Todo el procesamiento de negocio, cruces dimensionales, resolución de fórmulas de Excel y macros VBA se ejecutan directamente en la Base de Datos mediante SQL set-based.
+- **Vertical Slicing:** Cada entidad o flujo de reporte vive en su propio módulo independiente con sus modelos, ingesta, transformación y documentación.
+
+## 2. Mapa de Módulos
+
+- `core/`: Motor compartido de base de datos, conexión resiliente (SQL Server / SQLite), bulk inserts, lector Calamine y hashing SCD2.
+- `inputs/`: Vertical slices de ingesta y normalización:
+  - `referencias/`: Catálogos maestros (Almacenes, Centros, Materiales, Equipos, Localidades, Semanas).
+  - `cartera/`: Padrón general de clientes y normalización de donaciones.
+  - `query/`: Despachos operativos de SAP ZBCS (layout IM de 24 columnas).
+  - `proyeccion/`: Proyecciones comerciales semanales (RF Ajustado).
+  - `gd20/`: Facturación comercial de SAP GD20 -> BASE PANEL.
+- `outputs/`: Vertical slices de generación y acumulación de reportes para Power BI:
+  - `ventas_bi/`: Histórico acumulativo multianual de facturación con SCD Tipo 2 (SHA-256).
+  - `despacho_bi/`: Histórico acumulativo real de despachos.
+  - `despacho_mes/`: Resumen del mes en curso combinando despacho real + proyección comercial (`UNION ALL`).
+
+## 3. Comandos CLI
+
+```bash
+# Inicializar esquemas en base de datos
+python main.py init-db
+
+# Ejecución por slice
+python main.py run-referencias
+python main.py run-cartera
+python main.py run-query
+python main.py run-proyeccion
+python main.py run-gd20
+python main.py run-ventas-bi
+python main.py run-despacho-bi
+python main.py run-despacho-mes
+
+# Ejecución completa de punta a punta
+python main.py run-all
 ```
-itacamba_reportes/
-├── cli.py           ← entrypoint + composition root (registry de pipelines)
-├── config/          ← env, paths, specs Pydantic, loader YAML, sources Excel
-├── contracts/       ← schemas Pandera de validación de salida
-├── ingestion/       ← ExcelReader + ExcelSource (lectura configurable)
-├── pipelines/       ← SOLO infraestructura de orquestación: runner común
-│                      (change-detection), file_state y run_all (DAG)
-├── reportes/        ← UN SLICE POR REPORTE (referencias, cartera, query,
-│                      gd20_ventas_bi, despacho_bi, despacho_mes): cada
-│                      carpeta contiene config.yaml + columnas.yaml
-│                      (fórmulas declarativas) + reglas.py + pipeline.py
-│                      + manifest.yaml + README.md
-├── transforms/      ← motor técnico puro: column_engine (ejecuta los
-│                      catálogos) + utilidades comunes. SIN reglas de
-│                      negocio de ningún reporte
-├── persistence/     ← engine, session, models/ (TODOS los modelos SQL,
-│                      metadata única para Alembic), repositorios, export,
-│                      SCD2 de int_ventas_bi, row_hasher, execution tracker
-└── shared/          ← utilidades transversales (pandas, null tokens, logging)
-```
-
-## Flujo (DAG)
-
-```
-references ─┐
-cartera ────┼──► gd20 ──► UPSERT SCD2 int_ventas_bi   (REPORTE VENTAS BI)
-query ──────┼──► despacho_bi ──► despacho_mes          (REPORTE DESPACHOS)
-```
-
-## Convenciones
-
-- **Los datos fluyen como DataFrames** de punta a punta; STG persiste el raw,
-  INT persiste el resultado transformado.
-- **Configuración en YAML** (`assets/configs/*.yaml`): fuentes Excel (hoja,
-  header, renames, dedupe), renames STG→INT, lookups y reglas. Los datos de
-  negocio NO van hardcodeados en Python.
-- **Agregar un catálogo de referencia**: 1 modelo en `persistence/models/references/`
-  + 1 entrada en `references.yaml:catalogs` + 1 línea en
-  `persistence/repositories/reference_loader.py:CATALOGS`.
-- **Agregar un pipeline**: 1 módulo en `pipelines/` (solo stages; el ciclo
-  fingerprint/skip/state lo da `pipelines/runner.py`) + 1 builder y 1 entry
-  en `cli.py:PIPELINES`.
-- **Una abstracción se gana su lugar con 2+ implementaciones reales o
-  eliminando duplicación existente. Nunca "por si acaso".**
-
-## Tests
-
-- `tests/characterization/`: red de seguridad del refactor — goldens del
-  comportamiento de transforms, mappings, limpieza de referencias, config y
-  state. Correr `pytest tests/characterization/` tras CUALQUIER cambio en
-  esas piezas. Si un cambio de comportamiento es INTENCIONAL, regenerar con
-  `python tests/characterization/capture_goldens.py --write` y revisar el diff.
