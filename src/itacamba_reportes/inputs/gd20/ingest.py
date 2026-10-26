@@ -67,10 +67,20 @@ GD20_SPEC = ExcelSourceSpec(
         "Incoterms, parte 2": "incoterms_parte_2",
         "Clase de documento": "clase_documento",
         "Cond. pago": "cond_pago",
+        "Cond. Pago": "cond_pago",
+        "Unnamed: 45": "cond_pago",
         "Días 1": "dias_1",
         "Nº de transporte": "numero_transporte",
         "E": "e",
+        "Unnamed: 48": "e",
     },
+    required_columns=(
+        "cliente",
+        "numero_documento",
+        "cantidad",
+        "moneda_sociedad",
+        "fe_contabilizacion",
+    ),
 )
 
 
@@ -82,10 +92,14 @@ def ingest_gd20() -> int:
     for col in (
         "cliente", "emisor_orden", "customer_bill_to", "customer_rebate",
         "numero_documento", "documento_comercial", "numero_doc_referencia",
-        "numero_documento_2", "numero_transporte", "numero_cuenta", "material",
+        "numero_documento_2", "numero_cuenta", "material",
     ):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype("int64")
+
+    # numero_transporte opcional: preservar celdas vacias como NULL
+    if "numero_transporte" in df.columns:
+        df["numero_transporte"] = pd.to_numeric(df["numero_transporte"], errors="coerce")
 
     # Coercion de importes monetarios y cantidades a float para Numeric(18, 4)
     for col in ("cantidad", "moneda_sociedad", "moneda_transaccion", "moneda_fuerte"):

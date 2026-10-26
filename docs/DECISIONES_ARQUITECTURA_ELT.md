@@ -4,7 +4,7 @@
 **Versión de Arquitectura:** 2.0 (Database-First ELT & Vertical Slicing)  
 **Fecha de Consolidación:** Octubre de 2026  
 **Responsable Técnico:** Antigravity AI & Equipo de Ingeniería de Datos  
-**Estado:** PRODUCCIÓN / IMPLEMENTADO Y VERIFICADO AL 100%  
+**Estado:** En desarrollo. Pipeline completo verificado en SQL Server 2022 de prueba (22-10-2026); calibración contra BASE PANEL incompleta (ver "Estado verificado" en la sección 5). Aún no corre contra la BD de producción.  
 
 ---
 
@@ -211,6 +211,16 @@ mindmap
 
 ---
 
+### ADR 12: Alembic como única fuente del esquema y BD nueva
+- **Decisión**: El esquema solo se crea o cambia con migraciones Alembic. Se borran las migraciones 0001/0002 y se parte de `0001_baseline`, generada desde los modelos en una BD vacía. `init-db` ejecuta `alembic upgrade head` y cada corrida verifica que la BD esté en la última versión (ya no se usa `create_all`). Los datos antiguos no se migran: se usa una BD nueva.
+- **¿Por qué?**:
+  - Las migraciones anteriores producían un esquema con 412 diferencias respecto de los modelos, y con ellas `run-all` fallaba en el primer paso.
+  - `create_all` no modifica tablas existentes, así que un cambio de modelo nunca llegaba al servidor.
+  - `compare_server_default` queda desactivado porque en SQL Server los defaults de fecha dan diferencias falsas.
+  - Los códigos SAP (`sector`, `grupo_clientes_2`) se guardan como texto: valores reales como `4A` y `7G9` hacían fallar el `CAST` a INT.
+
+---
+
 ## 4. Arquitectura de la Solución Implementada
 
 ```mermaid
@@ -280,6 +290,21 @@ Los siguientes resultados corresponden a mediciones reales ejecutadas sobre la b
 - `DESPACHO BI`: 2.684 filas en **0.91 s**
 - `DESPACHO MES`: 19.403 filas agregadas en **3.56 s**
 - **TOTAL GENERAL DEL PIPELINE**: **14.23 segundos**.
+
+---
+
+### Estado verificado (22-10-2026)
+
+Medido en SQL Server 2022 de prueba con los archivos de octubre-2026, comparando `int_gd20` contra BASE PANEL (2.438 filas cruzadas):
+
+| Resultado | Columnas |
+|---|---|
+| 100 % | 13 (embalaje, producto, volumen, nombre pagador, día, mes, año, ingreso bruto, dpto y localidad pagador, código cliente, centro de distribución, zona de entrega) |
+| 99,9 % | 13 (3 filas con datos de cliente vacíos que el Excel sí tiene) |
+| 62,8 % | `tipo_venta`: se cruza por centro; el Excel cruza el pagador contra la lista de clientes de la hoja Centros (esa regla da 100 %) |
+| 0 % | `bonificaciones`: el Excel la deja vacía y el bot pone 0 |
+
+El pipeline completo tarda unos 21 s en ese ambiente. Las cifras de la sección 5 (14,23 s, VBA de 15 a 25 min, bot anterior de 3 a 6 min y 1,8 GB, "290 filas fantasma") no tienen una medición reproducible registrada: el bot anterior se midió en unos 14 s y, sin deduplicar la cartera, GD20 pasaba de 2.458 a 3.521 filas. Tómalas como referencia, no como resultado verificado.
 
 ---
 

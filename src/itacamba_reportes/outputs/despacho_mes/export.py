@@ -26,11 +26,4 @@ def export_despacho_mes() -> Path:
         df = pd.read_sql(query, conn)
 
     exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
-    control = {
-        "Total filas resumen": len(df),
-        "Total Despacho Real": df["despacho_t"].sum() if "despacho_t" in df.columns else 0,
-        "Total RF Inicial": df["rf"].sum() if "rf" in df.columns else 0,
-        "Total RF Ajustado": df["rf_ajustado_im"].sum() if "rf_ajustado_im" in df.columns else 0,
-        "Total Proyección": df["proyeccion"].sum() if "proyeccion" in df.columns else 0,
-    }
-    return exporter.export(df, "DESPACHO_MES", control_info=control)
+    return exporter.export(df, "DESPACHO_MES")

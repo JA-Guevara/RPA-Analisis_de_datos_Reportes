@@ -6,9 +6,9 @@ Capa de servicios fundamentales compartidos por todos los slices, agnóstica a l
 
 ### 1. `db/` - Base de Datos
 - `base.py`: Clase base declarativa SQLAlchemy (`DeclarativeBase`) y mixin `TimestampsMixin` (`created_at`, `updated_at`).
-- `connection.py`: Factoría de conexiones. Conecta a SQL Server (`Reportes_Itacamba`) si hay red/VPN activa, o realiza un fallback automático a SQLite local (`storage/db/local.db`) para entornos offline.
-- `bulk.py`: Inserción masiva de alto rendimiento (`bulk_insert_df`). Utiliza chunks de 10.000 filas y soporte de truncado atómico previo (`TRUNCATE` en SQL Server / `DELETE` en SQLite).
-- `schema.py`: Función `init_db()` que registra e inicializa todos los modelos DDL de Staging, Tablas Intermedias e Históricos.
+- `connection.py`: Conexión a SQL Server con las variables `DB_*` de `.env`. Si no hay conexión (por ejemplo, sin VPN) falla con `ConnectionError`; no existe respaldo en SQLite.
+- `bulk.py`: Inserción masiva (`bulk_insert_df`) en bloques de 10.000 filas, con `TRUNCATE` previo opcional en la misma transacción.
+- `schema.py`: Puente con Alembic. `upgrade_db()` aplica las migraciones pendientes (`python main.py init-db`) y `ensure_schema_current()` detiene cualquier corrida si la BD no está en la última versión. El esquema solo se crea o cambia con Alembic (ver `alembic/README`).
 
 ### 2. `io/` - Lectura y Exportación
 - `reader.py`: `FastExcelReader` basado en la biblioteca en Rust `calamine` para lectura ultrarrápida de archivos Excel pesados, con fallback a `openpyxl`. Resuelve hojas de trabajo numéricas o por nombre, y gestiona alias de columnas.

@@ -108,7 +108,7 @@ Dentro de cada slice de entrada u objetivo (`inputs/` y `outputs/`):
 | `python main.py run-despacho-mes` | Resumen mensual Real + Proyección y exportación de `DESPACHO_MES_<fecha>.xlsx` |
 | `python main.py run-all [--fin-de-mes]` | Ejecución integral secuencial de todos los pipelines |
 | `python main.py download-sap -t <tx> ...` | Descarga parametrizada de reportes desde SAP GUI (RPA) |
-| `python main.py init-db` | Verificación de conexión DDL e inicialización de esquemas en SQL Server |
+| `python main.py init-db` | Aplica las migraciones Alembic pendientes (`alembic upgrade head`). Los demás comandos se niegan a correr si la BD no está en la última versión |
 
 ## Convenciones
 
@@ -140,16 +140,17 @@ Dentro de cada slice de entrada u objetivo (`inputs/` y `outputs/`):
 
 ## Instalación
 
-1. Python 3.12 y ODBC Driver 17 for SQL Server.
+1. Python 3.12 y ODBC Driver 17 o 18 for SQL Server (poner el nombre exacto en `DB_DRIVER` del `.env`; el valor por defecto `SQL Server` es el driver antiguo de Windows).
 2. Crear el entorno virtual **fuera de OneDrive**: `python -m venv C:\venvs\itacamba_reportes`.
 3. `pip install -r requirements.txt` y, para desarrollo, `pip install pytest ruff`.
 4. Copiar `.env` con `DATABASE_URL` (o `DB_*`), `DATA_PATH` y `EXPORT_PATH`.
-5. `python main.py init-db` para verificar la conexión e inicializar esquemas en la Base de Datos.
+5. `python main.py init-db` para crear o actualizar el esquema con Alembic, y `alembic check` para confirmar que no hay diferencias con los modelos (ver `alembic/README`).
 
 ## Historial de cambios
 
 | Fecha | Cambio | Motivo |
 |---|---|---|
+| 22-10-2026 | **Alembic como única fuente del esquema y BD nueva**: se borran las migraciones 0001/0002 (412 diferencias con los modelos) y se genera `0001_baseline` desde los modelos. `init-db` ejecuta `alembic upgrade head`; las corridas verifican la versión en vez de hacer `create_all`. `sector` y `grupo_clientes_2` pasan a texto en `int_gd20` e `int_ventas_bi` (los valores `4A` y `7G9` hacían fallar la carga en SQL Server). Verificado en SQL Server 2022: `alembic check` sin diferencias, `run-all` completo en ~21 s y sin duplicar en una segunda corrida. Respaldo previo: rama `reset-alembic`, etiqueta `antes-reset-alembic`. | El esquema de la BD no coincidía con el código y GD20 no cargaba en SQL Server |
 | 22-10-2026 | **Arquitectura Database-First ELT & Vertical Slicing**: Ingesta cruda directa a staging (`stg_*`) y transformaciones/cruces masivos resueltos directamente en la Base de Datos (SQL Server). Purga del emulador de Excel en memoria RAM (`ColumnEngine`, specs y lookups en Python). Soporte de la nueva QUERY (24 cols) e integración de `PROYECCION-SEMANAL.xlsx` mediante unión vertical para `despacho_mes`. Documentado en `docs/DECISIONES_ARQUITECTURA_ELT.md`. | Rendimiento masivo, eliminar cuello de botella de red/RAM y garantizar mantenibilidad |
 | 22-10-2026 | Arquitectura limpia: `domain/` (fichas, puertos, cruces), `application/` (un pipeline genérico en lugar de 6), `reports/` (`definition.py` + `transform.py` + `contracts.py` por reporte), `infrastructure/` (SQL Server, Excel, estado, modo local), `interfaces/` (cli). Nuevo `--sin-bd` y `tools/calibrate_gd20.py`. Mismos resultados (comparación sobre octubre-2026: todas las tablas, controles y DDL idénticos; única diferencia, la opción nueva `--sin-bd`). | Escalar y mantener |
 | 22-10-2026 | Estructura por capas: un módulo por Excel en la raíz de `src/itacamba_reportes/` con `source.py` + `calculations.py` + `pipeline.py`; todo lo de la BD en `persistence/`; herramientas en `shared/` (desaparecen `core/`, `inputs/`, `outputs/`). Reglas de dependencias verificadas por pruebas. Corregido `tools/check_db_connection.py`, que fallaba al importar desde la v2. Misma salida (25 de 25 elementos idénticos sobre octubre-2026). | Todo lo del Excel en una carpeta y lo de la BD en otra |

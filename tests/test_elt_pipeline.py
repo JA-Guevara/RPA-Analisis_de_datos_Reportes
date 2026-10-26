@@ -14,7 +14,7 @@ from sqlalchemy import create_engine, text
 from itacamba_reportes.core.audit.hashing import add_hashes_to_df, compute_row_hash
 from itacamba_reportes.core.db.base import Base
 from itacamba_reportes.core.db.bulk import bulk_insert_df
-from itacamba_reportes.inputs.referencias.models import ChannelRefModel
+from itacamba_reportes.inputs.referencias.models import ChannelRefModel, RouteRefModel
 
 
 class TestEltPipeline(unittest.TestCase):
@@ -60,6 +60,23 @@ class TestEltPipeline(unittest.TestCase):
             ).scalar()
             self.assertEqual(count, 2)
 
+    def test_route_ref_model_bulk_insert(self):
+        mem_engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(bind=mem_engine)
+
+        df = pd.DataFrame([
+            {"codigo_ruta": "4B2910", "ruta": "RUTA_1", "departamento": "SANTA CRUZ", "localidad": "YANAIGUA"},
+            {"codigo_ruta": "4B2911", "ruta": "RUTA_2", "departamento": "SANTA CRUZ", "localidad": "VILLA ESPERANZA"},
+        ])
+        rows = bulk_insert_df(RouteRefModel, df, truncate_first=True, engine=mem_engine)
+        self.assertEqual(rows, 2)
+
+        with mem_engine.connect() as conn:
+            count = conn.execute(
+                text("SELECT count(*) FROM int_ref_ruta WHERE codigo_ruta LIKE '4B291%'")
+            ).scalar()
+            self.assertEqual(count, 2)
+
     def test_sql_transformation_files_exist(self):
         src_root = Path(__file__).resolve().parents[1] / "src" / "itacamba_reportes"
         expected_sql = [
@@ -77,7 +94,7 @@ class TestEltPipeline(unittest.TestCase):
     def test_model_field_types(self):
         from itacamba_reportes.inputs.cartera.models import CustomerIntModel, CustomerStgModel
         from itacamba_reportes.inputs.query.models import QueryIntModel
-        from itacamba_reportes.inputs.referencias.models import ChannelRefModel
+        from itacamba_reportes.inputs.referencias.models import ChannelRefModel, RouteRefModel
 
         self.assertEqual(ChannelRefModel.segmento.type.length, 100)
         self.assertEqual(QueryIntModel.dia.type.python_type, int)
@@ -152,6 +169,107 @@ class TestEltPipeline(unittest.TestCase):
         cfg_query = SapDownloadConfig.for_query(transaction="zbcs", date_from="01.10.2026", date_to="15.10.2026")
         self.assertEqual(cfg_query.transaction, "zbcs")
         self.assertEqual(cfg_query.date_from, "01.10.2026")
+
+    def test_defensive_reader_validation(self):
+        import tempfile
+        from itacamba_reportes.core.io.reader import (
+            ExcelSourceSpec,
+            FastExcelReader,
+            MissingColumnsError,
+            SheetNotFoundError,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            test_file = tmp_path / "TEST_DATA.xlsx"
+            df = pd.DataFrame({"col_a": [1, 2], "col_b": ["x", "y"]})
+            with pd.ExcelWriter(test_file) as writer:
+                df.to_excel(writer, sheet_name="HOJA_REAL", index=False)
+
+            # Caso 1: Hoja inexistente lanza SheetNotFoundError de inmediato
+            spec_bad_sheet = ExcelSourceSpec(
+                name="test",
+                file_pattern="TEST_DATA.xlsx",
+                sheet="HOJA_INEXISTENTE",
+            )
+            reader_bad_sheet = FastExcelReader(spec_bad_sheet, tmp_path)
+            with self.assertRaises(SheetNotFoundError):
+                reader_bad_sheet.read_raw()
+
+            # Caso 2: Columna requerida faltante lanza MissingColumnsError de inmediato
+            spec_missing_col = ExcelSourceSpec(
+                name="test",
+                file_pattern="TEST_DATA.xlsx",
+                sheet="HOJA_REAL",
+                required_columns=("col_a", "col_c_obligatoria"),
+            )
+            reader_missing_col = FastExcelReader(spec_missing_col, tmp_path)
+            with self.assertRaises(MissingColumnsError):
+                reader_missing_col.read_raw()
+
+            # Caso 3: Lectura exitosa con validacion aprobada
+            spec_ok = ExcelSourceSpec(
+                name="test",
+                file_pattern="TEST_DATA.xlsx",
+                sheet="HOJA_REAL",
+                required_columns=("col_a", "col_b"),
+            )
+            reader_ok = FastExcelReader(spec_ok, tmp_path)
+            df_read = reader_ok.read_raw()
+            self.assertEqual(len(df_read), 2)
+            self.assertIn("col_a", df_read.columns)
+
+    def test_clean_exporter_excludes_technical_columns(self):
+        import tempfile
+        import openpyxl
+        from itacamba_reportes.core.io.exporter import ExcelReportExporter
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            exporter = ExcelReportExporter(tmp_path)
+
+            df_with_tech = pd.DataFrame({
+                "cliente": [101, 102],
+                "volumen": [15.5, 20.0],
+                "id": [1, 2],
+                "created_at": ["2026-10-22", "2026-10-22"],
+                "version": [1, 2],
+                "is_current": [True, True],
+                "source_hash": ["hash1", "hash2"],
+            })
+
+            target = exporter.export(df_with_tech, "REPORTE_TEST")
+            wb = openpyxl.load_workbook(target)
+
+            # Verificacion 1: No existe la hoja de CONTROL por defecto
+            self.assertNotIn("CONTROL", wb.sheetnames)
+            self.assertIn("Data", wb.sheetnames)
+
+            # Verificacion 2: No se exportan columnas tecnicas
+            sheet = wb["Data"]
+            headers = [cell.value for cell in sheet[1]]
+            self.assertIn("cliente", headers)
+            self.assertIn("volumen", headers)
+            self.assertNotIn("id", headers)
+            self.assertNotIn("created_at", headers)
+            self.assertNotIn("version", headers)
+            self.assertNotIn("is_current", headers)
+            self.assertNotIn("source_hash", headers)
+
+    def test_zero_docstrings_in_src(self):
+        import ast
+        import glob
+        src_path = Path(__file__).resolve().parents[1] / "src"
+        docstring_findings = []
+        for py_file in src_path.rglob("*.py"):
+            with open(py_file, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read(), filename=str(py_file))
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.Module)):
+                    ds = ast.get_docstring(node)
+                    if ds:
+                        docstring_findings.append(f"{py_file.name}:{node.name if hasattr(node, 'name') else 'module'}")
+        self.assertEqual(docstring_findings, [])
 
 
 if __name__ == "__main__":

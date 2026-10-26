@@ -34,7 +34,13 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    raise RuntimeError("Modo offline no soportado. Usar migraciones online con engine real.")
+    context.configure(
+        dialect_name="mssql",
+        target_metadata=target_metadata,
+        literal_binds=True,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 def run_migrations_online() -> None:
@@ -46,7 +52,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
-            compare_server_default=True,
+            compare_server_default=False,
         )
 
         with context.begin_transaction():

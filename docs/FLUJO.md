@@ -1,5 +1,7 @@
 # Flujo de datos: de los Excel a VENTAS BI y DESPACHO BI
 
+> **Aviso (22-10-2026):** las columnas "En el bot" y "Estado" de las tablas V1–V11 y D1–D7 describen la versión anterior del bot (`reports/`, `domain/joins.py`, `center_overrides.py`), hoy archivada en `storage/archive/legacy_v1`. Siguen vigentes la sección 1 (puntos de control), las columnas "En el Excel" y la tabla 3.1. El estado actual de PC3 está en `DECISIONES_ARQUITECTURA_ELT.md`, sección "Estado verificado".
+
 Este documento muestra qué hace el `basepanel.xlsm` paso a paso, qué hace el bot en cada paso y qué falta para que el resultado coincida al 100 %. Es la guía para calibrar: si un número no coincide, se busca en qué paso se separan.
 
 ## 1. Regla de oro para mejorar sin romper

@@ -12,6 +12,18 @@ logger = logging.getLogger(__name__)
 NULL_TOKENS = frozenset({"", "#", "N/A", "NA", "nan", "NaN", "None", "null", "NULL", "00000000"})
 
 
+class ExcelReaderError(Exception):
+    pass
+
+
+class SheetNotFoundError(ExcelReaderError):
+    pass
+
+
+class MissingColumnsError(ExcelReaderError):
+    pass
+
+
 @dataclass(frozen=True, slots=True)
 class ExcelSourceSpec:
     name: str
@@ -45,39 +57,68 @@ class FastExcelReader:
             )
         return max(matches, key=lambda p: p.stat().st_mtime)
 
+    def get_sheet_names(self, path: Path) -> list[str]:
+        try:
+            import python_calamine
+            wb = python_calamine.CalamineWorkbook.from_path(path)
+            return wb.sheet_names
+        except Exception:
+            try:
+                import openpyxl
+                wb = openpyxl.load_workbook(path, read_only=True)
+                return wb.sheetnames
+            except Exception:
+                return []
+
     def read_raw(self) -> pd.DataFrame:
         path = self.resolve_path()
         logger.info("Leyendo Excel crudo %s (hoja=%s, fila=%d)", path.name, self.spec.sheet, self.spec.header_row)
 
+        # Paso 1: Validacion estricta de existencia de hoja solicitada
+        if isinstance(self.spec.sheet, str):
+            sheet_names = self.get_sheet_names(path)
+            if sheet_names and self.spec.sheet not in sheet_names:
+                raise SheetNotFoundError(
+                    f"La hoja requerida '{self.spec.sheet}' no existe en el archivo '{path.name}'. "
+                    f"Hojas encontradas en el libro: {sheet_names}"
+                )
+
         df = None
         for engine in ("calamine", "openpyxl"):
-            for sheet in (self.spec.sheet, 0):
-                try:
-                    df = pd.read_excel(
-                        path,
-                        sheet_name=sheet,
-                        header=self.spec.header_row,
-                        engine=engine,
-                    )
-                    break
-                except Exception:
-                    continue
-            if df is not None:
+            try:
+                df = pd.read_excel(
+                    path,
+                    sheet_name=self.spec.sheet,
+                    header=self.spec.header_row,
+                    engine=engine,
+                )
                 break
+            except Exception:
+                continue
 
         if df is None:
-            raise ValueError(f"No se pudo leer el archivo Excel {path.name}")
+            raise ValueError(f"No se pudo leer la hoja '{self.spec.sheet}' del archivo Excel {path.name}")
 
+        # Paso 2: Normalizacion de nombres de columnas y renombrado
         if self.spec.column_renames:
             df.columns = [str(c).strip() for c in df.columns]
             df = df.rename(columns=dict(self.spec.column_renames))
 
+        # Paso 3: Validacion defensiva de columnas obligatorias
+        if self.spec.required_columns:
+            missing = [c for c in self.spec.required_columns if c not in df.columns]
+            if missing:
+                raise MissingColumnsError(
+                    f"El archivo '{path.name}' (hoja '{self.spec.sheet}') no contiene las columnas requeridas: {missing}"
+                )
+
         df = df.dropna(how="all")
 
+        # Paso 4: Deduplicacion si aplica
         if self.spec.dedupe_keys:
             valid_keys = [k for k in self.spec.dedupe_keys if k in df.columns]
             if valid_keys:
                 df = df.drop_duplicates(subset=valid_keys, keep="first")
 
-        logger.info("%s leido: %d filas x %d columnas", self.spec.name, len(df), len(df.columns))
+        logger.info("%s validado y leido: %d filas x %d columnas", self.spec.name, len(df), len(df.columns))
         return df

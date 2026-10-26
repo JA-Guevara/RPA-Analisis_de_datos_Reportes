@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 QUERY_SPEC = ExcelSourceSpec(
     name="query",
     file_pattern="QUERY*.xlsx",
-    sheet="base",
+    sheet="Data",
     header_row=0,
     subdir="dinamicos",
     column_renames={
@@ -47,6 +47,12 @@ QUERY_SPEC = ExcelSourceSpec(
         "Código Ferretero": "codigo_ferretero",
         "Codigo Ferretero": "codigo_ferretero",
     },
+    required_columns=(
+        "nro_pedido",
+        "material",
+        "cod_destinatario",
+        "cantidad_ton",
+    ),
 )
 
 
@@ -59,12 +65,12 @@ def ingest_query() -> int:
         if col in df.columns:
             df[col] = df[col].astype(str).str.replace("#", "0").str.strip()
 
-    # Coercion de identificadores SAP numericos (BigInteger)
-    for col in ("nro_pedido", "cod_material", "cod_destinatario", "cod_pagador", "nro_factura"):
+    # Identificadores numericos SAP (BigInteger)
+    for col in ("nro_pedido", "cod_material", "cod_destinatario", "cod_pagador"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype("int64")
 
-    # Coercion de metricas de pesaje y precio a float para Numeric(18, 4)
+    # Metricas decimales (Numeric(18, 4))
     for col in ("cantidad_ton", "precio_pedido"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
@@ -73,5 +79,5 @@ def ingest_query() -> int:
     valid_cols = [c for c in model_cols if c in df.columns]
 
     rows = bulk_insert_df(QueryStgModel, df[valid_cols], truncate_first=True)
-    logger.info("Ingesta de QUERY ZBCS a stg_query: %d filas", rows)
+    logger.info("Ingesta Query ZBCS a stg_query: %d filas", rows)
     return rows

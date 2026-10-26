@@ -69,7 +69,7 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
 
     query_existing = """
     SELECT id, ejercicio, documento_comercial, numero_documento, material,
-           version, source_hash, derived_hash, cd_status
+           version, source_hash, derived_hash, cd_status, valid_from
     FROM int_ventas_bi
     WHERE is_current = 1
     """
@@ -84,7 +84,7 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
 
     to_insert = []
     ids_to_expire = []
-    updates_derived = []
+    ids_to_replace_today = []
 
     for _, row in df_int.iterrows():
         k = row["key"]
@@ -92,6 +92,7 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
         r_dict["full_row_hash"] = row["full_hash"]
 
         if k not in existing_map:
+            # Documento nuevo en el historico
             r_dict["version"] = 1
             r_dict["is_current"] = True
             r_dict["valid_from"] = now
@@ -100,21 +101,42 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
             to_insert.append(r_dict)
         else:
             ext = existing_map[k]
+            ext_vf = ext.get("valid_from")
+            ext_date = ext_vf.date() if hasattr(ext_vf, "date") else None
+
             if ext["source_hash"] != row["source_hash"]:
-                ids_to_expire.append(ext["id"])
-                r_dict["version"] = ext["version"] + 1
+                # Caso 1: Los datos SAP cambiaron. Si se registraron hoy mismo, sobreescribir hoy sin duplicar version
+                if ext_date == now.date():
+                    ids_to_replace_today.append(ext["id"])
+                    r_dict["version"] = ext["version"]
+                else:
+                    ids_to_expire.append(ext["id"])
+                    r_dict["version"] = ext["version"] + 1
+
                 r_dict["is_current"] = True
                 r_dict["valid_from"] = now
                 r_dict["valid_to"] = None
                 r_dict["cd_status"] = "PENDING"
                 to_insert.append(r_dict)
+
             elif ext["derived_hash"] != row["derived_hash"] or force_rebuild:
-                updates_derived.append((row["derived_hash"], ext["id"]))
+                # Caso 2: Las reglas de negocio o catalogos cambiaron -> actualizar en sitio
+                ids_to_replace_today.append(ext["id"])
+                r_dict["version"] = ext["version"]
+                r_dict["is_current"] = True
+                r_dict["valid_from"] = ext_vf or now
+                r_dict["valid_to"] = None
+                r_dict["cd_status"] = ext.get("cd_status", "PENDING")
+                to_insert.append(r_dict)
 
     with engine.begin() as conn:
+        if ids_to_replace_today:
+            del_list = ",".join(str(i) for i in ids_to_replace_today)
+            conn.execute(text(f"DELETE FROM int_ventas_bi WHERE id IN ({del_list})"))
+
         if ids_to_expire:
-            id_list = ",".join(str(i) for i in ids_to_expire)
-            conn.execute(text(f"UPDATE int_ventas_bi SET is_current = 0, valid_to = '{now}' WHERE id IN ({id_list})"))
+            exp_list = ",".join(str(i) for i in ids_to_expire)
+            conn.execute(text(f"UPDATE int_ventas_bi SET is_current = 0, valid_to = '{now}' WHERE id IN ({exp_list})"))
 
     if to_insert:
         df_ins = pd.DataFrame(to_insert)
@@ -122,6 +144,6 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
         valid_cols = [c for c in cols if c in df_ins.columns]
         bulk_insert_df(SalesBiIntModel, df_ins[valid_cols], truncate_first=False)
 
-    affected = len(to_insert) + len(updates_derived)
-    logger.info("Upsert SCD2 completado: %d nuevos/versionados, %d actualizados (%.2fs)", len(to_insert), len(updates_derived), perf_counter() - t0)
+    affected = len(to_insert)
+    logger.info("Upsert SCD2 completado: %d registros insertados/actualizados (reemplazo hoy=%d, expirados=%d) en %.2fs", affected, len(ids_to_replace_today), len(ids_to_expire), perf_counter() - t0)
     return affected

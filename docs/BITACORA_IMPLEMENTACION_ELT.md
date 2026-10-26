@@ -64,9 +64,31 @@
   - Dependencia nativa `pywin32` agregada y documentada en `requirements.txt`.
   - Verificación estricta de cero docstrings `""" """` en todo el proyecto y suite de pruebas unitarias actualizada y aprobada.
 
+- [x] **Paso 11**: Reinicio de Alembic y validación en SQL Server real (22-10-2026):
+  - Respaldo: rama `reset-alembic`, commit `Respaldo antes de reiniciar Alembic` y etiqueta `antes-reset-alembic`.
+  - Pruebas en SQL Server 2022 de prueba con los archivos de octubre:
+    - **(A)** Con las migraciones 0001/0002 quedan 412 diferencias con los modelos y `run-all` falla en REFERENCIAS.
+    - **(B)** Con `create_all`, GD20 falla con `Conversion failed ... '7G9' to int`.
+    - **(C)** Con la baseline nueva y los códigos como texto, todo pasa.
+  - Cambios:
+    - Borradas las migraciones 0001/0002.
+    - Nueva `alembic/versions/0001_baseline_esquema_inicial_elt.py`.
+    - `env.py`: modo `--sql` para el DBA y `compare_server_default=False`.
+    - `script.py.mako` sin docstrings ni comentarios.
+    - `schema.py`: `upgrade_db()` y `ensure_schema_current()`.
+    - `cli.py`: `init-db` aplica migraciones y el resto de comandos verifica la versión.
+    - `sector` y `grupo_clientes_2` pasan a texto en `int_gd20` e `int_ventas_bi`.
+  - Resultado:
+    - `alembic check` sin diferencias.
+    - `run-all` completo en unos 21 s, y una segunda corrida no duplica nada (VENTAS BI: 0 nuevos).
+    - 6 pruebas pasan.
+    - Calibración contra BASE PANEL: ver `DECISIONES_ARQUITECTURA_ELT.md`, sección "Estado verificado".
+
 ---
 
 ## 2. Métricas de Rendimiento Verificadas (Benchmark de Ejecución)
+
+> Nota (22-10-2026): no hay registro de cómo se obtuvieron estas cifras, ni de las comparaciones con VBA o con el bot anterior. La medición reproducible es la del Paso 11 (unos 21 s en SQL Server 2022 de prueba).
 
 Ejecución completa del pipeline end-to-end (`python main.py run-all`) con datos reales de producción:
 

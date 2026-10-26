@@ -10,7 +10,7 @@ src_path = str(Path(__file__).resolve().parents[1])
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
-from itacamba_reportes.core.db.schema import init_db
+from itacamba_reportes.core.db.schema import ensure_schema_current, upgrade_db
 from itacamba_reportes.inputs.referencias.pipeline import run_pipeline as run_referencias
 from itacamba_reportes.inputs.cartera.pipeline import run_pipeline as run_cartera
 from itacamba_reportes.inputs.query.pipeline import run_pipeline as run_query
@@ -66,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("init-db", help="Inicializa tablas y esquemas en BD.")
+    subparsers.add_parser("init-db", help="Aplica las migraciones Alembic pendientes (alembic upgrade head).")
     subparsers.add_parser("run-referencias", help="Pipeline REFERENCIAS -> tablas int_ref_*.")
     subparsers.add_parser("run-cartera", help="Pipeline CARTERA -> stg_cartera + int_cartera.")
     subparsers.add_parser("run-query", help="Pipeline QUERY ZBCS -> stg_query + int_query.")
@@ -119,11 +119,13 @@ def main(argv: list[str] | None = None) -> int:
             execute_download_report(session_mgr, cfg)
             return 0
 
-        init_db()
-
         if args.command == "init-db":
+            upgrade_db()
             return 0
-        elif args.command == "run-referencias":
+
+        ensure_schema_current()
+
+        if args.command == "run-referencias":
             run_referencias()
         elif args.command == "run-cartera":
             run_cartera()

@@ -35,7 +35,7 @@ class SalesBiIntModel(Base, TimestampsMixin):
     division = Column(String(20))
     oficina_ventas = Column(String(20))
     canal_distribucion = Column(Integer)
-    sector = Column(Integer)
+    sector = Column(String(10))
     numero_cuenta = Column(BigInteger)
     centro_beneficio = Column(String(50))
     material = Column(BigInteger)
@@ -51,7 +51,7 @@ class SalesBiIntModel(Base, TimestampsMixin):
     customer_bill_to = Column(BigInteger)
     destinatario = Column(BigInteger)
 
-    grupo_clientes_2 = Column(Integer)
+    grupo_clientes_2 = Column(String(10))
     atributo_6 = Column(String(20))
     atributo_7 = Column(String(20))
     atributo_10 = Column(String(20))

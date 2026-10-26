@@ -11,7 +11,7 @@ El sistema sigue estrictamente los principios de **Database-First ELT + Vertical
 
 ## 2. Mapa de Módulos
 
-- `core/`: Motor compartido de base de datos, conexión resiliente (SQL Server / SQLite), bulk inserts, lector Calamine y hashing SCD2.
+- `core/`: Motor compartido de base de datos, conexión a SQL Server, bulk inserts, lector Calamine y hashing SCD2.
 - `inputs/`: Vertical slices de ingesta y normalización:
   - `referencias/`: Catálogos maestros (Almacenes, Centros, Materiales, Equipos, Localidades, Semanas).
   - `cartera/`: Padrón general de clientes y normalización de donaciones.
@@ -26,7 +26,7 @@ El sistema sigue estrictamente los principios de **Database-First ELT + Vertical
 ## 3. Comandos CLI
 
 ```bash
-# Inicializar esquemas en base de datos
+# Aplicar migraciones Alembic (BD nueva o después de un cambio de modelo)
 python main.py init-db
 
 # Ejecución por slice

@@ -9,7 +9,7 @@ Agrupa los módulos que producen los reportes consumidos por Power BI, la Gerenc
 - **Lógica:** Implementa **Slowly Changing Dimensions Tipo 2 (SCD2)**:
   - Compara `source_hash` (columnas SAP) y `derived_hash` (columnas calculadas).
   - Si cambian columnas de SAP, vence la fila anterior (`is_current = 0`, `valid_to = NOW`) y crea una nueva versión (`version + 1`).
-  - Si solo cambian columnas derivadas por recalibración, actualiza en el lugar.
+  - Si solo cambian columnas derivadas por recalibración: **pendiente**. El código las detecta pero no ejecuta ningún UPDATE, así que una corrección de regla (por ejemplo `tipo_venta`) no llega a las filas ya acumuladas.
 - **Exportación:** `storage/exports/VENTAS_BI_YYYY-MM-DD_HHMM.xlsx`.
 
 ### 2. `despacho_bi` - Histórico Real de Despachos

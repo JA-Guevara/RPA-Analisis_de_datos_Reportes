@@ -58,3 +58,13 @@ class WeekRefModel(Base, TimestampsMixin):
     id = Column(Integer, primary_key=True, autoincrement=True)
     dia = Column(Integer, index=True)
     semana = Column(String(50))
+
+
+class RouteRefModel(Base, TimestampsMixin):
+    __tablename__ = "int_ref_ruta"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    codigo_ruta = Column(String(50), index=True)
+    ruta = Column(String(200))
+    departamento = Column(String(100))
+    localidad = Column(String(150))

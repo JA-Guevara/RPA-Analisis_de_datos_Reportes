@@ -4,16 +4,18 @@ import logging
 import unicodedata
 from pathlib import Path
 from typing import Any
-
+import openpyxl
 import pandas as pd
 
 from itacamba_reportes.core.db.bulk import bulk_insert_df
+from itacamba_reportes.core.io.reader import SheetNotFoundError
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.inputs.referencias.models import (
     CenterRefModel,
     ChannelRefModel,
     LocalityRefModel,
     MaterialRefModel,
+    RouteRefModel,
     SalesTeamRefModel,
     WeekRefModel,
 )
@@ -38,6 +40,7 @@ SHEET_CONFIG = (
     ("Centros", CenterRefModel, {
         "CENTRO": "centro",
         "NOMBRE": "nombre",
+        "CENTRO NOMBRE": "nombre",
         "CODIGO SAP CLIENTE": "codigo_sap_cliente",
         "TIPO": "tipo",
     }),
@@ -63,6 +66,16 @@ SHEET_CONFIG = (
         "DIA": "dia",
         "SEMANA": "semana",
     }),
+    ("Rutas", RouteRefModel, {
+        "CODIGO RUTA": "codigo_ruta",
+        "COD RUTA": "codigo_ruta",
+        "RUTA": "ruta",
+        "DPTO.": "departamento",
+        "DPTO": "departamento",
+        "DEPARTAMENTO": "departamento",
+        "LOCALIDAD/MUNICIPIO": "localidad",
+        "LOCALIDAD": "localidad",
+    }),
 )
 
 
@@ -83,8 +96,14 @@ def ingest_referencias() -> dict[str, int]:
     path = resolve_referencias_path()
     logger.info("Cargando catalogos de REFERENCIAS desde %s", path)
 
+    wb = openpyxl.load_workbook(path, read_only=True)
+    available_sheets = set(wb.sheetnames)
+
     results = {}
     for sheet_name, model, rename_map in SHEET_CONFIG:
+        if sheet_name not in available_sheets:
+            raise SheetNotFoundError(f"La hoja '{sheet_name}' no existe en REFERENCIAS.xlsx. Disponibles: {list(available_sheets)}")
+
         try:
             df = pd.read_excel(path, sheet_name=sheet_name, engine="calamine")
         except Exception:

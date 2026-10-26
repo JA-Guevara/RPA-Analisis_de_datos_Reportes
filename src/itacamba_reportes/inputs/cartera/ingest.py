@@ -41,6 +41,13 @@ CARTERA_SPEC = ExcelSourceSpec(
         "Unnamed: 36": "canal",
         "Condición pago": "condicion_pago",
     },
+    required_columns=(
+        "cliente",
+        "nombre_cliente",
+        "vendedor",
+        "equipo",
+        "region_nombre",
+    ),
 )
 
 
@@ -59,5 +66,5 @@ def ingest_cartera() -> int:
     valid_cols = [c for c in model_cols if c in df.columns]
 
     rows = bulk_insert_df(CustomerStgModel, df[valid_cols], truncate_first=True)
-    logger.info("Ingesta de Cartera a stg_cartera: %d filas", rows)
+    logger.info("Ingesta Cartera a stg_cartera: %d filas", rows)
     return rows

@@ -31,7 +31,7 @@ def export_ventas_bi() -> Path:
         canal, sub_canal, dia, mes, anio, tipo_venta, localidad, provincia,
         dpto, region_m, ingreso_bruto, dpto_pagador, localidad_pagador,
         codigo_cliente, bonificaciones, centro_distribucion, zona_entrega,
-        nombre_destinatario, version, is_current, valid_from
+        nombre_destinatario
     FROM int_ventas_bi
     WHERE is_current = 1
     ORDER BY fe_contabilizacion DESC, documento_comercial;
@@ -40,9 +40,4 @@ def export_ventas_bi() -> Path:
         df = pd.read_sql(query, conn)
 
     exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
-    control = {
-        "Total filas vigentes": len(df),
-        "Total Toneladas": df["volumen_toneladas"].sum() if "volumen_toneladas" in df.columns else 0,
-        "Total Ingreso Bruto": df["ingreso_bruto"].sum() if "ingreso_bruto" in df.columns else 0,
-    }
-    return exporter.export(df, "VENTAS_BI", control_info=control)
+    return exporter.export(df, "VENTAS_BI")

@@ -7,6 +7,7 @@ import openpyxl
 import pandas as pd
 
 from itacamba_reportes.core.db.bulk import bulk_insert_df
+from itacamba_reportes.core.io.reader import MissingColumnsError, SheetNotFoundError
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.inputs.proyeccion.models import ProyeccionStgModel
 
@@ -34,7 +35,9 @@ def find_target_sheet(path: Path) -> str:
     for sheet in wb.sheetnames:
         if re.search(r"^RF\s*AJUSTADO\s*SEMANAL", sheet, re.IGNORECASE):
             return sheet
-    return wb.sheetnames[-1]
+    raise SheetNotFoundError(
+        f"No se encontró una hoja que inicie con 'RF AJUSTADO SEMANAL' en '{path.name}'. Hojas disponibles: {wb.sheetnames}"
+    )
 
 
 def ingest_proyeccion() -> int:
@@ -63,6 +66,12 @@ def ingest_proyeccion() -> int:
         "RF AJUSTADO_IM": "rf_ajustado_im",
     }
     df = df.rename(columns=renames)
+
+    # Validacion defensiva de columnas obligatorias
+    required = ("dia", "rf_ajustado_im", "material")
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise MissingColumnsError(f"El archivo '{path.name}' (hoja '{sheet_name}') no contiene las columnas requeridas: {missing}")
 
     # Columna codigo_cliente: normalizacion numerica int64
     if "codigo_cliente" in df.columns:

@@ -40,6 +40,7 @@ class EnvConfig:
     _default_data_path = str(_PROJECT_ROOT / "storage" / "input")
     _candidates = [
         os.getenv("DATA_PATH"),
+        r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos ITACAMBA\Archivos",
         r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos ITACAMBA",
         r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos\Archivos",
         _default_data_path,
@@ -50,6 +51,8 @@ class EnvConfig:
     PROCESSED_PATH: Path = Path(_get_env("PROCESSED_PATH", default=str(_PROJECT_ROOT / "storage" / "processed")))
     ARCHIVE_PATH: Path = Path(_get_env("ARCHIVE_PATH", default=str(_PROJECT_ROOT / "storage" / "archive")))
     LOG_PATH: Path = Path(_get_env("LOG_PATH", default=str(LOG_PATH)))
+
+    _default_export = DATA_PATH / "reports" if (DATA_PATH / "reports").exists() else _PROJECT_ROOT / "storage" / "exports"
     _env_export = os.getenv("EXPORT_PATH")
     if _env_export:
         try:
@@ -59,7 +62,7 @@ class EnvConfig:
         except Exception:
             _env_export = None
 
-    EXPORT_PATH: Path = Path(_env_export or str(_PROJECT_ROOT / "storage" / "exports"))
+    EXPORT_PATH: Path = Path(_env_export or str(_default_export))
 
     DATABASE_URL: str | None = _get_env("DATABASE_URL")
     DB_SERVER: str | None = _get_env("DB_SERVER")

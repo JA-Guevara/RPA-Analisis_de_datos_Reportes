@@ -1,1 +1,25 @@
-Generic single-database configuration.
+Migraciones de la Base de Datos (SQL Server)
+
+Alembic es la unica fuente del esquema. El bot ya no crea tablas al ejecutarse: antes de cada corrida verifica que la BD este en la ultima version y, si no lo esta, se detiene con un mensaje.
+
+Primera vez en una BD nueva
+  1. Crear la BD vacia y poner DB_NAME en .env (credenciales solo en .env).
+  2. python main.py init-db            (equivale a: alembic upgrade head)
+  3. alembic check                     (debe responder: No new upgrade operations detected)
+  4. python main.py run-all
+
+Cambiar un modelo (models.py)
+  1. Editar el modelo.
+  2. alembic revision --autogenerate -m "descripcion corta" --rev-id 000N_nombre
+  3. Revisar el archivo generado en versions/ (autogenerate no detecta renombres: aparecen como borrar + crear).
+  4. python main.py init-db
+  5. alembic check
+
+Script SQL para el DBA (sin conexion)
+  alembic upgrade head --sql > esquema.sql
+
+Antes de pasar a produccion la baseline 0001 puede regenerarse: borrar la BD de prueba y el archivo 0001, crear la BD vacia y ejecutar alembic revision --autogenerate --rev-id 0001_baseline. Despues de produccion, solo migraciones nuevas.
+
+Notas
+  - compare_server_default esta desactivado en env.py: en SQL Server los defaults de fecha (CURRENT_TIMESTAMP vs getdate()) dan diferencias falsas.
+  - Las pruebas unitarias usan SQLite en memoria con create_all; no reemplazan una prueba contra SQL Server.

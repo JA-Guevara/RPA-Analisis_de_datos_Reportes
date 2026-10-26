@@ -6,7 +6,7 @@ Lee la información de despachos operativos extraída de SAP (transacción `ZBCS
 ## Formato de Entrada
 - **Archivo**: `QUERY*.xlsx`
 - **Hoja**: `base`
-- **Encabezado**: Fila 1 (0-indexed)
+- **Encabezado**: primera fila de la hoja (`header_row=0`)
 - **Columnas**: 24 columnas oficiales de SAP ZBCS (Fecha salida, fecha creación entrega, pedido, incoterms, centros, materiales, rutas, destinatario, pagador, cantidad en toneladas, facturación).
 
 ## Tipos de Datos y Normalización
