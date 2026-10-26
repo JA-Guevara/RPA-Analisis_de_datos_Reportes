@@ -299,6 +299,8 @@ class TestEltPipeline(unittest.TestCase):
         self.assertEqual(len(DESPACHO_MES_MAPPING), 20)
         self.assertIn("Fecha", DESPACHO_MES_MAPPING.values())
         self.assertIn("Mes", DESPACHO_MES_MAPPING.values())
+        self.assertIn("x", DESPACHO_BI_MAPPING.values())
+        self.assertEqual(DESPACHO_BI_MAPPING["dia"], "x")
 
         df_dummy = pd.DataFrame({
             "gerencia": ["SCZ"],
@@ -309,6 +311,14 @@ class TestEltPipeline(unittest.TestCase):
         })
         mapped = map_export_columns(df_dummy, DESPACHO_MES_MAPPING)
         self.assertEqual(list(mapped.columns), ["GERENCIA", "EQUIPO", "Fecha", "Mes", "Día"])
+
+        df_bi_dummy = pd.DataFrame({
+            "centro_origen": ["4B05"],
+            "dia": [20],
+        })
+        mapped_bi = map_export_columns(df_bi_dummy, DESPACHO_BI_MAPPING)
+        self.assertEqual(list(mapped_bi.columns), ["Centro Proveedor", "x"])
+        self.assertEqual(mapped_bi["x"].iloc[0], 20)
 
     def test_zero_docstrings_in_src(self):
         import ast

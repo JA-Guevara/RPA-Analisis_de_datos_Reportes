@@ -140,6 +140,7 @@ DESPACHO_BI_MAPPING = {
     "localidad_im": "LOCALIDAD IM",
     "gerencia": "GERENCIA",
     "semana": "Semana",
+    "dia": "x",
     "canal": "CANAL",
 }
 
