@@ -11,7 +11,7 @@ from itacamba_reportes.inputs.gd20.transform import transform_gd20
 logger = logging.getLogger(__name__)
 
 
-def run_pipeline(corte_fecha: date | None = None, is_fin_de_mes: bool = False) -> dict[str, int]:
+def run_pipeline(corte_fecha: date | str | None = None, is_fin_de_mes: bool = False) -> dict[str, int]:
     t0 = perf_counter()
     logger.info("=== Iniciando pipeline GD20 (BASE PANEL) ===")
     try:

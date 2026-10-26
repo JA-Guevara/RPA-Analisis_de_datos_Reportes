@@ -28,7 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger("itacamba_reportes")
 
 
-def run_all(is_fin_de_mes: bool = False) -> int:
+def run_all(is_fin_de_mes: bool = False, corte_fecha: str | None = None) -> int:
     t0 = perf_counter()
     logger.info("==================================================")
     logger.info("=== EJECUCIÓN GENERAL DE TODOS LOS PIPELINES   ===")
@@ -39,7 +39,7 @@ def run_all(is_fin_de_mes: bool = False) -> int:
         ("CARTERA", lambda: run_cartera()),
         ("QUERY", lambda: run_query()),
         ("PROYECCION", lambda: run_proyeccion()),
-        ("GD20", lambda: run_gd20(is_fin_de_mes=is_fin_de_mes)),
+        ("GD20", lambda: run_gd20(is_fin_de_mes=is_fin_de_mes, corte_fecha=corte_fecha)),
         ("VENTAS BI", lambda: run_ventas_bi()),
         ("DESPACHO BI", lambda: run_despacho_bi()),
         ("DESPACHO MES", lambda: run_despacho_mes()),
@@ -76,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     p_gd20 = subparsers.add_parser("run-gd20", help="Pipeline GD20 (BASE PANEL) -> int_gd20 + int_ventas_bi.")
     p_gd20.add_argument("--fin-de-mes", action="store_true", help="Conserva las filas de la fecha actual para cierre.")
     p_gd20.add_argument("--force", action="store_true", help="Fuerza la ejecución completa (compatibilidad).")
+    p_gd20.add_argument("--corte-fecha", default=None, help="Fecha de corte YYYY-MM-DD para excluir filas de esa fecha en adelante.")
 
     subparsers.add_parser("run-ventas-bi", help="Pipeline VENTAS BI -> acumula histórico SCD2.")
     subparsers.add_parser("run-despacho-bi", help="Pipeline DESPACHO BI -> acumula histórico real de despachos.")
@@ -84,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     p_all = subparsers.add_parser("run-all", help="Ejecuta todos los pipelines en orden secuencial.")
     p_all.add_argument("--fin-de-mes", action="store_true", help="Conserva las filas de la fecha actual para cierre.")
     p_all.add_argument("--force", action="store_true", help="Fuerza la ejecución completa (compatibilidad).")
+    p_all.add_argument("--corte-fecha", default=None, help="Fecha de corte YYYY-MM-DD para excluir filas de esa fecha en adelante.")
 
     p_sap = subparsers.add_parser("download-sap", help="Descarga un reporte parametrizado desde SAP GUI.")
     p_sap.add_argument("--transaction", "-t", required=True, help="Código de transacción SAP (ej: gd20, zbcs, sq01).")
@@ -154,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run-proyeccion":
             run_proyeccion()
         elif args.command == "run-gd20":
-            run_gd20(is_fin_de_mes=args.fin_de_mes)
+            run_gd20(is_fin_de_mes=args.fin_de_mes, corte_fecha=args.corte_fecha)
             run_ventas_bi()
         elif args.command == "run-ventas-bi":
             run_ventas_bi()
@@ -163,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run-despacho-mes":
             run_despacho_mes()
         elif args.command == "run-all":
-            return run_all(is_fin_de_mes=args.fin_de_mes)
+            return run_all(is_fin_de_mes=args.fin_de_mes, corte_fecha=args.corte_fecha)
         return 0
     except Exception as exc:
         logger.exception("Error en ejecución de %s: %s", args.command, exc)

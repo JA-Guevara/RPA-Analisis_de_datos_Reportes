@@ -12,14 +12,15 @@ logger = logging.getLogger(__name__)
 SQL_PATH = Path(__file__).parent / "transform.sql"
 
 
-def transform_gd20(corte_fecha: date | None = None, is_fin_de_mes: bool = False) -> int:
+def transform_gd20(corte_fecha: date | str | None = None, is_fin_de_mes: bool = False) -> int:
     logger.info("Transformando stg_gd20 -> int_gd20 en Base de Datos...")
     sql_script = SQL_PATH.read_text(encoding="utf-8")
 
     # Macro EliminarFilasFechaActual:
     if not is_fin_de_mes:
         if corte_fecha:
-            date_filter = f"WHERE g.fe_contabilizacion < '{corte_fecha.strftime('%Y-%m-%d')}'"
+            c_str = corte_fecha if isinstance(corte_fecha, str) else corte_fecha.strftime("%Y-%m-%d")
+            date_filter = f"WHERE g.fe_contabilizacion < '{c_str}'"
         else:
             date_filter = "WHERE g.fe_contabilizacion < CAST(GETDATE() AS DATE)"
         sql_script = sql_script.replace("/* DATE_FILTER */", date_filter)
