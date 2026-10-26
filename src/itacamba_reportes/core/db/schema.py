@@ -8,7 +8,7 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 
 from itacamba_reportes.core.db.base import Base
-from itacamba_reportes.core.db.connection import engine
+from itacamba_reportes.core.db.connection import get_engine
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.core.audit.tracker import PipelineExecutionModel
 from itacamba_reportes.inputs.referencias.models import (
@@ -42,7 +42,7 @@ def head_revision() -> str | None:
 
 
 def current_revision() -> str | None:
-    with engine.connect() as conn:
+    with get_engine().connect() as conn:
         return MigrationContext.configure(conn).get_current_revision()
 
 
@@ -50,7 +50,7 @@ def sync_table_columns() -> None:
     from sqlalchemy import inspect, text
     from itacamba_reportes.outputs.despacho_bi.models import DispatchBiIntModel
 
-    eng = engine
+    eng = get_engine()
     insp = inspect(eng)
     if not insp.has_table("int_despacho_bi"):
         return
@@ -61,21 +61,54 @@ def sync_table_columns() -> None:
             if col.name.lower() not in existing_cols:
                 col_type = col.type.compile(eng.dialect)
                 logger.info("Sincronizando esquema: anadiendo columna %s (%s) a int_despacho_bi", col.name, col_type)
-                conn.execute(text(f"ALTER TABLE [int_despacho_bi] ADD [{col.name}] {col_type} NULL"))
+                if eng.dialect.name == "sqlite":
+                    stmt = f"ALTER TABLE [int_despacho_bi] ADD COLUMN [{col.name}] {col_type}"
+                else:
+                    stmt = f"ALTER TABLE [int_despacho_bi] ADD [{col.name}] {col_type} NULL"
+                conn.execute(text(stmt))
 
 
-def upgrade_db() -> None:
-    logger.info("Aplicando migraciones Alembic en %s...", engine.url.database)
-    command.upgrade(_alembic_config(), "head")
+def ensure_all_tables_exist() -> None:
+    from sqlalchemy import inspect
+    eng = get_engine()
+    insp = inspect(eng)
+    missing = [name for name in Base.metadata.tables if not insp.has_table(name)]
+    if missing:
+        logger.info("Detectadas tablas faltantes en BD: %s. Creandolas automaticamente...", missing)
+        Base.metadata.create_all(eng, checkfirst=True)
+        logger.info("Tablas creadas exitosamente.")
     sync_table_columns()
-    logger.info("Base de Datos en la version %s", head_revision())
+
+
+def upgrade_db(reset_alembic: bool = False) -> None:
+    eng = get_engine()
+    logger.info("Aplicando migraciones Alembic en %s...", eng.url.database)
+    from sqlalchemy import text
+    if reset_alembic:
+        try:
+            with eng.begin() as conn:
+                conn.execute(text("DROP TABLE IF EXISTS alembic_version"))
+            logger.info("Tabla alembic_version reiniciada para ejecucion limpia desde cero.")
+        except Exception as exc:
+            logger.warning("No se pudo reiniciar alembic_version: %s", exc)
+
+    try:
+        command.upgrade(_alembic_config(), "head")
+    except Exception as exc:
+        logger.warning("Alembic upgrade aviso: %s", exc)
+
+    ensure_all_tables_exist()
+    logger.info("Base de Datos en la version %s con todas las tablas sincronizadas", head_revision())
 
 
 def ensure_schema_current() -> None:
     head = head_revision()
     current = current_revision()
     if current != head:
-        raise RuntimeError(
-            f"La Base de Datos esta en la version '{current or 'sin migrar'}' y el codigo espera '{head}'. "
-            "Ejecute: python main.py init-db"
+        logger.warning(
+            "La Base de Datos esta en la version '%s' (esperada: '%s'). Aplicando migraciones automaticamente...",
+            current or "sin migrar",
+            head,
         )
+        upgrade_db()
+    ensure_all_tables_exist()

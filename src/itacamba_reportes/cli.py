@@ -69,7 +69,8 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("test-db", help="Verifica la conexión a SQL Server y muestra diagnóstico detallado.")
-    subparsers.add_parser("init-db", help="Aplica las migraciones Alembic pendientes (alembic upgrade head).")
+    p_init = subparsers.add_parser("init-db", help="Aplica las migraciones Alembic pendientes y asegura todas las tablas.")
+    p_init.add_argument("--reset-alembic", action="store_true", help="Reinicia tabla de versiones de Alembic para forzar ejecución limpia.")
     subparsers.add_parser("run-referencias", help="Pipeline REFERENCIAS -> tablas int_ref_*.")
     subparsers.add_parser("run-cartera", help="Pipeline CARTERA -> stg_cartera + int_cartera.")
     subparsers.add_parser("run-query", help="Pipeline QUERY ZBCS -> stg_query + int_query.")
@@ -145,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "init-db":
-            upgrade_db()
+            upgrade_db(reset_alembic=getattr(args, "reset_alembic", False))
             return 0
 
         ensure_schema_current()

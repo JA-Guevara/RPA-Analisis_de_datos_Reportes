@@ -400,6 +400,61 @@ class TestEltPipeline(unittest.TestCase):
         self.assertEqual(len(mapped_full.columns), 56)
         self.assertEqual(list(mapped_full.columns), list(DESPACHO_BI_MAPPING.values()))
 
+    def test_migration_matches_all_models_exactly(self):
+        import importlib.util
+        from itacamba_reportes.core.db.base import Base
+        import itacamba_reportes.core.db.schema
+
+        spec = importlib.util.spec_from_file_location("baseline", "alembic/versions/0001_baseline_esquema_inicial_elt.py")
+        baseline = importlib.util.module_from_spec(spec)
+
+        created_tables = {}
+        class MockOp:
+            @staticmethod
+            def create_table(name, *columns, **kwargs):
+                created_tables[name] = [c.name for c in columns if getattr(c, "name", None)]
+            @staticmethod
+            def create_index(*args, **kwargs): pass
+            @staticmethod
+            def drop_table(*args, **kwargs): pass
+            @staticmethod
+            def drop_index(*args, **kwargs): pass
+            @staticmethod
+            def f(x): return x
+
+        spec.loader.exec_module(baseline)
+        baseline.op = MockOp()
+        baseline.upgrade()
+
+        self.assertEqual(len(created_tables), 18)
+        self.assertEqual(len(Base.metadata.tables), 18)
+        for tname, mtable in Base.metadata.tables.items():
+            self.assertIn(tname, created_tables)
+            m_cols = set(c.name for c in mtable.columns)
+            mig_cols = set(created_tables[tname])
+            self.assertEqual(m_cols, mig_cols, f"Discrepancia de columnas en tabla {tname}: {m_cols ^ mig_cols}")
+
+    def test_ensure_all_tables_exist_creates_missing_table(self):
+        from itacamba_reportes.core.db.base import Base
+        from itacamba_reportes.core.db.schema import ensure_all_tables_exist
+        import itacamba_reportes.core.db.connection as conn_mod
+        from sqlalchemy import create_engine, inspect
+
+        mem_eng = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(mem_eng, tables=[t for n, t in Base.metadata.tables.items() if n != "int_despacho_bi"])
+        insp = inspect(mem_eng)
+        self.assertFalse(insp.has_table("int_despacho_bi"))
+
+        orig_engine = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+        try:
+            ensure_all_tables_exist()
+            insp2 = inspect(mem_eng)
+            self.assertTrue(insp2.has_table("int_despacho_bi"))
+            self.assertEqual(len(insp2.get_columns("int_despacho_bi")), 63)
+        finally:
+            conn_mod.set_engine(orig_engine)
+
     def test_zero_docstrings_in_src(self):
         import ast
         import glob
