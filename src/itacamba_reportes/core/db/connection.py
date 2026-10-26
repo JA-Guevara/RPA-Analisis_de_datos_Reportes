@@ -21,17 +21,26 @@ def build_sqlserver_url() -> str | None:
     if EnvConfig.DATABASE_URL and "{" not in EnvConfig.DATABASE_URL:
         return EnvConfig.DATABASE_URL
 
-    if not all([EnvConfig.DB_SERVER, EnvConfig.DB_NAME, EnvConfig.DB_USER, EnvConfig.DB_PASSWORD]):
+    if not all([EnvConfig.DB_SERVER, EnvConfig.DB_NAME]):
         return None
 
     driver_name = (EnvConfig.DB_DRIVER or "SQL Server").strip("{}")
+    server_str = str(EnvConfig.DB_SERVER)
+    if EnvConfig.DB_PORT and "," not in server_str and "\\" not in server_str:
+        server_str = f"{server_str},{EnvConfig.DB_PORT}"
+
     odbc_parts = [
         f"DRIVER={{{driver_name}}}",
-        f"SERVER={EnvConfig.DB_SERVER},{EnvConfig.DB_PORT}",
+        f"SERVER={server_str}",
         f"DATABASE={EnvConfig.DB_NAME}",
-        f"UID={EnvConfig.DB_USER}",
-        f"PWD={EnvConfig.DB_PASSWORD}",
     ]
+    if EnvConfig.DB_USER and EnvConfig.DB_PASSWORD:
+        odbc_parts.append(f"UID={EnvConfig.DB_USER}")
+        odbc_parts.append(f"PWD={EnvConfig.DB_PASSWORD}")
+    else:
+        # Autenticacion integrada de Windows si no se configuran usuario y clave
+        odbc_parts.append("Trusted_Connection=yes")
+
     if any(k in driver_name for k in ("ODBC Driver", "Native Client")):
         trust_cert = "yes" if EnvConfig.DB_TRUST_CERT else "no"
         odbc_parts.append(f"TrustServerCertificate={trust_cert}")
@@ -43,7 +52,7 @@ def build_sqlserver_url() -> str | None:
 def create_app_engine() -> Engine:
     sqlserver_url = build_sqlserver_url()
     if not sqlserver_url:
-        raise ValueError("Configuración de SQL Server incompleta en .env (DB_SERVER, DB_NAME, DB_USER, DB_PASSWORD)")
+        raise ValueError("Configuración de SQL Server incompleta en .env (se requiere al menos DB_SERVER y DB_NAME)")
 
     try:
         eng = create_engine(sqlserver_url, pool_pre_ping=True, fast_executemany=True)
