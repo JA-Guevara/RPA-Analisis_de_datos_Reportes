@@ -75,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_gd20 = subparsers.add_parser("run-gd20", help="Pipeline GD20 (BASE PANEL) -> int_gd20 + int_ventas_bi.")
     p_gd20.add_argument("--fin-de-mes", action="store_true", help="Conserva las filas de la fecha actual para cierre.")
+    p_gd20.add_argument("--force", action="store_true", help="Fuerza la ejecución completa (compatibilidad).")
 
     subparsers.add_parser("run-ventas-bi", help="Pipeline VENTAS BI -> acumula histórico SCD2.")
     subparsers.add_parser("run-despacho-bi", help="Pipeline DESPACHO BI -> acumula histórico real de despachos.")
@@ -82,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_all = subparsers.add_parser("run-all", help="Ejecuta todos los pipelines en orden secuencial.")
     p_all.add_argument("--fin-de-mes", action="store_true", help="Conserva las filas de la fecha actual para cierre.")
+    p_all.add_argument("--force", action="store_true", help="Fuerza la ejecución completa (compatibilidad).")
 
     p_sap = subparsers.add_parser("download-sap", help="Descarga un reporte parametrizado desde SAP GUI.")
     p_sap.add_argument("--transaction", "-t", required=True, help="Código de transacción SAP (ej: gd20, zbcs, sq01).")
