@@ -346,6 +346,29 @@ class TestEltPipeline(unittest.TestCase):
             self.assertEqual(wb["DESPACHOS"].cell(2, 1).value, 888)
             wb.close()
 
+    def test_state_file_signature_and_change_detection(self):
+        import tempfile
+        from itacamba_reportes.core import state
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_state_file = Path(tmp) / "test_pipeline_state.json"
+            orig_state_path = state.STATE_PATH
+            state.STATE_PATH = tmp_state_file
+            try:
+                test_file = Path(tmp) / "test_cartera.xlsx"
+                test_file.write_bytes(b"CONTENIDO INICIAL CARTERA 123")
+
+                self.assertTrue(state.has_file_changed("cartera", test_file))
+                state.save_file_signature("cartera", test_file)
+                self.assertFalse(state.has_file_changed("cartera", test_file))
+
+                test_file.write_bytes(b"CONTENIDO MODIFICADO NUEVA CARTERA 456789")
+                self.assertTrue(state.has_file_changed("cartera", test_file))
+                state.save_file_signature("cartera", test_file)
+                self.assertFalse(state.has_file_changed("cartera", test_file))
+            finally:
+                state.STATE_PATH = orig_state_path
+
     def test_alembic_single_baseline_schema(self):
         from alembic.config import Config
         from alembic.script import ScriptDirectory

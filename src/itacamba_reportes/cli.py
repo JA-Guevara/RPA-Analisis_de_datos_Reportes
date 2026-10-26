@@ -29,41 +29,51 @@ logging.basicConfig(
 logger = logging.getLogger("itacamba_reportes")
 
 
-def run_all(is_fin_de_mes: bool = False, corte_fecha: str | None = None) -> int:
+def export_all_reports_parallel() -> None:
+    logger.info("--> Iniciando EXPORTACIONES en paralelo (4 hilos concurrentes)...")
+    t_exp = perf_counter()
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from itacamba_reportes.outputs.ventas_bi.export import export_ventas_bi
+    from itacamba_reportes.outputs.despacho_bi.export import export_despacho_bi
+    from itacamba_reportes.outputs.despacho_mes.export import export_despacho_mes
+    from itacamba_reportes.outputs.historial_ventas.export import export_historial_ventas
+
+    tasks = {
+        "VENTAS BI": lambda: export_ventas_bi(),
+        "DESPACHO BI": lambda: export_despacho_bi(),
+        "DESPACHO MES": lambda: export_despacho_mes(),
+        "HISTORIAL VENTAS": lambda: export_historial_ventas(),
+    }
+
+    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="ExportWorker") as executor:
+        future_to_name = {executor.submit(fn): name for name, fn in tasks.items()}
+        for future in as_completed(future_to_name):
+            name = future_to_name[future]
+            try:
+                res = future.result()
+                logger.info("Exportación completada: %s -> %s", name, getattr(res, "name", res))
+            except Exception as exc:
+                logger.error("Fallo crítico en exportación %s: %s", name, exc)
+                raise
+    logger.info("Todas las exportaciones paralelas completadas exitosamente en %.2fs", perf_counter() - t_exp)
+
+
+def run_all(force_cartera: bool = False, is_fin_de_mes: bool = False, corte_fecha: str | None = None) -> int:
     t0 = perf_counter()
     logger.info("==================================================")
     logger.info("=== EJECUCIÓN GENERAL DE TODOS LOS PIPELINES   ===")
     logger.info("==================================================")
 
-    cached_ventas_df = None
-    cached_despacho_df = None
-
-    def _step_ventas():
-        nonlocal cached_ventas_df
-        res = run_ventas_bi(return_df=True)
-        cached_ventas_df = res.get("df")
-
-    def _step_despacho():
-        nonlocal cached_despacho_df
-        res = run_despacho_bi(return_df=True)
-        cached_despacho_df = res.get("df")
-
-    def _step_historial():
-        export_historial_ventas(
-            df_ventas=cached_ventas_df,
-            df_despachos=cached_despacho_df,
-        )
-
     steps = [
         ("REFERENCIAS", lambda: run_referencias()),
-        ("CARTERA", lambda: run_cartera()),
+        ("CARTERA", lambda: run_cartera(force=force_cartera)),
         ("QUERY", lambda: run_query()),
         ("PROYECCION", lambda: run_proyeccion()),
         ("GD20", lambda: run_gd20(is_fin_de_mes=is_fin_de_mes, corte_fecha=corte_fecha)),
-        ("VENTAS BI", _step_ventas),
-        ("DESPACHO BI", _step_despacho),
-        ("DESPACHO MES", lambda: run_despacho_mes()),
-        ("HISTORIAL VENTAS", _step_historial),
+        ("VENTAS BI (Transformación BD)", lambda: run_ventas_bi(do_export=False)),
+        ("DESPACHO BI (Transformación BD)", lambda: run_despacho_bi(do_export=False)),
+        ("DESPACHO MES (Transformación BD)", lambda: run_despacho_mes(do_export=False)),
+        ("EXPORTACIONES (En Paralelo)", lambda: export_all_reports_parallel()),
     ]
 
     for name, func in steps:
@@ -91,7 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     p_init = subparsers.add_parser("init-db", help="Aplica las migraciones Alembic pendientes y asegura todas las tablas.")
     p_init.add_argument("--reset-alembic", action="store_true", help="Reinicia tabla de versiones de Alembic para forzar ejecución limpia.")
     subparsers.add_parser("run-referencias", help="Pipeline REFERENCIAS -> tablas int_ref_*.")
-    subparsers.add_parser("run-cartera", help="Pipeline CARTERA -> stg_cartera + int_cartera.")
+    p_cartera = subparsers.add_parser("run-cartera", help="Pipeline CARTERA -> stg_cartera + int_cartera.")
+    p_cartera.add_argument("--force", action="store_true", help="Fuerza re-ingesta aunque el archivo no haya cambiado.")
     subparsers.add_parser("run-query", help="Pipeline QUERY ZBCS -> stg_query + int_query.")
     subparsers.add_parser("run-proyeccion", help="Pipeline PROYECCIÓN -> stg_proyeccion.")
 
@@ -105,9 +116,10 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("run-despacho-mes", help="Pipeline DESPACHO MES -> resumen mensual y proyección.")
     subparsers.add_parser("export-historial", help="Exporta HISTORIAL VENTAS.xlsx (hojas VENTAS y DESPACHOS) para Power BI.")
 
-    p_all = subparsers.add_parser("run-all", help="Ejecuta todos los pipelines en orden secuencial.")
+    p_all = subparsers.add_parser("run-all", help="Ejecuta todos los pipelines con exportaciones en paralelo.")
     p_all.add_argument("--fin-de-mes", action="store_true", help="Conserva las filas de la fecha actual para cierre.")
     p_all.add_argument("--force", action="store_true", help="Fuerza la ejecución completa (compatibilidad).")
+    p_all.add_argument("--force-cartera", action="store_true", help="Fuerza re-ingesta de cartera ignorando cache.")
     p_all.add_argument("--corte-fecha", default=None, help="Fecha de corte YYYY-MM-DD para excluir filas de esa fecha en adelante.")
 
     p_sap = subparsers.add_parser("download-sap", help="Descarga un reporte parametrizado desde SAP GUI.")
@@ -173,7 +185,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "run-referencias":
             run_referencias()
         elif args.command == "run-cartera":
-            run_cartera()
+            run_cartera(force=getattr(args, "force", False))
         elif args.command == "run-query":
             run_query()
         elif args.command == "run-proyeccion":
@@ -190,7 +202,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "export-historial":
             export_historial_ventas()
         elif args.command == "run-all":
-            return run_all(is_fin_de_mes=args.fin_de_mes, corte_fecha=args.corte_fecha)
+            force_c = getattr(args, "force_cartera", False)
+            return run_all(force_cartera=force_c, is_fin_de_mes=args.fin_de_mes, corte_fecha=args.corte_fecha)
         return 0
     except Exception as exc:
         logger.exception("Error en ejecución de %s: %s", args.command, exc)
