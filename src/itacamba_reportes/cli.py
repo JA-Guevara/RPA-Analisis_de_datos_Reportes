@@ -19,6 +19,7 @@ from itacamba_reportes.inputs.gd20.pipeline import run_pipeline as run_gd20
 from itacamba_reportes.outputs.ventas_bi.pipeline import run_pipeline as run_ventas_bi
 from itacamba_reportes.outputs.despacho_bi.pipeline import run_pipeline as run_despacho_bi
 from itacamba_reportes.outputs.despacho_mes.pipeline import run_pipeline as run_despacho_mes
+from itacamba_reportes.outputs.historial_ventas.export import export_historial_ventas
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,6 +44,7 @@ def run_all(is_fin_de_mes: bool = False, corte_fecha: str | None = None) -> int:
         ("VENTAS BI", lambda: run_ventas_bi()),
         ("DESPACHO BI", lambda: run_despacho_bi()),
         ("DESPACHO MES", lambda: run_despacho_mes()),
+        ("HISTORIAL VENTAS", lambda: export_historial_ventas()),
     ]
 
     for name, func in steps:
@@ -78,9 +80,10 @@ def main(argv: list[str] | None = None) -> int:
     p_gd20.add_argument("--force", action="store_true", help="Fuerza la ejecución completa (compatibilidad).")
     p_gd20.add_argument("--corte-fecha", default=None, help="Fecha de corte YYYY-MM-DD para excluir filas de esa fecha en adelante.")
 
-    subparsers.add_parser("run-ventas-bi", help="Pipeline VENTAS BI -> acumula histórico SCD2.")
-    subparsers.add_parser("run-despacho-bi", help="Pipeline DESPACHO BI -> acumula histórico real de despachos.")
+    subparsers.add_parser("run-ventas-bi", help="Pipeline VENTAS BI -> acumula histórico SCD2 y exporta.")
+    subparsers.add_parser("run-despacho-bi", help="Pipeline DESPACHO BI -> acumula histórico real y exporta.")
     subparsers.add_parser("run-despacho-mes", help="Pipeline DESPACHO MES -> resumen mensual y proyección.")
+    subparsers.add_parser("export-historial", help="Exporta HISTORIAL VENTAS.xlsx (hojas VENTAS y DESPACHOS) para Power BI.")
 
     p_all = subparsers.add_parser("run-all", help="Ejecuta todos los pipelines en orden secuencial.")
     p_all.add_argument("--fin-de-mes", action="store_true", help="Conserva las filas de la fecha actual para cierre.")
@@ -164,6 +167,8 @@ def main(argv: list[str] | None = None) -> int:
             run_despacho_bi()
         elif args.command == "run-despacho-mes":
             run_despacho_mes()
+        elif args.command == "export-historial":
+            export_historial_ventas()
         elif args.command == "run-all":
             return run_all(is_fin_de_mes=args.fin_de_mes, corte_fecha=args.corte_fecha)
         return 0

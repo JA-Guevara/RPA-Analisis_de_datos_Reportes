@@ -54,6 +54,48 @@ class ExcelReportExporter:
         logger.info("Export Excel exitoso: %s (%d filas, %d columnas, %.2fs)", target.name, len(clean_df), len(clean_df.columns), perf_counter() - t0)
         return target
 
+    def export_multi_sheet(
+        self,
+        sheets: dict[str, pd.DataFrame],
+        file_name: str,
+        timestamped: bool = False,
+    ) -> Path:
+        t0 = perf_counter()
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        stem = Path(file_name).stem
+        if timestamped:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+            target = self.output_dir / f"{stem}_{timestamp}.xlsx"
+        else:
+            target = self.output_dir / f"{stem}.xlsx"
+
+        clean_sheets = {}
+        for sname, df in sheets.items():
+            business_cols = [c for c in df.columns if c not in TECHNICAL_COLUMNS]
+            clean_sheets[sname] = df[business_cols]
+
+        try:
+            self._write_multi(clean_sheets, target, engine="xlsxwriter")
+        except Exception:
+            self._write_multi(clean_sheets, target, engine="openpyxl")
+
+        summary = ", ".join(f"{k}: {len(v)} filas" for k, v in clean_sheets.items())
+        logger.info("Export Multi-Sheet Excel exitoso: %s (%s, %.2fs)", target.name, summary, perf_counter() - t0)
+        return target
+
+    @staticmethod
+    def _write_multi(
+        sheets: dict[str, pd.DataFrame],
+        target: Path,
+        engine: str,
+    ) -> None:
+        kwargs = {}
+        if engine == "xlsxwriter":
+            kwargs["engine_kwargs"] = {"options": {"constant_memory": True}}
+        with pd.ExcelWriter(target, engine=engine, **kwargs) as writer:
+            for sname, df in sheets.items():
+                df.to_excel(writer, index=False, sheet_name=sname)
+
     @staticmethod
     def _write(
         df: pd.DataFrame,
@@ -62,7 +104,10 @@ class ExcelReportExporter:
         include_control_sheet: bool,
         engine: str,
     ) -> None:
-        with pd.ExcelWriter(target, engine=engine) as writer:
+        kwargs = {}
+        if engine == "xlsxwriter":
+            kwargs["engine_kwargs"] = {"options": {"constant_memory": True}}
+        with pd.ExcelWriter(target, engine=engine, **kwargs) as writer:
             df.to_excel(writer, index=False, sheet_name="Data")
             if include_control_sheet and control_info:
                 ctrl_df = pd.DataFrame(

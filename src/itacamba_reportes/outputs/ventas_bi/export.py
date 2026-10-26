@@ -13,8 +13,7 @@ from itacamba_reportes.core.settings import EnvConfig
 logger = logging.getLogger(__name__)
 
 
-def export_ventas_bi() -> Path:
-    logger.info("Exportando VENTAS BI a Excel...")
+def get_ventas_bi_dataframe() -> pd.DataFrame:
     query = """
     SELECT 
         ejercicio, sociedad, organizacion_ventas, centro, division, oficina_ventas,
@@ -48,8 +47,11 @@ def export_ventas_bi() -> Path:
     if "dpto_pagador" in df.columns:
         df["dpto_pagador"] = df["dpto_pagador"].replace({"GENERIC": "EXPORTACION"})
 
-    # Renombrar y ordenar columnas usando el mapeo oficial de negocio
-    df = map_export_columns(df, VENTAS_BI_MAPPING)
+    return map_export_columns(df, VENTAS_BI_MAPPING)
 
+
+def export_ventas_bi() -> Path:
+    logger.info("Exportando VENTAS BI a Excel...")
+    df = get_ventas_bi_dataframe()
     exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
     return exporter.export(df, "VENTAS_BI")

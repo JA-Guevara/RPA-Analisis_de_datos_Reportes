@@ -12,8 +12,7 @@ from itacamba_reportes.core.settings import EnvConfig
 logger = logging.getLogger(__name__)
 
 
-def export_despacho_bi() -> Path:
-    logger.info("Exportando DESPACHO BI a Excel...")
+def get_despacho_bi_dataframe() -> pd.DataFrame:
     query = """
     SELECT 
         centro_origen, centro_destino, cod_material, material,
@@ -28,8 +27,11 @@ def export_despacho_bi() -> Path:
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
 
-    # Renombrar y ordenar columnas usando el mapeo oficial de negocio
-    df = map_export_columns(df, DESPACHO_BI_MAPPING)
+    return map_export_columns(df, DESPACHO_BI_MAPPING)
 
+
+def export_despacho_bi() -> Path:
+    logger.info("Exportando DESPACHO BI a Excel...")
+    df = get_despacho_bi_dataframe()
     exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
     return exporter.export(df, "DESPACHO_BI")

@@ -256,6 +256,53 @@ class TestEltPipeline(unittest.TestCase):
             self.assertNotIn("is_current", headers)
             self.assertNotIn("source_hash", headers)
 
+    def test_exporter_multi_sheet_historial_ventas(self):
+        import tempfile
+        import openpyxl
+        from itacamba_reportes.core.io.exporter import ExcelReportExporter
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            exporter = ExcelReportExporter(tmp_path)
+
+            df_ventas = pd.DataFrame({
+                "Nº documento": [1001, 1002],
+                "Cantidad": [10.5, 20.0],
+                "id": [1, 2],
+                "is_current": [True, True],
+            })
+            df_despachos = pd.DataFrame({
+                "Documento venta": [5001, 5002],
+                "x": [15, 16],
+                "created_at": ["2026-10-26", "2026-10-26"],
+            })
+
+            target = exporter.export_multi_sheet(
+                sheets={
+                    "VENTAS": df_ventas,
+                    "DESPACHOS": df_despachos,
+                },
+                file_name="HISTORIAL VENTAS.xlsx",
+                timestamped=False,
+            )
+
+            self.assertEqual(target.name, "HISTORIAL VENTAS.xlsx")
+            wb = openpyxl.load_workbook(target)
+            self.assertEqual(wb.sheetnames, ["VENTAS", "DESPACHOS"])
+
+            ws_v = wb["VENTAS"]
+            headers_v = [cell.value for cell in ws_v[1]]
+            self.assertIn("Nº documento", headers_v)
+            self.assertNotIn("id", headers_v)
+            self.assertNotIn("is_current", headers_v)
+
+            ws_d = wb["DESPACHOS"]
+            headers_d = [cell.value for cell in ws_d[1]]
+            self.assertIn("Documento venta", headers_d)
+            self.assertIn("x", headers_d)
+            self.assertNotIn("created_at", headers_d)
+            wb.close()
+
     def test_alembic_single_baseline_schema(self):
         from alembic.config import Config
         from alembic.script import ScriptDirectory
