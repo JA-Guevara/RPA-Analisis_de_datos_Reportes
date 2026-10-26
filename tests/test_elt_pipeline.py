@@ -295,12 +295,36 @@ class TestEltPipeline(unittest.TestCase):
             self.assertIn("Nº documento", headers_v)
             self.assertNotIn("id", headers_v)
             self.assertNotIn("is_current", headers_v)
+            self.assertEqual(ws_v.cell(2, headers_v.index("Nº documento") + 1).value, 1001)
+            self.assertEqual(ws_v.cell(2, headers_v.index("Cantidad") + 1).value, 10.5)
 
             ws_d = wb["DESPACHOS"]
             headers_d = [cell.value for cell in ws_d[1]]
             self.assertIn("Documento venta", headers_d)
             self.assertIn("x", headers_d)
             self.assertNotIn("created_at", headers_d)
+            self.assertEqual(ws_d.cell(2, headers_d.index("Documento venta") + 1).value, 5001)
+            self.assertEqual(ws_d.cell(2, headers_d.index("x") + 1).value, 15)
+            wb.close()
+
+    def test_exporter_single_sheet_values_not_blank(self):
+        import tempfile
+        import openpyxl
+        from itacamba_reportes.core.io.exporter import ExcelReportExporter
+
+        with tempfile.TemporaryDirectory() as tmp:
+            exporter = ExcelReportExporter(Path(tmp))
+            df = pd.DataFrame({
+                "Nº documento": [1001, 1002],
+                "Cantidad": [10.5, 20.0],
+                "id": [1, 2],
+            })
+            target = exporter.export(df, "TEST_SINGLE")
+            wb = openpyxl.load_workbook(target)
+            ws = wb["Data"]
+            headers = [cell.value for cell in ws[1]]
+            self.assertEqual(ws.cell(2, headers.index("Nº documento") + 1).value, 1001)
+            self.assertEqual(ws.cell(2, headers.index("Cantidad") + 1).value, 10.5)
             wb.close()
 
     def test_alembic_single_baseline_schema(self):

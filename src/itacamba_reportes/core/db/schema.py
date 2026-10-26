@@ -46,9 +46,28 @@ def current_revision() -> str | None:
         return MigrationContext.configure(conn).get_current_revision()
 
 
+def sync_table_columns() -> None:
+    from sqlalchemy import inspect, text
+    from itacamba_reportes.outputs.despacho_bi.models import DispatchBiIntModel
+
+    eng = engine
+    insp = inspect(eng)
+    if not insp.has_table("int_despacho_bi"):
+        return
+
+    existing_cols = {col["name"].lower() for col in insp.get_columns("int_despacho_bi")}
+    with eng.begin() as conn:
+        for col in DispatchBiIntModel.__table__.columns:
+            if col.name.lower() not in existing_cols:
+                col_type = col.type.compile(eng.dialect)
+                logger.info("Sincronizando esquema: anadiendo columna %s (%s) a int_despacho_bi", col.name, col_type)
+                conn.execute(text(f"ALTER TABLE [int_despacho_bi] ADD [{col.name}] {col_type} NULL"))
+
+
 def upgrade_db() -> None:
     logger.info("Aplicando migraciones Alembic en %s...", engine.url.database)
     command.upgrade(_alembic_config(), "head")
+    sync_table_columns()
     logger.info("Base de Datos en la version %s", head_revision())
 
 

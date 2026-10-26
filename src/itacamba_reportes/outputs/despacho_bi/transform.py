@@ -13,6 +13,12 @@ SQL_PATH = Path(__file__).parent / "transform.sql"
 
 def transform_despacho_bi() -> int:
     logger.info("Transformando y acumulando DESPACHO BI en Base de Datos...")
+    from itacamba_reportes.core.db.schema import sync_table_columns
+    try:
+        sync_table_columns()
+    except Exception as exc:
+        logger.warning("No se pudo verificar o sincronizar columnas de int_despacho_bi: %s", exc)
+
     sql_script = SQL_PATH.read_text(encoding="utf-8")
 
     with engine.begin() as conn:

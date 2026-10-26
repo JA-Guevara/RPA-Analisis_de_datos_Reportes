@@ -35,7 +35,9 @@ def get_despacho_bi_dataframe() -> pd.DataFrame:
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
 
-    return map_export_columns(df, DESPACHO_BI_MAPPING)
+    mapped = map_export_columns(df, DESPACHO_BI_MAPPING)
+    logger.info("DESPACHO BI generado para exportación con %d columnas (esperadas: %d)", len(mapped.columns), len(DESPACHO_BI_MAPPING))
+    return mapped
 
 
 def export_despacho_bi() -> Path:

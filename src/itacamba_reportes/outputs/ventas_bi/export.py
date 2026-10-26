@@ -47,7 +47,9 @@ def get_ventas_bi_dataframe() -> pd.DataFrame:
     if "dpto_pagador" in df.columns:
         df["dpto_pagador"] = df["dpto_pagador"].replace({"GENERIC": "EXPORTACION"})
 
-    return map_export_columns(df, VENTAS_BI_MAPPING)
+    mapped = map_export_columns(df, VENTAS_BI_MAPPING)
+    logger.info("VENTAS BI generado para exportación con %d columnas (esperadas: %d)", len(mapped.columns), len(VENTAS_BI_MAPPING))
+    return mapped
 
 
 def export_ventas_bi() -> Path:

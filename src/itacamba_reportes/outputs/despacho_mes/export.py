@@ -31,6 +31,7 @@ def export_despacho_mes() -> Path:
 
     # Renombrar y ordenar columnas usando el mapeo oficial de negocio (20 columnas)
     df = map_export_columns(df, DESPACHO_MES_MAPPING)
+    logger.info("DESPACHO MES generado para exportación con %d columnas (esperadas: %d)", len(df.columns), len(DESPACHO_MES_MAPPING))
 
     exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
     return exporter.export(df, "DESPACHO_MES")

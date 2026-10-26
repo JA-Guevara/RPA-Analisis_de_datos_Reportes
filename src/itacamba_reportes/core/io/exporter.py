@@ -89,10 +89,7 @@ class ExcelReportExporter:
         target: Path,
         engine: str,
     ) -> None:
-        kwargs = {}
-        if engine == "xlsxwriter":
-            kwargs["engine_kwargs"] = {"options": {"constant_memory": True}}
-        with pd.ExcelWriter(target, engine=engine, **kwargs) as writer:
+        with pd.ExcelWriter(target, engine=engine) as writer:
             for sname, df in sheets.items():
                 df.to_excel(writer, index=False, sheet_name=sname)
 
@@ -104,10 +101,7 @@ class ExcelReportExporter:
         include_control_sheet: bool,
         engine: str,
     ) -> None:
-        kwargs = {}
-        if engine == "xlsxwriter":
-            kwargs["engine_kwargs"] = {"options": {"constant_memory": True}}
-        with pd.ExcelWriter(target, engine=engine, **kwargs) as writer:
+        with pd.ExcelWriter(target, engine=engine) as writer:
             df.to_excel(writer, index=False, sheet_name="Data")
             if include_control_sheet and control_info:
                 ctrl_df = pd.DataFrame(
