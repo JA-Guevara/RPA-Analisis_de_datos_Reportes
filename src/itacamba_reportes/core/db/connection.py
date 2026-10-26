@@ -44,7 +44,7 @@ def build_sqlserver_url() -> str | None:
     if any(k in driver_name for k in ("ODBC Driver", "Native Client")):
         trust_cert = "yes" if EnvConfig.DB_TRUST_CERT else "no"
         odbc_parts.append(f"TrustServerCertificate={trust_cert}")
-        odbc_parts.append("Connection Timeout=5")
+        odbc_parts.append("Connection Timeout=15")
     params = urllib.parse.quote_plus(";".join(odbc_parts) + ";")
     return f"mssql+pyodbc:///?odbc_connect={params}"
 
