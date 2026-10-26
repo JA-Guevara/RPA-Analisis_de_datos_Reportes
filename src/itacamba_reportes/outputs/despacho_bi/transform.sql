@@ -10,7 +10,7 @@ WHERE mes IN (SELECT DISTINCT mes FROM [int_query])
 
 -- 2. Insertar los despachos enriquecidos con cruces en BD
 WITH ref_cen AS (
-    SELECT centro, codigo_sap_cliente,
+    SELECT centro, codigo_sap_cliente, nombre,
            ROW_NUMBER() OVER (PARTITION BY UPPER(LTRIM(RTRIM(centro))) ORDER BY id) AS rn
     FROM [int_ref_centro]
     WHERE centro IS NOT NULL AND centro <> ''
@@ -58,40 +58,83 @@ ref_sem AS (
     WHERE dia IS NOT NULL
 )
 INSERT INTO [int_despacho_bi] (
-    fecha_salida, dia, mes, anio, nro_pedido, incoterm,
-    centro_origen, centro_destino, cod_material, material,
-    cod_ruta, nom_ruta, cod_destinatario, nom_destinatario,
-    cod_pagador, pagador, despacho_t, traslados_t,
-    centro_distribucion, localidad, departamento,
-    codigo_cliente, nombre_cliente, vendedor, desarrollador,
-    equipo, gerencia, canal, localidad_im, semana
+    centro_origen, ds_centro_origen, cod_material, material,
+    fecha_salida, nro_pedido, cod_destinatario, nom_destinatario,
+    poblacion, incoterm, clase_doc_ventas, centro_destino,
+    ds_centro_destino, atributo_7, departamento_facturacion,
+    clase_expedicion, vc_embalaje, cod_transportista, transportista,
+    nombre_transportista, telefono_1, tipo_servicio_transporte,
+    placa, tipo_vehiculo, cod_ruta, nom_ruta, distancia_km,
+    numero_transporte, distancia, cantidad, despacho_t,
+    departamento, traslados_t, mes, anio, grupo_producto,
+    tipo_traslado, producto, centro_distribucion, link,
+    provincia, semana_anio, traslados, zona_descarga, cd,
+    localidad, tipo_venta, vendedor, desarrollador,
+    codigo_cliente, nombre_cliente, equipo, localidad_im, incoterms_im,
+    gerencia, semana, dia, canal, cod_pagador, pagador
 )
 SELECT 
-    q.fecha_salida,
-    q.dia,
-    q.mes,
-    q.anio,
-    q.nro_pedido,
-    q.incoterm,
     q.centro_origen,
-    q.centro_destino,
+    COALESCE(stg.nom_centro_origen, cen_orig.nombre, q.centro_origen) AS ds_centro_origen,
     q.cod_material,
     q.material,
-    q.cod_ruta,
-    q.nom_ruta,
+    q.fecha_salida,
+    q.nro_pedido,
     q.cod_destinatario,
     q.nom_destinatario,
-    q.cod_pagador,
-    q.pagador,
+    COALESCE(c.poblacion, q.localidad) AS poblacion,
+    q.incoterm,
+    'Venta de Stock - Off' AS clase_doc_ventas,
+    q.centro_destino,
+    COALESCE(stg.nom_centro_destino, 'Sin asignar') AS ds_centro_destino,
+    COALESCE(c.attribute_7, 'VC-BO-Z5') AS atributo_7,
+    COALESCE(c.region_nombre, q.departamento, 'Santa Cruz') AS departamento_facturacion,
+    'Terrestre' AS clase_expedicion,
+    'E' AS vc_embalaje,
+    NULL AS cod_transportista,
+    NULL AS transportista,
+    NULL AS nombre_transportista,
+    NULL AS telefono_1,
+    NULL AS tipo_servicio_transporte,
+    NULL AS placa,
+    NULL AS tipo_vehiculo,
+    q.cod_ruta,
+    q.nom_ruta,
+    NULL AS distancia_km,
+    NULL AS numero_transporte,
+    NULL AS distancia,
+    COALESCE(stg.cantidad_ton, q.despacho_t + q.traslados_t, 0) AS cantidad,
     q.despacho_t,
-    q.traslados_t,
-    q.centro_distribucion,
-    q.localidad,
     q.departamento,
-
-    -- Código Cliente: si len(destinatario) <= 5 cruza centro_destino con Centros (H:I)
-    calc_cli.codigo_cliente,
-    COALESCE(c.nombre_cliente, 'Prospecto') AS nombre_cliente,
+    q.traslados_t,
+    q.mes,
+    q.anio,
+    CASE 
+        WHEN q.material LIKE '%CLINQUER%' THEN 'Clinker'
+        WHEN q.material LIKE '%AGREGADOS%' THEN 'Agregados'
+        ELSE 'Cemento Interno'
+    END AS grupo_producto,
+    CASE 
+        WHEN q.material LIKE '%GRANEL%' THEN 'Granel'
+        WHEN q.material LIKE '%BIG BAG%' OR q.material LIKE '%BIG-BAG%' THEN 'Big Bag'
+        ELSE 'Embolsado'
+    END AS tipo_traslado,
+    q.material AS producto,
+    q.centro_distribucion,
+    NULL AS link,
+    COALESCE(c.barrio, 'IT-SC-ANDRES IBAÑEZ') AS provincia,
+    DATEPART(isowk, q.fecha_salida) AS semana_anio,
+    NULL AS traslados,
+    CASE 
+        WHEN UPPER(q.departamento) LIKE '%SANTA CRUZ%' THEN 'SCZ-LOCAL' 
+        ELSE 'INTERIOR' 
+    END AS zona_descarga,
+    'CD' AS cd,
+    q.localidad,
+    CASE 
+        WHEN c.canal_distribucion = '10' THEN 'VENTA DIRECTA' 
+        ELSE 'VENTA INDIRECTA' 
+    END AS tipo_venta,
 
     -- Vendedor: regla 5281728 (La Paz -> Vivian, Cbba -> Salustia) o Cartera
     CASE 
@@ -107,25 +150,37 @@ SELECT
     -- Desarrollador: vendedor_ok en Equipo
     COALESCE(eq_v.vendedor_ok, 'OTROS') AS desarrollador,
 
+    -- Código Cliente: si len(destinatario) <= 5 cruza centro_destino con Centros (H:I)
+    calc_cli.codigo_cliente,
+    COALESCE(c.nombre_cliente, 'Prospecto') AS nombre_cliente,
+
     -- Equipo
     CASE 
         WHEN q.material LIKE '%CEMENTO%' THEN COALESCE(eq_v.equipo, 'OTROS')
         ELSE COALESCE(eq_g.equipo, 'OTROS')
     END AS equipo,
 
-    -- Gerencia
-    COALESCE(eq_e.gerencia, 'OTROS') AS gerencia,
-
-    -- Canal (Búsqueda en 2 pasos: attribute_10 -> segmento -> canal)
-    COALESCE(alm_can.canal, 'OTROS') AS canal,
-
     -- Localidad IM
     COALESCE(loc.localidad_im, q.localidad) AS localidad_im,
 
+    NULL AS incoterms_im,
+
+    -- Gerencia
+    COALESCE(eq_e.gerencia, 'OTROS') AS gerencia,
+
     -- Semana
-    COALESCE(sem.semana, 'SEMANA 0') AS semana
+    COALESCE(sem.semana, 'SEMANA 0') AS semana,
+
+    -- x (día del mes 1..31)
+    q.dia,
+
+    -- Columnas auxiliares internas
+    COALESCE(alm_can.canal, 'OTROS') AS canal,
+    q.cod_pagador,
+    q.pagador
 
 FROM [int_query] q
+LEFT JOIN ref_cen cen_orig ON cen_orig.centro = UPPER(LTRIM(RTRIM(q.centro_origen))) AND cen_orig.rn = 1
 LEFT JOIN ref_cen cen ON cen.centro = UPPER(LTRIM(RTRIM(q.centro_destino))) AND cen.rn = 1
 CROSS APPLY (
     SELECT CASE 
@@ -134,6 +189,7 @@ CROSS APPLY (
         ELSE q.cod_destinatario
     END AS codigo_cliente
 ) calc_cli
+LEFT JOIN [stg_query] stg ON stg.nro_pedido = q.nro_pedido AND stg.cod_material = q.cod_material
 LEFT JOIN [int_cartera] c ON c.cliente = calc_cli.codigo_cliente
 LEFT JOIN ref_eq_v eq_v ON eq_v.vendedor_sap = c.vendedor AND eq_v.rn = 1
 LEFT JOIN ref_eq_g eq_g ON eq_g.grupo_vendedores = c.grupo_vendedores AND eq_g.rn = 1
