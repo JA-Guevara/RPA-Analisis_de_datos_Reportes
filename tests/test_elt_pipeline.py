@@ -256,6 +256,38 @@ class TestEltPipeline(unittest.TestCase):
             self.assertNotIn("is_current", headers)
             self.assertNotIn("source_hash", headers)
 
+    def test_alembic_single_baseline_schema(self):
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+        from itacamba_reportes.core.settings import EnvConfig
+        import subprocess
+
+        alembic_versions_dir = EnvConfig.PROJECT_ROOT / "alembic" / "versions"
+        py_files = [f for f in alembic_versions_dir.glob("*.py") if not f.name.startswith("__")]
+        # Debe existir exactamente 1 archivo de migracion baseline inicial
+        self.assertEqual(len(py_files), 1, f"Se esperaba exactamente 1 version de Alembic, encontradas: {py_files}")
+
+        cfg = Config(str(EnvConfig.PROJECT_ROOT / "alembic.ini"))
+        cfg.set_main_option("script_location", str(EnvConfig.PROJECT_ROOT / "alembic"))
+        script_dir = ScriptDirectory.from_config(cfg)
+        heads = script_dir.get_heads()
+        self.assertEqual(len(heads), 1)
+        self.assertEqual(heads[0], "0001_baseline")
+
+        # Verificar que la generacion offline de SQL para upgrade head funciona sin errores
+        res = subprocess.run(
+            [sys.executable, "-m", "alembic", "upgrade", "head", "--sql"],
+            cwd=str(EnvConfig.PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(res.returncode, 0, f"alembic upgrade head --sql fallo: {res.stderr}")
+        self.assertIn("CREATE TABLE int_cartera", res.stdout)
+        self.assertIn("CREATE TABLE int_ref_ruta", res.stdout)
+        self.assertIn("CREATE TABLE int_ventas_bi", res.stdout)
+        self.assertIn("CREATE TABLE pipeline_executions", res.stdout)
+        self.assertIn("0001_baseline", res.stdout)
+
     def test_zero_docstrings_in_src(self):
         import ast
         import glob

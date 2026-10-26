@@ -17,6 +17,7 @@ from itacamba_reportes.inputs.referencias.models import (
     LocalityRefModel,
     MaterialRefModel,
     SalesTeamRefModel,
+    RouteRefModel,
     WeekRefModel,
 )
 from itacamba_reportes.inputs.cartera.models import CustomerStgModel, CustomerIntModel
