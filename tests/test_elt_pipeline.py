@@ -288,6 +288,28 @@ class TestEltPipeline(unittest.TestCase):
         self.assertIn("CREATE TABLE pipeline_executions", res.stdout)
         self.assertIn("0001_baseline", res.stdout)
 
+    def test_column_mappings_export(self):
+        from itacamba_reportes.core.io.column_mappings import (
+            VENTAS_BI_MAPPING,
+            DESPACHO_MES_MAPPING,
+            DESPACHO_BI_MAPPING,
+            map_export_columns,
+        )
+        self.assertEqual(len(VENTAS_BI_MAPPING), 77)
+        self.assertEqual(len(DESPACHO_MES_MAPPING), 20)
+        self.assertIn("Fecha", DESPACHO_MES_MAPPING.values())
+        self.assertIn("Mes", DESPACHO_MES_MAPPING.values())
+
+        df_dummy = pd.DataFrame({
+            "gerencia": ["SCZ"],
+            "equipo": ["EQ1"],
+            "fecha": ["2026-10-01"],
+            "mes": [10],
+            "dia": [1],
+        })
+        mapped = map_export_columns(df_dummy, DESPACHO_MES_MAPPING)
+        self.assertEqual(list(mapped.columns), ["GERENCIA", "EQUIPO", "Fecha", "Mes", "Día"])
+
     def test_zero_docstrings_in_src(self):
         import ast
         import glob
