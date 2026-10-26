@@ -40,8 +40,11 @@ def get_despacho_bi_dataframe() -> pd.DataFrame:
     return mapped
 
 
-def export_despacho_bi() -> Path:
+def export_despacho_bi(return_df: bool = False) -> Path | tuple[Path, pd.DataFrame]:
     logger.info("Exportando DESPACHO BI a Excel (56 columnas oficiales)...")
     df = get_despacho_bi_dataframe()
     exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
-    return exporter.export(df, "DESPACHO_BI")
+    path = exporter.export(df, "DESPACHO_BI")
+    if return_df:
+        return path, df
+    return path

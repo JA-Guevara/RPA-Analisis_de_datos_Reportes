@@ -327,6 +327,25 @@ class TestEltPipeline(unittest.TestCase):
             self.assertEqual(ws.cell(2, headers.index("Cantidad") + 1).value, 10.5)
             wb.close()
 
+    def test_export_historial_ventas_in_memory_reuse(self):
+        import tempfile
+        import openpyxl
+        from itacamba_reportes.outputs.historial_ventas.export import export_historial_ventas
+
+        with tempfile.TemporaryDirectory() as tmp:
+            df_v = pd.DataFrame({"Nº documento": [999], "Cantidad": [50.0]})
+            df_d = pd.DataFrame({"Documento venta": [888], "x": [25]})
+            target = export_historial_ventas(
+                df_ventas=df_v,
+                df_despachos=df_d,
+                target_dir=Path(tmp),
+            )
+            wb = openpyxl.load_workbook(target)
+            self.assertEqual(wb.sheetnames, ["VENTAS", "DESPACHOS"])
+            self.assertEqual(wb["VENTAS"].cell(2, 1).value, 999)
+            self.assertEqual(wb["DESPACHOS"].cell(2, 1).value, 888)
+            wb.close()
+
     def test_alembic_single_baseline_schema(self):
         from alembic.config import Config
         from alembic.script import ScriptDirectory

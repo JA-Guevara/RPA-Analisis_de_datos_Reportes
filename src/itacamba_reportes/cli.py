@@ -34,17 +34,36 @@ def run_all(is_fin_de_mes: bool = False, corte_fecha: str | None = None) -> int:
     logger.info("==================================================")
     logger.info("=== EJECUCIÓN GENERAL DE TODOS LOS PIPELINES   ===")
     logger.info("==================================================")
-    
+
+    cached_ventas_df = None
+    cached_despacho_df = None
+
+    def _step_ventas():
+        nonlocal cached_ventas_df
+        res = run_ventas_bi(return_df=True)
+        cached_ventas_df = res.get("df")
+
+    def _step_despacho():
+        nonlocal cached_despacho_df
+        res = run_despacho_bi(return_df=True)
+        cached_despacho_df = res.get("df")
+
+    def _step_historial():
+        export_historial_ventas(
+            df_ventas=cached_ventas_df,
+            df_despachos=cached_despacho_df,
+        )
+
     steps = [
         ("REFERENCIAS", lambda: run_referencias()),
         ("CARTERA", lambda: run_cartera()),
         ("QUERY", lambda: run_query()),
         ("PROYECCION", lambda: run_proyeccion()),
         ("GD20", lambda: run_gd20(is_fin_de_mes=is_fin_de_mes, corte_fecha=corte_fecha)),
-        ("VENTAS BI", lambda: run_ventas_bi()),
-        ("DESPACHO BI", lambda: run_despacho_bi()),
+        ("VENTAS BI", _step_ventas),
+        ("DESPACHO BI", _step_despacho),
         ("DESPACHO MES", lambda: run_despacho_mes()),
-        ("HISTORIAL VENTAS", lambda: export_historial_ventas()),
+        ("HISTORIAL VENTAS", _step_historial),
     ]
 
     for name, func in steps:

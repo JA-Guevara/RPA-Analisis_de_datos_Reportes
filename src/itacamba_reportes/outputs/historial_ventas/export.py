@@ -12,10 +12,22 @@ from itacamba_reportes.outputs.despacho_bi.export import get_despacho_bi_datafra
 logger = logging.getLogger(__name__)
 
 
-def export_historial_ventas(target_dir: Path | None = None, file_name: str = "HISTORIAL VENTAS.xlsx") -> Path:
+def export_historial_ventas(
+    df_ventas: pd.DataFrame | None = None,
+    df_despachos: pd.DataFrame | None = None,
+    target_dir: Path | None = None,
+    file_name: str = "HISTORIAL VENTAS.xlsx",
+) -> Path:
     logger.info("Exportando HISTORIAL VENTAS consolidado (hojas VENTAS y DESPACHOS) para Power BI...")
-    df_ventas = get_ventas_bi_dataframe()
-    df_despachos = get_despacho_bi_dataframe()
+    if df_ventas is None:
+        df_ventas = get_ventas_bi_dataframe()
+    else:
+        logger.info("Reutilizando DataFrame de VENTAS BI en memoria (0 consultas duplicadas a BD)")
+
+    if df_despachos is None:
+        df_despachos = get_despacho_bi_dataframe()
+    else:
+        logger.info("Reutilizando DataFrame de DESPACHO BI en memoria (0 consultas duplicadas a BD)")
 
     out_dir = target_dir or EnvConfig.EXPORT_PATH
     exporter = ExcelReportExporter(out_dir)
