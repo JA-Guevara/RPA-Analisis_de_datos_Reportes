@@ -66,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    subparsers.add_parser("test-db", help="Verifica la conexión a SQL Server y muestra diagnóstico detallado.")
     subparsers.add_parser("init-db", help="Aplica las migraciones Alembic pendientes (alembic upgrade head).")
     subparsers.add_parser("run-referencias", help="Pipeline REFERENCIAS -> tablas int_ref_*.")
     subparsers.add_parser("run-cartera", help="Pipeline CARTERA -> stg_cartera + int_cartera.")
@@ -117,6 +118,23 @@ def main(argv: list[str] | None = None) -> int:
             )
             session_mgr = SapSessionManager()
             execute_download_report(session_mgr, cfg)
+            return 0
+
+        if args.command == "test-db":
+            from itacamba_reportes.core.db.connection import get_engine
+            from sqlalchemy import text
+            eng = get_engine()
+            with eng.connect() as conn:
+                row = conn.execute(text("SELECT @@SERVERNAME, DB_NAME(), SUSER_SNAME(), @@VERSION")).fetchone()
+                logger.info("==================================================")
+                logger.info("=== CONEXIÓN A BASE DE DATOS EXITOSA           ===")
+                logger.info("==================================================")
+                logger.info("Servidor SQL      : %s", row[0])
+                logger.info("Base de Datos     : %s", row[1])
+                logger.info("Usuario Conectado : %s", row[2])
+                v_str = str(row[3]).splitlines()[0] if row[3] else "Desconocida"
+                logger.info("Versión           : %s", v_str)
+                logger.info("==================================================")
             return 0
 
         if args.command == "init-db":
