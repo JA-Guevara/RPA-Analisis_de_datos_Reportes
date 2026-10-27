@@ -522,6 +522,63 @@ class TestEltPipeline(unittest.TestCase):
             self.assertEqual(result, 0)
             mock_run_all.assert_called_once_with(force_cartera=False, is_fin_de_mes=False, corte_fecha=None)
 
+    def test_ventas_bi_scd2_update_with_expire(self):
+        from datetime import datetime, timedelta
+        from sqlalchemy import create_engine, text
+        import itacamba_reportes.core.db.connection as conn_mod
+        from itacamba_reportes.core.db.base import Base
+        from itacamba_reportes.outputs.ventas_bi.transform import upsert_ventas_bi_scd2
+
+        mem_eng = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(mem_eng)
+        orig_engine = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+
+        try:
+            # 1. Poblar int_gd20 con 1 registro
+            with mem_eng.begin() as conn:
+                conn.execute(text("""
+                    INSERT INTO int_gd20 (
+                        ejercicio, documento_comercial, numero_documento, material,
+                        sociedad, organizacion_ventas, centro, cantidad
+                    ) VALUES (
+                        2026, 'DOC1', 'NUM1', 'MAT1',
+                        'SOC1', 'ORG1', 'C1', 10.0
+                    )
+                """))
+
+            # 2. Carga inicial SCD2
+            inserted = upsert_ventas_bi_scd2()
+            self.assertEqual(inserted, 1)
+
+            # 3. Simular que el registro se creo ayer para forzar expiracion
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+            with mem_eng.begin() as conn:
+                conn.execute(text(f"UPDATE int_ventas_bi SET valid_from = '{yesterday}'"))
+
+            # 4. Modificar dato en int_gd20 (cambio de cantidad)
+            with mem_eng.begin() as conn:
+                conn.execute(text("UPDATE int_gd20 SET cantidad = 20.0 WHERE documento_comercial = 'DOC1'"))
+
+            # 5. Segunda corrida: debe expirar registro anterior y crear version 2
+            updated = upsert_ventas_bi_scd2()
+            self.assertEqual(updated, 1)
+
+            # 6. Validar estado en BD
+            with mem_eng.connect() as conn:
+                rows = conn.execute(text("SELECT id, version, is_current, valid_to FROM int_ventas_bi ORDER BY version")).fetchall()
+                self.assertEqual(len(rows), 2)
+                # Registro anterior expirado
+                self.assertEqual(rows[0][1], 1)
+                self.assertEqual(rows[0][2], 0)
+                self.assertIsNotNone(rows[0][3])
+                # Registro nuevo activo
+                self.assertEqual(rows[1][1], 2)
+                self.assertEqual(rows[1][2], 1)
+                self.assertIsNone(rows[1][3])
+        finally:
+            conn_mod.set_engine(orig_engine)
+
 
 if __name__ == "__main__":
     unittest.main()

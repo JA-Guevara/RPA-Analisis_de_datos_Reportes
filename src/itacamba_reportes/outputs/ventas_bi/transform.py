@@ -48,7 +48,8 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
         return 0
 
     df_int = add_hashes_to_df(df_int, SOURCE_COLS, DERIVED_COLS)
-    now = datetime.now()
+    now = datetime.now().replace(microsecond=0)
+    now_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
     with engine.connect() as conn:
         count_existing = conn.execute(text("SELECT COUNT(*) FROM int_ventas_bi")).scalar() or 0
@@ -102,7 +103,12 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
         else:
             ext = existing_map[k]
             ext_vf = ext.get("valid_from")
-            ext_date = ext_vf.date() if hasattr(ext_vf, "date") else None
+            if hasattr(ext_vf, "date"):
+                ext_date = ext_vf.date()
+            elif isinstance(ext_vf, str):
+                ext_date = pd.to_datetime(ext_vf).date()
+            else:
+                ext_date = None
 
             if ext["source_hash"] != row["source_hash"]:
                 # Caso 1: Los datos SAP cambiaron. Si se registraron hoy mismo, sobreescribir hoy sin duplicar version
@@ -131,12 +137,21 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
 
     with engine.begin() as conn:
         if ids_to_replace_today:
-            del_list = ",".join(str(i) for i in ids_to_replace_today)
-            conn.execute(text(f"DELETE FROM int_ventas_bi WHERE id IN ({del_list})"))
+            chunk_size = 1000
+            for i in range(0, len(ids_to_replace_today), chunk_size):
+                chunk = ids_to_replace_today[i:i + chunk_size]
+                del_list = ",".join(str(cid) for cid in chunk)
+                conn.execute(text(f"DELETE FROM int_ventas_bi WHERE id IN ({del_list})"))
 
         if ids_to_expire:
-            exp_list = ",".join(str(i) for i in ids_to_expire)
-            conn.execute(text(f"UPDATE int_ventas_bi SET is_current = 0, valid_to = '{now}' WHERE id IN ({exp_list})"))
+            chunk_size = 1000
+            for i in range(0, len(ids_to_expire), chunk_size):
+                chunk = ids_to_expire[i:i + chunk_size]
+                exp_list = ",".join(str(cid) for cid in chunk)
+                conn.execute(
+                    text(f"UPDATE int_ventas_bi SET is_current = 0, valid_to = :val_to WHERE id IN ({exp_list})"),
+                    {"val_to": now_str},
+                )
 
     if to_insert:
         df_ins = pd.DataFrame(to_insert)
