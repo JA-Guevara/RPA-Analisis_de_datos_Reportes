@@ -16,17 +16,13 @@ from itacamba_reportes.inputs.cartera.pipeline import run_pipeline as run_carter
 from itacamba_reportes.inputs.query.pipeline import run_pipeline as run_query
 from itacamba_reportes.inputs.proyeccion.pipeline import run_pipeline as run_proyeccion
 from itacamba_reportes.inputs.gd20.pipeline import run_pipeline as run_gd20
+from itacamba_reportes.core.logging_config import setup_logging
 from itacamba_reportes.outputs.ventas_bi.pipeline import run_pipeline as run_ventas_bi
 from itacamba_reportes.outputs.despacho_bi.pipeline import run_pipeline as run_despacho_bi
 from itacamba_reportes.outputs.despacho_mes.pipeline import run_pipeline as run_despacho_mes
 from itacamba_reportes.outputs.historial_ventas.export import export_historial_ventas
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger("itacamba_reportes")
+logger = setup_logging()
 
 
 def export_all_reports_parallel() -> None:
