@@ -131,12 +131,12 @@ SELECT
     u.incoterms,
     u.dia,
     u.codigo_cliente,
-    SUM(u.despacho_t) AS despacho_t,
-    SUM(u.rf) AS rf,
-    SUM(u.rf_ajustado_im) AS rf_ajustado_im,
+    u.despacho_t,
+    u.rf,
+    u.rf_ajustado_im,
     
-    -- PROYECCIÓN: Real hasta ayer + RF ajustado desde hoy
-    SUM(CASE WHEN u.dia < /* DIA_CORTE */ THEN u.despacho_t ELSE u.rf_ajustado_im END) AS proyeccion,
+    -- PROYECCIÓN: Real hasta ayer + RF ajustado desde hoy (cálculo fila por fila idéntico a Power Query en basepanel.xlsm)
+    CASE WHEN u.dia < /* DIA_CORTE */ THEN u.despacho_t ELSE u.rf_ajustado_im END AS proyeccion,
 
     COALESCE(c.nombre_cliente, 'Prospecto') AS nombre_cliente,
     COALESCE(c.vendedor, 'Prospecto') AS vendedor,
@@ -162,7 +162,4 @@ WHERE u.producto IN (
     'CEMENTO PORTLAND IP-30 PRO 50 KG-MQL',
     'CEMENTO PORTLAND TIPO CPII-C40 BIG BAG'
 )
-GROUP BY 
-    u.gerencia, u.equipo, u.departamento, u.localidad, u.centro_distribucion,
-    u.producto, u.incoterms, u.dia, u.codigo_cliente,
-    c.nombre_cliente, c.vendedor, cen_tipo.tipo, alm_can.canal, sem.semana;
+;
