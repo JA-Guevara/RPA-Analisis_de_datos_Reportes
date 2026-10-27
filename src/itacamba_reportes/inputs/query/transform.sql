@@ -13,7 +13,9 @@ INSERT INTO [int_query] (
     nro_pedido,
     incoterm,
     centro_origen,
+    nom_centro_origen,
     centro_destino,
+    nom_centro_destino,
     cod_material,
     material,
     cod_ruta,
@@ -36,7 +38,9 @@ SELECT
     q.nro_pedido,
     COALESCE(q.incoterm, 'OTROS') AS incoterm,
     q.centro_origen,
+    q.nom_centro_origen,
     q.centro_destino,
+    q.nom_centro_destino,
     q.cod_material,
     CASE 
         WHEN q.material LIKE '%CALCÁREO CORRECTIVO DE SUELO BRÓTER M30%%' THEN 'BRÓTER MIX AZCALMAG 30+'

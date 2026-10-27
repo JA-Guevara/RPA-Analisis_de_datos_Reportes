@@ -75,7 +75,7 @@ INSERT INTO [int_despacho_bi] (
 )
 SELECT 
     q.centro_origen,
-    COALESCE(stg.nom_centro_origen, cen_orig.nombre, q.centro_origen) AS ds_centro_origen,
+    COALESCE(q.nom_centro_origen, cen_orig.nombre, q.centro_origen) AS ds_centro_origen,
     q.cod_material,
     q.material,
     q.fecha_salida,
@@ -86,7 +86,7 @@ SELECT
     q.incoterm,
     'Venta de Stock - Off' AS clase_doc_ventas,
     q.centro_destino,
-    COALESCE(stg.nom_centro_destino, 'Sin asignar') AS ds_centro_destino,
+    COALESCE(q.nom_centro_destino, cen.nombre, 'Sin asignar') AS ds_centro_destino,
     COALESCE(c.attribute_7, 'VC-BO-Z5') AS atributo_7,
     COALESCE(c.region_nombre, q.departamento, 'Santa Cruz') AS departamento_facturacion,
     'Terrestre' AS clase_expedicion,
@@ -103,7 +103,7 @@ SELECT
     NULL AS distancia_km,
     NULL AS numero_transporte,
     NULL AS distancia,
-    COALESCE(stg.cantidad_ton, q.despacho_t + q.traslados_t, 0) AS cantidad,
+    (COALESCE(q.despacho_t, 0) + COALESCE(q.traslados_t, 0)) AS cantidad,
     q.despacho_t,
     q.departamento,
     q.traslados_t,
@@ -189,7 +189,6 @@ CROSS APPLY (
         ELSE q.cod_destinatario
     END AS codigo_cliente
 ) calc_cli
-LEFT JOIN [stg_query] stg ON stg.nro_pedido = q.nro_pedido AND stg.cod_material = q.cod_material
 LEFT JOIN [int_cartera] c ON c.cliente = calc_cli.codigo_cliente
 LEFT JOIN ref_eq_v eq_v ON eq_v.vendedor_sap = c.vendedor AND eq_v.rn = 1
 LEFT JOIN ref_eq_g eq_g ON eq_g.grupo_vendedores = c.grupo_vendedores AND eq_g.rn = 1

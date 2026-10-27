@@ -48,24 +48,27 @@ def current_revision() -> str | None:
 
 def sync_table_columns() -> None:
     from sqlalchemy import inspect, text
-    from itacamba_reportes.outputs.despacho_bi.models import DispatchBiIntModel
 
     eng = get_engine()
     insp = inspect(eng)
-    if not insp.has_table("int_despacho_bi"):
-        return
-
-    existing_cols = {col["name"].lower() for col in insp.get_columns("int_despacho_bi")}
-    with eng.begin() as conn:
-        for col in DispatchBiIntModel.__table__.columns:
-            if col.name.lower() not in existing_cols:
-                col_type = col.type.compile(eng.dialect)
-                logger.info("Sincronizando esquema: anadiendo columna %s (%s) a int_despacho_bi", col.name, col_type)
-                if eng.dialect.name == "sqlite":
-                    stmt = f"ALTER TABLE [int_despacho_bi] ADD COLUMN [{col.name}] {col_type}"
-                else:
-                    stmt = f"ALTER TABLE [int_despacho_bi] ADD [{col.name}] {col_type} NULL"
-                conn.execute(text(stmt))
+    targets = [
+        ("int_despacho_bi", DispatchBiIntModel),
+        ("int_query", QueryIntModel),
+    ]
+    for table_name, model_cls in targets:
+        if not insp.has_table(table_name):
+            continue
+        existing_cols = {col["name"].lower() for col in insp.get_columns(table_name)}
+        with eng.begin() as conn:
+            for col in model_cls.__table__.columns:
+                if col.name.lower() not in existing_cols:
+                    col_type = col.type.compile(eng.dialect)
+                    logger.info("Sincronizando esquema: anadiendo columna %s (%s) a %s", col.name, col_type, table_name)
+                    if eng.dialect.name == "sqlite":
+                        stmt = f"ALTER TABLE [{table_name}] ADD COLUMN [{col.name}] {col_type}"
+                    else:
+                        stmt = f"ALTER TABLE [{table_name}] ADD [{col.name}] {col_type} NULL"
+                    conn.execute(text(stmt))
 
 
 def ensure_all_tables_exist() -> None:
@@ -156,4 +159,3 @@ def drop_all_tables(reset_state: bool = True) -> list[str]:
         clear_pipeline_state()
     logger.info("Tablas eliminadas exitosamente (%d tablas): %s", len(dropped), dropped)
     return dropped
-
