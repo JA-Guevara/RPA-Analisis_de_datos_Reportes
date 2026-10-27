@@ -1,0 +1,2524 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Itacamba Cemento S.A. · Consola de Control de Reportes & BI v3.8</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c121d;
+      --surface: #141c2b;
+      --surface-2: #1b263a;
+      --surface-3: #223049;
+      --surface-hover: #293a58;
+      --line: #273752;
+      --line-soft: #1d2a40;
+      --text: #f0f4f9;
+      --text-2: #a7b7cd;
+      --text-3: #75869e;
+      --accent: #3fb7a5;
+      --accent-strong: #2a9c8b;
+      --accent-ink: #052420;
+      --accent-soft: rgba(63, 183, 165, .15);
+      --accent-cyan: #38bdf8;
+      --ok: #34d399;
+      --ok-soft: rgba(52, 211, 153, .14);
+      --warn: #fbbf24;
+      --warn-soft: rgba(251, 191, 36, .14);
+      --err: #f87171;
+      --err-soft: rgba(248, 113, 113, .16);
+      --idle: #75869e;
+      --idle-soft: rgba(117, 134, 158, .14);
+      --shadow: 0 4px 14px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .2);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --mono: "JetBrains Mono", Consolas, Menlo, monospace;
+      --sidebar: 234px;
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --bg: #f4f6fa;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --surface-3: #edf2f7;
+      --surface-hover: #e2e8f0;
+      --line: #dbe2ea;
+      --line-soft: #e9eff5;
+      --text: #111827;
+      --text-2: #475569;
+      --text-3: #64748b;
+      --accent: #14b8a6;
+      --accent-strong: #0f766e;
+      --accent-ink: #ffffff;
+      --accent-soft: rgba(20, 184, 166, .12);
+      --accent-cyan: #0284c7;
+      --ok: #10b981;
+      --ok-soft: rgba(16, 185, 129, .12);
+      --warn: #d97706;
+      --warn-soft: rgba(217, 119, 6, .12);
+      --err: #ef4444;
+      --err-soft: rgba(239, 68, 68, .12);
+      --idle: #64748b;
+      --idle-soft: rgba(100, 116, 139, .10);
+      --shadow: 0 2px 6px rgba(15, 23, 42, .06), 0 8px 20px rgba(15, 23, 42, .04);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font); font-size: 13.5px; line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    [x-cloak] { display: none !important; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 2px solid var(--bg); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    .mono { font-family: var(--mono); font-size: 12.5px; }
+    .muted { color: var(--text-2); }
+    .faint { color: var(--text-3); }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    .shell { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100vh; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh; padding: 18px 14px;
+      background: var(--surface); border-right: 1px solid var(--line-soft);
+      display: flex; flex-direction: column; gap: 18px; z-index: 25;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 2px 6px; }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--accent) 0%, #0284c7 100%);
+      color: #062420; display: grid; place-items: center; font-weight: 800; font-size: 13.5px;
+      box-shadow: 0 4px 10px rgba(63, 183, 165, .3);
+    }
+    .brand b { display: block; font-size: 14.5px; font-weight: 700; letter-spacing: .2px; color: var(--text); }
+    .brand small { display: block; color: var(--text-3); font-size: 11.5px; }
+
+    .nav { display: flex; flex-direction: column; gap: 3px; }
+    .nav button {
+      display: flex; align-items: center; gap: 11px; width: 100%; padding: 10px 12px;
+      background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer;
+      color: var(--text-2); text-align: left; font-weight: 500; font-size: 13px;
+      transition: background .15s, color .15s;
+    }
+    .nav button:hover { background: var(--surface-2); color: var(--text); }
+    .nav button[aria-current="page"] {
+      background: var(--accent-soft); color: var(--text); font-weight: 600;
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+    .nav button[aria-current="page"] svg { color: var(--accent); }
+    .nav .count {
+      margin-left: auto; font-size: 11px; padding: 1px 7px; border-radius: 99px;
+      background: var(--warn-soft); color: var(--warn); font-weight: 700;
+    }
+
+    .sidebar-foot { margin-top: auto; display: grid; gap: 10px; padding: 0 2px; }
+    .sidebar-foot .seg { grid-auto-columns: 1fr; }
+    .sidebar-foot .seg button { padding: 6px 4px; font-size: 12px; }
+
+    .main { min-width: 0; display: flex; flex-direction: column; }
+    .topbar {
+      position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 14px;
+      padding: 12px 28px; background: color-mix(in srgb, var(--surface) 85%, transparent);
+      backdrop-filter: blur(12px); border-bottom: 1px solid var(--line-soft);
+    }
+    .topbar h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.2px; }
+    .topbar .sub { color: var(--text-3); font-size: 12.5px; }
+    .topbar .spacer { flex: 1; }
+    .content { padding: 22px 28px 96px; max-width: 1340px; width: 100%; margin: 0 auto; }
+    .mobile-nav { display: none; }
+
+    .grid { display: grid; gap: 16px; }
+    .cols-run { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.05fr); }
+    .cols-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .stack { display: grid; gap: 16px; }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .between { justify-content: space-between; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--line-soft);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      transition: border-color .15s;
+    }
+    .card-h {
+      padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; border-bottom: 1px solid var(--line-soft);
+    }
+    .card-h h2 { margin: 0; font-size: 14.5px; font-weight: 700; color: var(--text); }
+    .card-h p { margin: 2px 0 0; color: var(--text-3); font-size: 12.5px; }
+    .card-b { padding: 18px 20px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      height: 36px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+      background: var(--surface-2); color: var(--text); font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: background .15s, border-color .15s, transform .05s, box-shadow .15s;
+    }
+    .btn:hover:not(:disabled) { background: var(--surface-3); border-color: var(--line); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #22a08f 100%);
+      border-color: var(--accent); color: var(--accent-ink); font-weight: 700;
+      box-shadow: 0 2px 8px rgba(63, 183, 165, .3);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #4dd2bf 0%, var(--accent-strong) 100%);
+      border-color: #4dd2bf; box-shadow: 0 4px 14px rgba(63, 183, 165, .4);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, var(--err) 0%, #dc2626 100%);
+      border-color: var(--err); color: #fff; font-weight: 700;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, .3);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: linear-gradient(135deg, #f87171 0%, #b91c1c 100%);
+    }
+    .btn-ghost { background: none; border-color: transparent; color: var(--text-2); }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+    .btn-lg { height: 46px; padding: 0 22px; font-size: 14.5px; border-radius: 10px; }
+    .btn-sm { height: 30px; padding: 0 10px; font-size: 12px; }
+    .icon-btn { width: 34px; padding: 0; }
+    .kbd { font-family: var(--mono); font-size: 11px; padding: 2px 6px; border: 1px solid currentColor; border-radius: 4px; opacity: .8; }
+
+    .seg { display: inline-grid; grid-auto-flow: column; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 9px; }
+    .seg button { border: 0; background: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; color: var(--text-2); font-weight: 600; font-size: 12.5px; transition: all .15s; }
+    .seg button:hover { color: var(--text); }
+    .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); border: 1px solid var(--line); }
+
+    .field { display: grid; gap: 6px; }
+    .field label, .label { font-size: 12.5px; color: var(--text-2); font-weight: 600; }
+    .input {
+      height: 36px; width: 100%; padding: 0 11px; border-radius: var(--radius-sm);
+      border: 1px solid var(--line); background: var(--bg); color: var(--text);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .input.mono { font-size: 12.5px; }
+    .hint { font-size: 12px; color: var(--text-3); }
+
+    .switch { position: relative; width: 40px; height: 22px; flex: none; }
+    .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 2; }
+    .switch span { position: absolute; inset: 0; border-radius: 99px; background: var(--surface-3); border: 1px solid var(--line); transition: background .15s; pointer-events: none; }
+    .switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-2); transition: transform .15s, background .15s; }
+    .switch input:checked + span { background: var(--accent); border-color: var(--accent); }
+    .switch input:checked + span::after { transform: translateX(18px); background: #fff; }
+    .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 99px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .badge.plain::before { display: none; }
+    .b-ok { background: var(--ok-soft); color: var(--ok); border: 1px solid rgba(52, 211, 153, .3); }
+    .b-warn { background: var(--warn-soft); color: var(--warn); border: 1px solid rgba(251, 191, 36, .3); }
+    .b-err { background: var(--err-soft); color: var(--err); border: 1px solid rgba(248, 113, 113, .3); }
+    .b-idle { background: var(--idle-soft); color: var(--idle); border: 1px solid var(--line); }
+    .b-run { background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(63, 183, 165, .3); }
+    .chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--text-2); font-size: 11.5px; }
+
+    .conn {
+      display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+      border-radius: 99px; border: 1px solid var(--line-soft); background: var(--surface-2);
+      cursor: pointer; font-size: 12.5px; color: var(--text-2); font-weight: 600;
+      transition: all .15s;
+    }
+    .conn:hover { border-color: var(--accent); color: var(--text); background: var(--surface-3); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); flex: none; }
+    .dot.ok { background: var(--ok); box-shadow: 0 0 6px rgba(52, 211, 153, .6); }
+    .dot.err { background: var(--err); box-shadow: 0 0 6px rgba(248, 113, 113, .6); }
+    .dot.warn { background: var(--warn); }
+    .dot.run { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .3; transform: scale(1.15); } }
+
+    .banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid; font-size: 13px; line-height: 1.45; }
+    .banner svg { flex: none; margin-top: 1px; }
+    .banner.info { background: var(--accent-soft); border-color: rgba(63, 183, 165, .35); color: var(--text); }
+    .banner.warn { background: var(--warn-soft); border-color: rgba(251, 191, 36, .35); color: var(--text); }
+    .banner.err { background: var(--err-soft); border-color: rgba(248, 113, 113, .4); color: var(--text); }
+    .banner.ok { background: var(--ok-soft); border-color: rgba(52, 211, 153, .35); color: var(--text); }
+
+    .summary {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
+      background: var(--line-soft); border: 1px solid var(--line-soft);
+      border-radius: var(--radius-sm); overflow: hidden;
+    }
+    .summary > div { background: var(--surface-2); padding: 10px 14px; }
+    .summary span { display: block; font-size: 11.5px; color: var(--text-3); font-weight: 500; }
+    .summary strong { font-weight: 700; font-size: 13px; color: var(--text); margin-top: 2px; display: block; }
+
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; }
+    .step { display: grid; grid-template-columns: 28px 1fr auto; gap: 14px; align-items: start; padding: 10px 0; position: relative; }
+    .step:not(:last-child)::after {
+      content: ""; position: absolute; left: 13px; top: 38px; bottom: -4px; width: 2px; background: var(--line-soft);
+    }
+    .step.done:not(:last-child)::after { background: var(--ok); opacity: .6; }
+    .step-ico {
+      width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+      font-size: 12px; font-weight: 800; border: 2px solid var(--line); color: var(--text-3);
+      background: var(--surface); position: relative; z-index: 1; transition: all .2s;
+    }
+    .step.done .step-ico { background: var(--ok); border-color: var(--ok); color: #062420; }
+    .step.running .step-ico { border-color: var(--accent); color: var(--accent); background: var(--surface-2); }
+    .step.running .step-ico::before {
+      content: ""; position: absolute; inset: -4px; border-radius: 50%;
+      border: 2px solid transparent; border-top-color: var(--accent); animation: spin .9s linear infinite;
+    }
+    .step.error .step-ico { background: var(--err); border-color: var(--err); color: #fff; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .step-name { font-weight: 700; font-size: 13px; }
+    .step-desc { font-size: 12px; color: var(--text-3); }
+    .step-time { font-family: var(--mono); font-size: 12px; color: var(--text-3); padding-top: 2px; font-weight: 600; }
+    .progress { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+    .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-cyan)); border-radius: 99px; transition: width .4s ease; }
+
+    .log {
+      height: 270px; overflow: auto; padding: 10px 0; font-family: var(--mono); font-size: 12px; line-height: 1.6;
+      background: #090e17; border-top: 1px solid var(--line-soft); border-radius: 0 0 var(--radius) var(--radius);
+    }
+    .log-line { display: grid; grid-template-columns: 74px 1fr; gap: 10px; padding: 1px 18px; }
+    .log-line:hover { background: rgba(255, 255, 255, .03); }
+    .log-line .t { color: var(--text-3); user-select: none; }
+    .log-line.error .m { color: var(--err); font-weight: 600; }
+    .log-line.warn .m { color: var(--warn); }
+    .log-line.success .m { color: var(--ok); font-weight: 600; }
+    .log-empty { padding: 36px 16px; text-align: center; color: var(--text-3); font-family: var(--font); font-size: 13px; }
+
+    .list { display: grid; }
+    .item { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line-soft); }
+    .item:first-child { border-top: 0; }
+    .file-ico { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line-soft); color: var(--accent); }
+    .item .name { font-weight: 700; word-break: break-word; font-size: 13px; }
+    .item .meta { font-size: 12px; color: var(--text-3); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .path { font-family: var(--mono); font-size: 12px; color: var(--text-3); word-break: break-all; }
+
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line-soft); margin-bottom: 18px; overflow-x: auto; }
+    .tabs button {
+      border: 0; background: none; padding: 10px 14px; cursor: pointer; color: var(--text-2); font-weight: 600;
+      font-size: 13px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: all .15s;
+    }
+    .tabs button:hover { color: var(--text); }
+    .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .env-group summary { list-style: none; cursor: pointer; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+    .env-group summary::-webkit-details-marker { display: none; }
+    .env-group summary .chev { transition: transform .15s; color: var(--text-3); }
+    .env-group[open] summary .chev { transform: rotate(90deg); }
+    .env-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr) auto; gap: 14px; align-items: center; padding: 12px 20px; border-top: 1px solid var(--line-soft); }
+    .env-row.dirty { box-shadow: inset 3px 0 0 var(--warn); background: rgba(251, 191, 36, .03); }
+    .env-row.off .env-key { color: var(--text-3); text-decoration: line-through; }
+    .env-key { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--text); }
+
+    .savebar {
+      position: fixed; left: calc(var(--sidebar) + 28px); right: 28px; bottom: 20px; z-index: 35;
+      display: flex; align-items: center; gap: 14px; padding: 12px 18px;
+      background: var(--surface); border: 1px solid var(--warn); border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, .4);
+      animation: slideUp .2s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(5, 9, 15, .7); backdrop-filter: blur(5px); display: grid; place-items: center; padding: 16px; }
+    .dialog { width: min(580px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,.5); max-height: 90vh; display: flex; flex-direction: column; }
+    .dialog-h { padding: 18px 22px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line-soft); flex-shrink: 0; }
+    .dialog-h h3 { margin: 0; font-size: 15.5px; font-weight: 700; }
+    .dialog-b { padding: 18px 22px; display: grid; gap: 14px; overflow-y: auto; }
+    .dialog-f { padding: 14px 22px 18px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--line-soft); flex-shrink: 0; }
+    pre.preview { margin: 0; max-height: 380px; overflow: auto; padding: 14px; background: var(--bg); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-all; }
+
+    .toasts { position: fixed; right: 24px; top: 76px; z-index: 60; display: grid; gap: 8px; width: min(380px, calc(100vw - 48px)); }
+    .toast { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 13px; line-height: 1.4; }
+    .toast .dot { margin-top: 5px; }
+
+    .pill-day {
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line);
+      display: grid; place-items: center; font-size: 11px; font-weight: 700; cursor: pointer;
+      background: var(--surface-2); color: var(--text-2); transition: all .15s;
+    }
+    .pill-day:hover { border-color: var(--accent); color: var(--text); }
+    .pill-day.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+    /* SELECTOR DINÁMICO DE PERFILES DE EJECUCIÓN */
+    .profile-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .profile-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--line-soft);
+      background: var(--surface-2);
+      cursor: pointer;
+      transition: all .18s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      user-select: none;
+      min-height: 78px;
+    }
+    .profile-card:hover {
+      border-color: var(--line);
+      background: var(--surface-3);
+      transform: translateY(-1px);
+    }
+    .profile-card.active {
+      border-color: var(--accent);
+      background: linear-gradient(145deg, rgba(63, 183, 165, .12) 0%, var(--surface-2) 100%);
+      box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px rgba(63, 183, 165, .18);
+    }
+    .profile-card .p-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .profile-card .p-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.3;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .profile-card.active .p-title {
+      color: var(--accent-strong);
+    }
+    .profile-card .p-radio {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      border: 1.5px solid var(--line);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+      transition: all .15s;
+    }
+    .profile-card.active .p-radio {
+      border-color: var(--accent);
+    }
+    .profile-card.active .p-radio::after {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .profile-card .p-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-3);
+    }
+
+    /* ESPECIFICACIÓN TÉCNICA Y GESTIÓN COMPLETA SAP */
+    .sap-spec-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 12px;
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--line-soft);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+    }
+    .sap-spec-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sap-spec-lbl {
+      font-size: 10.5px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      font-weight: 600;
+    }
+    .sap-spec-val {
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .sap-params-box {
+      display: grid;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, .015);
+    }
+    .sap-params-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-2);
+    }
+
+    @media (max-width: 1100px) { .cols-run { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .topbar { padding: 12px 16px; }
+      .content { padding: 16px 16px 120px; }
+      .mobile-nav {
+        display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+        background: var(--surface); border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+      }
+      .mobile-nav button { border: 0; background: none; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; font-size: 11px; color: var(--text-3); cursor: pointer; border-radius: 8px; }
+      .mobile-nav button[aria-current="page"] { color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+      .savebar { left: 12px; right: 12px; bottom: 76px; }
+      .env-row { grid-template-columns: 1fr; gap: 8px; }
+      .summary { grid-template-columns: 1fr; }
+      .conn-label { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div x-data="consola()" x-init="iniciar()" @keydown.window="atajos($event)" class="shell">
+
+  <!-- ============================================================== -->
+  <!-- BARRA LATERAL (SIDEBAR DE NAVEGACIÓN COMPACTA)                 -->
+  <!-- ============================================================== -->
+  <aside class="sidebar" aria-label="Navegación principal">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">IT</div>
+      <div>
+        <b>ITACAMBA</b>
+        <small>Reportes & BI v3.8</small>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <template x-for="s in secciones" :key="s.id">
+        <button type="button" @click="ir(s.id)" :aria-current="vista === s.id ? 'page' : null">
+          <span x-html="icono(s.icono)"></span>
+          <span x-text="s.nombre"></span>
+          <span class="count" x-show="s.id === 'fuentes' && alertasFuentes() > 0" x-text="alertasFuentes()"></span>
+        </button>
+      </template>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="seg" role="group" aria-label="Tema">
+        <button type="button" :aria-pressed="tema === 'system'" @click="ponerTema('system')" title="Seguir al sistema">Auto</button>
+        <button type="button" :aria-pressed="tema === 'light'" @click="ponerTema('light')">Claro</button>
+        <button type="button" :aria-pressed="tema === 'dark'" @click="ponerTema('dark')">Oscuro</button>
+      </div>
+      <div class="row" style="gap:6px; font-size:11.5px">
+        <span class="dot" :class="api ? 'ok' : 'warn'"></span>
+        <span class="faint" x-text="api ? 'Motor Python Nativo' : 'Modo Demostración'"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================================================== -->
+  <!-- ÁREA PRINCIPAL                                                 -->
+  <!-- ============================================================== -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 x-text="seccionActual().nombre"></h1>
+        <div class="sub" x-text="seccionActual().ayuda"></div>
+      </div>
+      <div class="spacer"></div>
+
+      <!-- Píldoras interactivas de conectividad directa -->
+      <button type="button" class="conn" @click="probar('sql')" :title="conexiones.sql.mensaje">
+        <span class="dot" :class="claseDot(conexiones.sql.estado)"></span>
+        <span>SQL Server</span>
+        <span class="faint conn-label" x-text="textoEstado(conexiones.sql.estado)"></span>
+      </button>
+
+      <button type="button" class="conn" @click="probar('sap')" :title="conexiones.sap.mensaje">
+        <span class="dot" :class="claseDot(conexiones.sap.estado)"></span>
+        <span>SAP GUI</span>
+        <span class="faint conn-label" x-text="textoEstado(conexiones.sap.estado)"></span>
+      </button>
+
+      <!-- Pill de Planificador Cíclico -->
+      <button type="button" class="conn" @click="alternarPlanificador()" :title="'Clic para ' + (schedulerActivo ? 'pausar' : 'activar') + ' el ciclo automático'">
+        <span class="dot" :class="schedulerActivo ? 'ok' : 'idle'"></span>
+        <span>Planificador:</span>
+        <span :style="schedulerActivo ? 'color:var(--ok); font-weight:700' : 'color:var(--text-3)'" x-text="schedulerActivo ? (configuracionActiva().horaFija || '06:00 AM') : 'Pausado'"></span>
+      </button>
+    </header>
+
+    <main class="content" id="contenido">
+      <div class="banner warn" x-show="!api" x-cloak style="margin-bottom:18px">
+        <span x-html="icono('info')"></span>
+        <div>
+          <b>Modo demostración en navegador.</b> Abierto fuera del entorno ejecutable de Python. Al iniciar el bot mediante <code>Iniciar_Bot_Reportes.bat</code> o <code>python run_gui.py</code>, se conectará al motor nativo con SQL Server y archivos físicos reales.
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- VISTA: INICIO (CONTROL OPERATIVO, STEPPER & LOGS)            -->
+      <!-- ============================================================ -->
+      <section x-show="vista === 'inicio'" class="stack" aria-labelledby="t-inicio">
+        <h2 id="t-inicio" class="sr-only">Inicio</h2>
+
+        <div class="grid cols-run">
+          <!-- CARD: EJECUTAR BOT -->
+          <div class="card">
+            <div class="card-h">
+              <div>
+                <h2>Ejecución del Bot de Reportes</h2>
+                <p>Ingesta de insumos, cálculo ELT en SQL Server y generación de reportes BI.</p>
+              </div>
+              <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
+            </div>
+
+            <div class="card-b stack">
+              <!-- Selector Dinámico y Visual de Perfiles de Ejecución -->
+              <div class="field">
+                <div class="row between" style="margin-bottom:6px">
+                  <div class="row" style="gap:8px">
+                    <label class="label" style="font-size:13px; font-weight:700">Perfil de Ejecución</label>
+                    <span class="chip" x-text="configuraciones.length + ' configuraciones'"></span>
+                  </div>
+                  <div class="row" style="gap:6px">
+                    <button type="button" class="btn btn-sm btn-ghost" @click="abrirModalConfiguracion(configuracionActiva())" title="Editar parámetros y horarios de este perfil">
+                      <span x-html="icono('settings')"></span> Editar Perfil
+                    </button>
+                    <button type="button" class="btn btn-sm btn-ghost" @click="abrirModalConfiguracion(null)" title="Crear nueva configuración">
+                      <span x-html="icono('plus')"></span> Nuevo
+                    </button>
+                    <button type="button" class="btn btn-sm btn-ghost icon-btn" style="color:var(--err)" @click="pedirConfirmarEliminarCfg(configuracionActiva())" title="Eliminar este perfil de ejecución">
+                      <span x-html="icono('trash')"></span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- SELECTOR DINÁMICO DE TARJETAS / PILLS -->
+                <div class="profile-selector">
+                  <template x-for="c in configuraciones" :key="c.id">
+                    <div class="profile-card" :class="{ active: configuracionActivaId === c.id }" @click="seleccionarConfiguracion(c.id)">
+                      <div class="p-header">
+                        <div class="p-title">
+                          <span x-text="iconoModo(c.modo)"></span>
+                          <span x-text="c.nombre"></span>
+                        </div>
+                        <span class="p-radio"></span>
+                      </div>
+                      <div class="p-meta">
+                        <span class="chip" style="font-size:10.5px" x-text="c.modo === 'diaria' ? 'Diaria (< hoy)' : (c.modo === 'cierre' ? 'Cierre Mes' : 'Rango Libre')"></span>
+                        <span class="mono" x-text="textoCicloCorto(c)"></span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Detalle Estructurado de la Configuración Seleccionada -->
+              <div class="card" style="background:var(--surface-2); border:1px solid var(--line-soft); box-shadow:none">
+                <div style="padding:14px 16px; border-bottom:1px solid var(--line-soft)">
+                  <div class="row between" style="margin-bottom:4px">
+                    <div class="row" style="gap:8px">
+                      <span class="badge plain" :class="badgeModo(configuracionActiva().modo).clase" x-text="badgeModo(configuracionActiva().modo).texto"></span>
+                      <span class="chip mono" style="font-size:11px" x-text="'ID: ' + configuracionActiva().id"></span>
+                    </div>
+                    <span class="hint mono" x-text="'Planificador: ' + (schedulerActivo ? 'ACTIVO' : 'PAUSADO')"></span>
+                  </div>
+                  <p class="hint" style="margin:4px 0 0; font-size:12.5px; color:var(--text-2)" x-text="configuracionActiva().descripcion"></p>
+                </div>
+
+                <div class="summary" style="border:0; border-radius:0">
+                  <div>
+                    <span>Periodo / Corte</span>
+                    <strong x-text="textoCorte()"></strong>
+                  </div>
+                  <div>
+                    <span>Día en Curso</span>
+                    <strong x-text="configuracionActiva().incluirHoy ? 'Incluido (Día completo)' : 'Excluido (< hoy)'"></strong>
+                  </div>
+                  <div>
+                    <span>Ciclo Programado</span>
+                    <strong x-text="textoCiclo(configuracionActiva())"></strong>
+                  </div>
+                </div>
+
+                <!-- Si la modalidad es Rango Libre, muestra selectores de fecha claros y accesos rápidos -->
+                <div x-show="configuracionActiva().modo === 'rango'" style="padding:12px 16px; border-top:1px solid var(--line-soft)">
+                  <div class="row between" style="margin-bottom:8px">
+                    <span class="label" style="font-size:11.5px">Rango Personalizado:</span>
+                    <div class="row" style="gap:4px">
+                      <button type="button" class="btn btn-sm btn-ghost" style="height:24px; font-size:11px; padding:0 8px" @click="aplicarPresetRango(7)">Últimos 7 días</button>
+                      <button type="button" class="btn btn-sm btn-ghost" style="height:24px; font-size:11px; padding:0 8px" @click="aplicarPresetRango(30)">Últimos 30 días</button>
+                      <button type="button" class="btn btn-sm btn-ghost" style="height:24px; font-size:11px; padding:0 8px" @click="aplicarPresetRango(60)">Últimos 60 días</button>
+                    </div>
+                  </div>
+                  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px">
+                    <div class="field">
+                      <label for="f-desde">Fecha Desde</label>
+                      <input id="f-desde" class="input" type="date" x-model="configuracionActiva().fechaDesde" :disabled="ejecutando">
+                    </div>
+                    <div class="field">
+                      <label for="f-hasta">Fecha Hasta (Corte)</label>
+                      <input id="f-hasta" class="input" type="date" x-model="configuracionActiva().fechaHasta" :disabled="ejecutando">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botón principal de Ejecutar / Detener -->
+              <div class="row" style="margin-top:2px">
+                <button type="button" class="btn btn-lg" style="flex:1"
+                        :class="ejecutando ? 'btn-danger' : 'btn-primary'"
+                        :disabled="deteniendo"
+                        @click="ejecutando ? detener() : ejecutar()">
+                  <span x-html="icono(ejecutando ? 'stop' : 'play')"></span>
+                  <span x-text="ejecutando ? (deteniendo ? 'Deteniendo corrida…' : 'Detener Ejecución') : 'Iniciar Ejecución Ahora'"></span>
+                  <span class="kbd" x-show="!ejecutando">Ctrl ⏎</span>
+                </button>
+              </div>
+
+              <!-- Banner de Error Real -->
+              <div class="banner err" x-show="estado.has_error && !ejecutando" x-cloak role="alert">
+                <span x-html="icono('alert')"></span>
+                <div>
+                  <b>La ejecución se detuvo por un fallo en el pipeline.</b>
+                  <div style="margin-top:2px; font-family:var(--mono); font-size:12px" x-text="estado.error_message"></div>
+                  <button type="button" class="btn btn-sm btn-ghost" style="margin:6px 0 0 -10px" @click="filtroLog = 'error'">Ver traza exacta en el registro</button>
+                </div>
+              </div>
+
+              <!-- Banner de Éxito -->
+              <div class="banner ok" x-show="estado.finished && !estado.has_error && !ejecutando" x-cloak>
+                <span x-html="icono('check')"></span>
+                <div>
+                  <b>¡Ejecución completada con éxito!</b> Todos los reportes BI están actualizados.
+                  <button type="button" class="btn btn-sm btn-ghost" style="margin-left:4px" @click="ir('reportes')">Ver reportes generados</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD: PROGRESO Y PASOS -->
+          <div class="card">
+            <div class="card-h">
+              <div>
+                <h2>Progreso del pipeline</h2>
+                <p x-text="textoProgreso()"></p>
+              </div>
+              <span class="mono faint" x-text="pasosCompletos() + ' / ' + pasos.length + ' pasos'"></span>
+            </div>
+            <div class="card-b">
+              <div class="progress" role="progressbar" aria-label="Progreso" aria-valuemin="0" :aria-valuemax="pasos.length" :aria-valuenow="pasosCompletos()" style="margin-bottom:14px">
+                <div :style="'width:' + (pasosCompletos() / pasos.length * 100) + '%'"></div>
+              </div>
+
+              <ol class="steps">
+                <template x-for="p in pasos" :key="p.id">
+                  <li class="step" :class="claseStep(p.id)">
+                    <span class="step-ico">
+                      <template x-if="estadoPaso(p.id) === 'success'"><span x-html="icono('check-sm')"></span></template>
+                      <template x-if="estadoPaso(p.id) === 'error'"><span>✕</span></template>
+                      <template x-if="!['success','error'].includes(estadoPaso(p.id))"><span x-text="p.id"></span></template>
+                    </span>
+                    <div>
+                      <div class="step-name" x-text="p.nombre"></div>
+                      <div class="step-desc" x-text="p.desc"></div>
+                    </div>
+                    <span class="step-time" x-text="tiempoPaso(p.id)"></span>
+                  </li>
+                </template>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD: TERMINAL DE LOGS EN VIVO -->
+        <div class="card">
+          <div class="card-h">
+            <div>
+              <h2>Registro de ejecución en tiempo real</h2>
+              <p>Trazas directas emitidas por el motor de logging de Python.</p>
+            </div>
+            <div class="row">
+              <div class="seg" role="group" aria-label="Filtrar registro">
+                <button type="button" :aria-pressed="filtroLog === 'todo'" @click="filtroLog = 'todo'">Todo</button>
+                <button type="button" :aria-pressed="filtroLog === 'error'" @click="filtroLog = 'error'">
+                  Errores <span x-show="logs.filter(l => l.tipo === 'error').length" x-text="'(' + logs.filter(l => l.tipo === 'error').length + ')'"></span>
+                </button>
+              </div>
+              <button type="button" class="btn btn-sm btn-ghost" @click="copiarLog()" title="Copiar al portapapeles">Copiar</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="logs = []">Limpiar</button>
+            </div>
+          </div>
+          <div class="log" x-ref="log" role="log" aria-live="polite" @scroll="seguirLog = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 24">
+            <template x-for="l in logsFiltrados()" :key="l.id">
+              <div class="log-line" :class="l.tipo">
+                <span class="t" x-text="l.hora"></span>
+                <span class="m" x-text="l.mensaje"></span>
+              </div>
+            </template>
+            <div class="log-empty" x-show="logsFiltrados().length === 0" x-text="filtroLog === 'error' ? 'Sin errores en esta sesión.' : 'Esperando mensajes. Al iniciar una corrida aparecerán las trazas aquí.'"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- VISTA: FUENTES (INSUMOS REALES Y GESTIÓN DE DESCARGAS SAP)   -->
+      <!-- ============================================================ -->
+      <section x-show="vista === 'fuentes'" x-cloak aria-labelledby="t-fuentes">
+        <h2 id="t-fuentes" class="sr-only">Fuentes</h2>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" :aria-selected="subFuentes === 'archivos'" @click="subFuentes = 'archivos'">Archivos de Entrada (3 Rutas Físicas)</button>
+          <button type="button" role="tab" :aria-selected="subFuentes === 'sap'" @click="subFuentes = 'sap'">Gestión y Descargas SAP</button>
+        </div>
+
+        <!-- SUB-TAB 1: ARCHIVOS DE ENTRADA -->
+        <div x-show="subFuentes === 'archivos'" class="grid cols-3">
+          <template x-for="g in gruposArchivos" :key="g.clave">
+            <div class="card">
+              <div class="card-h">
+                <div>
+                  <h2 x-text="g.titulo"></h2>
+                  <p x-text="g.ayuda"></p>
+                </div>
+                <button type="button" class="btn btn-sm" @click="abrirCarpeta(g.clave)" :title="'Abrir en Explorador: ' + (rutas[g.clave] || '')">
+                  <span x-html="icono('folder')"></span> Abrir
+                </button>
+              </div>
+              <div class="card-b" style="padding-bottom:8px">
+                <div class="path" x-text="rutas[g.clave] || 'Ruta no configurada'"></div>
+              </div>
+              <div class="list">
+                <template x-for="e in esperadosDe(g)" :key="e.patron">
+                  <div class="item">
+                    <span class="file-ico" x-html="icono('file')"></span>
+                    <div style="min-width:0">
+                      <div class="name" x-text="e.archivo ? e.archivo.nombre : e.patron + '.xlsx'"></div>
+                      <div class="meta">
+                        <template x-if="e.archivo">
+                          <span>
+                            <span x-text="'Modificado ' + haceCuanto(e.archivo.modificado)"></span> ·
+                            <span x-text="e.archivo.tamano"></span>
+                            <template x-if="e.archivo.hojas && e.archivo.hojas.length">
+                              <span>· <span x-text="e.archivo.hojas.join(', ')"></span></span>
+                            </template>
+                          </span>
+                        </template>
+                        <template x-if="!e.archivo"><span x-text="e.origen"></span></template>
+                      </div>
+                    </div>
+                    <span class="badge" :class="estadoArchivo(e, g).clase" x-text="estadoArchivo(e, g).texto"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- SUB-TAB 2: GESTIÓN Y DESCARGAS SAP MEJORADA -->
+        <div x-show="subFuentes === 'sap'" class="stack">
+          <div class="row between" style="flex-wrap:wrap; gap:10px">
+            <div class="banner info" style="flex:1; min-width:280px">
+              <span x-html="icono('info')"></span>
+              <div>
+                Para ejecutar descargas mediante RPA Scripting, SAP Logon debe estar abierto.
+                <b x-text="conexiones.sap.mensaje || 'Prueba la conexión para verificar el estado de la sesión.'"></b>
+              </div>
+            </div>
+            <div class="row" style="gap:8px">
+              <button type="button" class="btn btn-sm btn-ghost" @click="restaurarTareasSapPredeterminadas()" title="Restablecer tareas predeterminadas de SAP (GD20, ZBCS, CARTERA)">
+                <span x-html="icono('refresh')"></span> Restaurar Estándar
+              </button>
+              <button type="button" class="btn btn-sm btn-primary" @click="abrirModalSapTarea(null)">
+                <span x-html="icono('plus')"></span> Nueva Descarga SAP
+              </button>
+            </div>
+          </div>
+
+          <div class="grid cols-3">
+            <template x-for="t in tareasSap" :key="t.id">
+              <div class="card" style="display:flex; flex-direction:column; justify-content:space-between">
+                <div>
+                  <div class="card-h">
+                    <div>
+                      <div class="row" style="gap:8px; margin-bottom:2px">
+                        <h2 x-text="t.titulo"></h2>
+                        <span class="chip mono" style="font-weight:700; color:var(--accent); font-size:11.5px" x-text="t.tcode"></span>
+                      </div>
+                      <p x-text="t.ayuda"></p>
+                    </div>
+                    <div class="row" style="gap:4px">
+                      <button type="button" class="btn btn-ghost btn-sm" @click="abrirModalSapTarea(t)" title="Editar configuración completa de esta descarga">
+                        <span x-html="icono('settings')"></span> Editar
+                      </button>
+                      <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="duplicarSapTarea(t)" title="Duplicar tarea">
+                        <span x-html="icono('copy')"></span>
+                      </button>
+                      <button type="button" class="btn btn-ghost btn-sm icon-btn" style="color:var(--err)" @click="pedirConfirmarEliminarSap(t)" title="Eliminar descarga SAP">
+                        <span x-html="icono('trash')"></span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="card-b stack" style="gap:12px">
+                    <!-- Ficha Técnica Completa de Parámetros SAP -->
+                    <div class="sap-spec-grid">
+                      <div class="sap-spec-item">
+                        <span class="sap-spec-lbl">Transacción</span>
+                        <span class="sap-spec-val mono" x-text="t.tcode"></span>
+                      </div>
+                      <div class="sap-spec-item">
+                        <span class="sap-spec-lbl">Archivo Destino</span>
+                        <span class="sap-spec-val mono" x-text="t.destino || (t.tcode + '.xlsx')"></span>
+                      </div>
+                      <div class="sap-spec-item">
+                        <span class="sap-spec-lbl">Variante Grabada</span>
+                        <span class="sap-spec-val mono" x-text="t.variante || 'N/A'"></span>
+                      </div>
+                      <div class="sap-spec-item">
+                        <span class="sap-spec-lbl">Layout ALV</span>
+                        <span class="sap-spec-val mono" x-text="t.layout || '/DEFAULT'"></span>
+                      </div>
+                      <div class="sap-spec-item">
+                        <span class="sap-spec-lbl">Ledger Contable</span>
+                        <span class="sap-spec-val mono" x-text="t.ledger || 'N/A'"></span>
+                      </div>
+                      <div class="sap-spec-item">
+                        <span class="sap-spec-lbl">Tipo de Período</span>
+                        <span class="sap-spec-val" x-text="textoPeriodoSap(t.periodoTipo)"></span>
+                      </div>
+                    </div>
+
+                    <!-- Parámetros Editables en Caliente para la Descarga -->
+                    <div class="sap-params-box" x-show="t.campos && t.campos.length">
+                      <div class="sap-params-title">Valores de Entrada para la Descarga:</div>
+                      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px">
+                        <template x-for="c in t.campos" :key="c.id">
+                          <div class="field">
+                            <label :for="t.id + c.id" x-text="c.etiqueta"></label>
+                            <input class="input mono" :id="t.id + c.id" :type="c.tipo || 'text'" x-model="c.valor">
+                            <span class="hint" x-show="c.nota" x-text="c.nota"></span>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Footer de la Card -->
+                <div class="card-b" style="padding-top:0">
+                  <div class="row between" style="border-top:1px solid var(--line-soft); padding-top:12px">
+                    <span class="hint mono" x-text="'Ruta: dinamicos/' + t.destino"></span>
+                    <button type="button" class="btn btn-primary btn-sm" @click="descargarSap(t)">
+                      <span x-html="icono('download')"></span> Descargar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- VISTA: REPORTES (EXCEL GENERADOS PARA BI)                     -->
+      <!-- ============================================================ -->
+      <section x-show="vista === 'reportes'" x-cloak class="stack" aria-labelledby="t-rep">
+        <h2 id="t-rep" class="sr-only">Reportes</h2>
+
+        <div class="row between">
+          <span class="path" x-text="rutas.PATH_REPORTES_SALIDA || 'Carpeta de reportes no configurada'"></span>
+          <div class="row">
+            <button type="button" class="btn btn-sm" @click="recargar()"><span x-html="icono('refresh')"></span> Actualizar lista</button>
+            <button type="button" class="btn btn-sm" @click="abrirCarpeta('PATH_REPORTES_SALIDA')"><span x-html="icono('folder')"></span> Abrir carpeta física</button>
+          </div>
+        </div>
+
+        <div class="grid cols-3">
+          <template x-for="r in reportesAgrupados()" :key="r.tipo">
+            <div class="card">
+              <div class="card-h">
+                <div>
+                  <h2 x-text="r.titulo"></h2>
+                  <p x-text="r.ultimo ? 'Generado ' + haceCuanto(r.ultimo.modificado) : 'Aún no generado en disco'"></p>
+                </div>
+                <span class="badge" :class="r.ultimo ? (esReciente(r.ultimo.modificado, 1) ? 'b-ok' : 'b-warn') : 'b-idle'"
+                      x-text="r.ultimo ? (esReciente(r.ultimo.modificado, 1) ? 'Al día' : 'Antiguo') : 'Sin archivo'"></span>
+              </div>
+              <div class="card-b stack">
+                <template x-if="r.ultimo">
+                  <div class="stack" style="gap:10px">
+                    <div class="mono" style="word-break:break-all; font-weight:700" x-text="r.ultimo.nombre"></div>
+                    <div class="row">
+                      <template x-for="h in r.ultimo.hojas" :key="h">
+                        <span class="chip" x-text="h"></span>
+                      </template>
+                    </div>
+                    <div class="hint" x-text="r.ultimo.tamano + (r.anteriores ? ' · ' + r.anteriores + ' versión(es) anterior(es) en la carpeta' : '')"></div>
+                  </div>
+                </template>
+                <div class="row" style="margin-top:4px">
+                  <button type="button" class="btn btn-primary btn-sm" :disabled="!r.ultimo" @click="abrirExcel(r.ultimo)">
+                    <span x-html="icono('excel')"></span> Abrir en Excel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- VISTA: CONFIGURACIÓN (.ENV Y CREDENCIALES)                   -->
+      <!-- ============================================================ -->
+      <section x-show="vista === 'config'" x-cloak class="stack" aria-labelledby="t-cfg">
+        <h2 id="t-cfg" class="sr-only">Configuración</h2>
+
+        <div class="row between">
+          <input class="input" style="max-width:320px" type="search" x-ref="buscarEnv" placeholder="Buscar variable…  ( / )" x-model="busquedaEnv" aria-label="Buscar variable">
+          <div class="row">
+            <button type="button" class="btn btn-sm" @click="dialogo = 'vista'"><span x-html="icono('eye')"></span> Vista previa .env</button>
+            <button type="button" class="btn btn-sm" @click="nuevaVariable()"><span x-html="icono('plus')"></span> Nueva variable</button>
+          </div>
+        </div>
+
+        <div class="banner info">
+          <span x-html="icono('lock')"></span>
+          <div>
+            Las credenciales de base de datos y SAP se protegen con máscara de asteriscos. Para actualizar una clave escribe el nuevo valor; si se deja el campo intacto se conserva la existente.
+          </div>
+        </div>
+
+        <template x-for="g in gruposEnv" :key="g.id">
+          <details class="card env-group" open x-show="variablesDe(g.id).length > 0">
+            <summary>
+              <span class="chev" x-html="icono('chevron')"></span>
+              <span style="font-weight:700" x-text="g.titulo"></span>
+              <span class="chip" x-text="variablesDe(g.id).length"></span>
+              <span style="flex:1"></span>
+              <template x-if="g.prueba">
+                <button type="button" class="btn btn-sm" @click.prevent="probar(g.prueba)">
+                  <span class="dot" :class="claseDot(conexiones[g.prueba].estado)"></span> Probar conexión
+                </button>
+              </template>
+            </summary>
+
+            <template x-for="v in variablesDe(g.id)" :key="v.clave">
+              <div class="env-row" :class="{ dirty: estaModificada(v), off: !v.activa }">
+                <div style="min-width:0">
+                  <div class="env-key" x-text="v.clave"></div>
+                  <div class="hint" x-text="v.descripcion"></div>
+                </div>
+
+                <div>
+                  <template x-if="v.esSecreto">
+                    <input class="input mono" type="password" autocomplete="new-password"
+                           :placeholder="v.valorOriginal ? '•••••••• configurada' : 'Sin configurar'"
+                           x-model="v.nuevoSecreto" :disabled="!v.activa" :aria-label="'Nuevo valor de ' + v.clave">
+                  </template>
+                  <template x-if="!v.esSecreto">
+                    <input class="input mono" type="text" x-model="v.valor" :disabled="!v.activa" :aria-label="'Valor de ' + v.clave">
+                  </template>
+                </div>
+
+                <div class="row" style="justify-content:flex-end">
+                  <label class="switch" :title="v.activa ? 'Desactivar variable' : 'Activar variable'">
+                    <input type="checkbox" x-model="v.activa" :aria-label="'Activar ' + v.clave"><span></span>
+                  </label>
+                  <button type="button" class="btn btn-ghost btn-sm icon-btn" x-show="v.nueva || v.categoria === 'custom'"
+                          @click="quitarVariable(v)" :aria-label="'Eliminar ' + v.clave" title="Eliminar variable">
+                    <span x-html="icono('trash')"></span>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </details>
+        </template>
+      </section>
+    </main>
+  </div>
+
+  <!-- NAVEGACIÓN MÓVIL / PANTALLAS PEQUEÑAS -->
+  <nav class="mobile-nav" aria-label="Navegación Móvil">
+    <template x-for="s in secciones" :key="s.id">
+      <button type="button" @click="ir(s.id)" :aria-current="vista === s.id ? 'page' : null">
+        <span x-html="icono(s.icono)"></span>
+        <span x-text="s.corto"></span>
+      </button>
+    </template>
+  </nav>
+
+  <!-- BARRA FLOTANTE DE GUARDADO (.ENV) -->
+  <div class="savebar" x-show="vista === 'config' && cambiosEnv() > 0" x-cloak role="region" aria-label="Cambios sin guardar">
+    <span class="dot warn"></span>
+    <span><b x-text="cambiosEnv()"></b> cambio(s) pendiente(s) de guardar en el archivo .env</span>
+    <span style="flex:1"></span>
+    <button type="button" class="btn btn-ghost btn-sm" @click="descartarEnv()">Descartar cambios</button>
+    <button type="button" class="btn btn-primary btn-sm" @click="guardarEnv()" :disabled="guardando" x-text="guardando ? 'Guardando…' : 'Guardar en disco'"></button>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: GESTIONAR CONFIGURACIÓN DE EJECUCIÓN (CICLOS & HORAS)   -->
+  <!-- ============================================================== -->
+  <div class="overlay" x-show="dialogo === 'configuracion'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" style="width:min(640px, 100%)">
+      <div class="dialog-h">
+        <div>
+          <h3 x-text="editCfg.esNueva ? 'Nueva Configuración de Ejecución' : 'Editar Configuración: ' + editCfg.nombre"></h3>
+          <p class="hint" style="margin:2px 0 0">Ajusta modalidad, periodos de corte y ciclos automáticos de repetición.</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+      </div>
+
+      <div class="dialog-b">
+        <div class="field">
+          <label for="cfg-nombre">Nombre de la Configuración</label>
+          <input id="cfg-nombre" class="input" x-model="editCfg.nombre" placeholder="ej. Corrida Diaria Matutina">
+        </div>
+
+        <div class="field">
+          <label for="cfg-desc">Descripción Operativa</label>
+          <input id="cfg-desc" class="input" x-model="editCfg.descripcion" placeholder="Notas sobre cuándo y quién debe usar esta configuración">
+        </div>
+
+        <div class="field">
+          <label>Modalidad de Corrida</label>
+          <div class="seg" role="group">
+            <button type="button" :aria-pressed="editCfg.modo === 'diaria'" @click="editCfg.modo = 'diaria'; editCfg.incluirHoy = false">☀️ Diaria (< hoy)</button>
+            <button type="button" :aria-pressed="editCfg.modo === 'cierre'" @click="editCfg.modo = 'cierre'; editCfg.incluirHoy = true">🏁 Cierre de Mes (Día completo)</button>
+            <button type="button" :aria-pressed="editCfg.modo === 'rango'" @click="editCfg.modo = 'rango'">📅 Rango Libre</button>
+          </div>
+          <span class="hint" x-text="editCfg.modo === 'diaria' ? 'Excluye hoy para evitar despachos incompletos.' : (editCfg.modo === 'cierre' ? 'Incluye hoy para cerrar el mes contable completo.' : 'Fechas manuales para reprocesos.')"></span>
+        </div>
+
+        <!-- Periodo de Fechas -->
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px; padding:12px; background:var(--surface-2); border-radius:var(--radius-sm)">
+          <div class="field" x-show="editCfg.modo === 'rango'">
+            <label for="cfg-fdesde">Fecha Desde</label>
+            <input id="cfg-fdesde" class="input" type="date" x-model="editCfg.fechaDesde">
+          </div>
+          <div class="field">
+            <label for="cfg-fhasta">Fecha Hasta (Corte)</label>
+            <input id="cfg-fhasta" class="input" type="date" x-model="editCfg.fechaHasta">
+          </div>
+          <div class="field" style="grid-column: 1 / -1">
+            <label class="row" style="cursor:pointer">
+              <span class="switch"><input type="checkbox" x-model="editCfg.incluirHoy"><span></span></span>
+              <span>Incluir día de corte en el procesamiento</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Ciclos de Repetición y Horarios -->
+        <div class="field">
+          <label>Ciclo y Planificación Automática</label>
+          <div class="seg" role="group">
+            <button type="button" :aria-pressed="editCfg.frecuencia === 'diaria'" @click="editCfg.frecuencia = 'diaria'">Hora Fija Diaria</button>
+            <button type="button" :aria-pressed="editCfg.frecuencia === 'intervalo'" @click="editCfg.frecuencia = 'intervalo'">Intervalo Cíclico</button>
+            <button type="button" :aria-pressed="editCfg.frecuencia === 'manual'" @click="editCfg.frecuencia = 'manual'">Solo Manual</button>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px" x-show="editCfg.frecuencia !== 'manual'">
+          <div class="field" x-show="editCfg.frecuencia === 'diaria'">
+            <label for="cfg-horafija">Hora de Ejecución Programada</label>
+            <input id="cfg-horafija" class="input mono" type="time" x-model="editCfg.horaFija">
+          </div>
+          <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
+            <label for="cfg-intervalo">Repetir cada cuántas horas</label>
+            <select id="cfg-intervalo" class="input" x-model.number="editCfg.intervaloHoras">
+              <option value="1">Cada 1 hora</option>
+              <option value="2">Cada 2 horas</option>
+              <option value="4">Cada 4 horas</option>
+              <option value="6">Cada 6 horas</option>
+              <option value="12">Cada 12 horas</option>
+              <option value="24">Cada 24 horas</option>
+            </select>
+          </div>
+          <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
+            <label for="cfg-hini">Ventana: Hora Inicio</label>
+            <input id="cfg-hini" class="input mono" type="time" x-model="editCfg.horaInicioVentana">
+          </div>
+          <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
+            <label for="cfg-hfin">Ventana: Hora Fin</label>
+            <input id="cfg-hfin" class="input mono" type="time" x-model="editCfg.horaFinVentana">
+          </div>
+        </div>
+
+        <!-- Días permitidos -->
+        <div class="field" x-show="editCfg.frecuencia !== 'manual'">
+          <label>Días de Ejecución Permitidos</label>
+          <div class="row" style="gap:6px">
+            <template x-for="d in ['L', 'M', 'X', 'J', 'V', 'S', 'D']" :key="d">
+              <button type="button" class="pill-day" :class="{ active: (editCfg.diasSemana || []).includes(d) }"
+                      @click="alternarDia(d)" x-text="d"></button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-f">
+        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
+        <button type="button" class="btn btn-primary" @click="guardarConfiguracion()">Guardar Configuración</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: GESTIONAR TAREA DE DESCARGA SAP COMPLETA                -->
+  <!-- ============================================================== -->
+  <div class="overlay" x-show="dialogo === 'sap_tarea'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" style="width:min(660px, 100%)">
+      <div class="dialog-h">
+        <div>
+          <h3 x-text="editSap.esNueva ? 'Nueva Tarea de Descarga SAP' : 'Editar Descarga: ' + editSap.titulo"></h3>
+          <p class="hint" style="margin:2px 0 0">Configura transacción, variante, layout, ledger y parámetros de selección.</p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+      </div>
+
+      <div class="dialog-b">
+        <div class="field">
+          <label for="sap-titulo">Título Descriptivo de la Tarea</label>
+          <input id="sap-titulo" class="input" x-model="editSap.titulo" placeholder="ej. Ventas Contables (GD20)">
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px">
+          <div class="field">
+            <label for="sap-tcode">Código de Transacción SAP (T-Code)</label>
+            <input id="sap-tcode" class="input mono" x-model="editSap.tcode" placeholder="ej. GD20, ZBCS, ZSDI">
+          </div>
+          <div class="field">
+            <label for="sap-destino">Archivo Excel Destino (.xlsx)</label>
+            <input id="sap-destino" class="input mono" x-model="editSap.destino" placeholder="ej. GD20.xlsx, QUERY.xlsx">
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px">
+          <div class="field">
+            <label for="sap-variante">Variante Guardada en SAP</label>
+            <input id="sap-variante" class="input mono" x-model="editSap.variante" placeholder="ej. Prueba_GD20">
+          </div>
+          <div class="field">
+            <label for="sap-layout">Layout ALV / Disposición</label>
+            <input id="sap-layout" class="input mono" x-model="editSap.layout" placeholder="ej. /DEFAULT o /DESPACHOS">
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px">
+          <div class="field">
+            <label for="sap-ledger">Ledger Contable (Opcional)</label>
+            <input id="sap-ledger" class="input mono" x-model="editSap.ledger" placeholder="ej. VC, 0L o dejar en blanco">
+          </div>
+          <div class="field">
+            <label for="sap-periodo">Criterio Temporal / Período</label>
+            <select id="sap-periodo" class="input" x-model="editSap.periodoTipo">
+              <option value="mes_actual">Mes en curso (Automático)</option>
+              <option value="acumulado">Acumulado Anual (Ene - Hoy)</option>
+              <option value="rango">Rango de Fechas Libre</option>
+              <option value="fijo">Parámetros Fijos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sap-ayuda">Descripción Operativa</label>
+          <input id="sap-ayuda" class="input" x-model="editSap.ayuda" placeholder="Qué tablas de SQL Server o reportes alimenta">
+        </div>
+
+        <!-- Parámetros dinámicos de selección SAP -->
+        <div class="field" style="border-top:1px solid var(--line-soft); padding-top:12px; margin-top:4px">
+          <div class="row between" style="margin-bottom:8px">
+            <div>
+              <span class="label" style="font-weight:700">Parámetros de Selección SAP (Campos)</span>
+              <div class="hint">Valores que el script RPA completa en la pantalla de selección.</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-ghost" @click="agregarCampoEditSap()">
+              <span x-html="icono('plus')"></span> Agregar Parámetro
+            </button>
+          </div>
+
+          <div class="stack" style="gap:8px">
+            <template x-for="(c, idx) in (editSap.campos || [])" :key="idx">
+              <div class="row" style="gap:8px; background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line-soft); align-items:center">
+                <div style="flex:1">
+                  <label class="sr-only" x-text="'Nombre ' + idx"></label>
+                  <input class="input" style="height:32px; font-size:12px" x-model="c.etiqueta" placeholder="Etiqueta visible (ej. Período / Mes)">
+                </div>
+                <div style="width:130px">
+                  <label class="sr-only" x-text="'ID ' + idx"></label>
+                  <input class="input mono" style="height:32px; font-size:12px" x-model="c.id" placeholder="id_parametro">
+                </div>
+                <div style="flex:1">
+                  <label class="sr-only" x-text="'Valor ' + idx"></label>
+                  <input class="input mono" style="height:32px; font-size:12px" x-model="c.valor" placeholder="Valor por defecto">
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm icon-btn" style="color:var(--err); height:32px; width:32px" @click="quitarCampoEditSap(idx)" title="Quitar parámetro">
+                  <span x-html="icono('trash')"></span>
+                </button>
+              </div>
+            </template>
+            <div x-show="!editSap.campos || editSap.campos.length === 0" class="hint" style="text-align:center; padding:10px">
+              Sin parámetros personalizados. La descarga usará la variante guardada en SAP directamente.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-f">
+        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
+        <button type="button" class="btn btn-primary" @click="guardarSapTarea()">Guardar Tarea SAP</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMACIÓN: ELIMINAR DESCARGA SAP -->
+  <div class="overlay" x-show="dialogo === 'confirmar_eliminar_sap'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" style="width:min(450px, 100%)">
+      <div class="dialog-h">
+        <div class="row" style="gap:8px">
+          <span style="color:var(--err)" x-html="icono('alert')"></span>
+          <h3 style="margin:0">¿Eliminar Descarga SAP?</h3>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+      </div>
+      <div class="dialog-b">
+        <p style="margin:0; font-size:13px; line-height:1.5">
+          ¿Estás seguro de que deseas eliminar la tarea de descarga <b x-text="eliminarSapNombre"></b>?
+        </p>
+        <div class="hint" style="margin-top:6px">
+          Esta tarea se eliminará de las descargas configuradas y no se ejecutará en las corridas automáticas del bot. Siempre podrás restaurar las tareas estándar con el botón "Restaurar Estándar".
+        </div>
+      </div>
+      <div class="dialog-f">
+        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
+        <button type="button" class="btn btn-danger" @click="ejecutarEliminarSap()">Eliminar Descarga</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMACIÓN: ELIMINAR CONFIGURACIÓN DE EJECUCIÓN -->
+  <div class="overlay" x-show="dialogo === 'confirmar_eliminar_cfg'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" style="width:min(450px, 100%)">
+      <div class="dialog-h">
+        <div class="row" style="gap:8px">
+          <span style="color:var(--err)" x-html="icono('alert')"></span>
+          <h3 style="margin:0">¿Eliminar Perfil de Ejecución?</h3>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+      </div>
+      <div class="dialog-b">
+        <p style="margin:0; font-size:13px; line-height:1.5">
+          ¿Estás seguro de que deseas eliminar el perfil de ejecución <b x-text="eliminarCfgNombre"></b>?
+        </p>
+        <div class="hint" style="margin-top:6px">
+          Se actualizará la configuración persistente en disco y se seleccionará el siguiente perfil disponible.
+        </div>
+      </div>
+      <div class="dialog-f">
+        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
+        <button type="button" class="btn btn-danger" @click="ejecutarEliminarCfg()">Eliminar Perfil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODALES: NUEVA VARIABLE / VISTA PREVIA .ENV                    -->
+  <!-- ============================================================== -->
+  <div class="overlay" x-show="dialogo === 'nueva'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dn-t">
+      <div class="dialog-h">
+        <h3 id="dn-t">Nueva variable de entorno</h3>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+      </div>
+      <div class="dialog-b">
+        <div class="field">
+          <label for="nv-clave">Nombre de la clave (KEY)</label>
+          <input id="nv-clave" class="input mono" x-model="borrador.clave" @input="borrador.clave = borrador.clave.toUpperCase().replace(/[^A-Z0-9_]/g, '_')" placeholder="EJEMPLO_VARIABLE" x-ref="nvClave">
+          <span class="hint" x-show="errorBorrador" x-text="errorBorrador" style="color:var(--err)"></span>
+        </div>
+        <div class="field">
+          <label for="nv-grupo">Categoría</label>
+          <select id="nv-grupo" class="input" x-model="borrador.categoria">
+            <template x-for="g in gruposEnv" :key="g.id">
+              <option :value="g.id" x-text="g.titulo"></option>
+            </template>
+          </select>
+        </div>
+        <div class="field">
+          <label for="nv-valor">Valor</label>
+          <input id="nv-valor" class="input mono" :type="borrador.esSecreto ? 'password' : 'text'" x-model="borrador.valor" autocomplete="new-password">
+        </div>
+        <label class="row" style="cursor:pointer">
+          <span class="switch"><input type="checkbox" x-model="borrador.esSecreto"><span></span></span>
+          <span>Es una clave o contraseña sensible</span>
+        </label>
+        <div class="field">
+          <label for="nv-desc">Descripción</label>
+          <input id="nv-desc" class="input" x-model="borrador.descripcion" placeholder="Para qué se utiliza en el bot">
+        </div>
+      </div>
+      <div class="dialog-f">
+        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
+        <button type="button" class="btn btn-primary" @click="agregarVariable()">Agregar variable</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" x-show="dialogo === 'vista'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" style="width:min(720px,100%)" aria-labelledby="dv-t">
+      <div class="dialog-h">
+        <h3 id="dv-t">Vista previa del archivo físico .env</h3>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+      </div>
+      <div class="dialog-b">
+        <pre class="preview" x-text="vistaEnv()"></pre>
+        <span class="hint">Las contraseñas y claves protegidas se enmascaran en la visualización por seguridad.</span>
+      </div>
+      <div class="dialog-f">
+        <button type="button" class="btn btn-primary" @click="dialogo = null">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOASTS DE NOTIFICACIÓN FLOTANTES -->
+  <div class="toasts" aria-live="polite" aria-atomic="false">
+    <template x-for="t in toasts" :key="t.id">
+      <div class="toast" x-transition>
+        <span class="dot" :class="t.tipo === 'error' ? 'err' : (t.tipo === 'success' ? 'ok' : (t.tipo === 'warn' ? 'warn' : 'run'))"></span>
+        <span x-text="t.mensaje"></span>
+      </div>
+    </template>
+  </div>
+
+</div>
+
+<script>
+const ICONOS = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  sources: '<path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  reports: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  play: '<path d="M7 4v16l13-8z" fill="currentColor" stroke="none"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  'check-sm': '<path d="m5 12 4 4 10-10" stroke-width="3"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14.8-4M4 4v4h4M4 13a8 8 0 0 0 14.8 4M20 20v-4h-4"/>',
+  excel: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m9 8 6 8M15 8l-6 8"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+};
+
+const PASOS = [
+  { id: 1, nombre: 'Base de datos', desc: 'Conexión a SQL Server y versión del esquema' },
+  { id: 2, nombre: 'Referencias', desc: 'Catálogos de REFERENCIAS.xlsx' },
+  { id: 3, nombre: 'Cartera', desc: 'Clientes y donaciones' },
+  { id: 4, nombre: 'Despachos', desc: 'QUERY (ZBCS) del mes' },
+  { id: 5, nombre: 'Ventas', desc: 'GD20, BASE PANEL y VENTAS BI' },
+  { id: 6, nombre: 'Reportes', desc: 'Exportación de los Excel finales' },
+];
+
+function haceDias(n) {
+  const d = new Date(Date.now() - n * 86400000);
+  const p = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function hoyISO(delta = 0) {
+  const d = new Date(Date.now() + delta * 86400000);
+  const p = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+const DEMO = {
+  paths: {
+    PATH_INSUMOS_FIJOS: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\fijos',
+    PATH_INSUMOS_DINAMICOS: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\dinamicos',
+    PATH_REPORTES_SALIDA: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\reports',
+  },
+  archivos_fijos: [
+    { nombre: 'REFERENCIAS.xlsx', tamano: '21.2 KB', modificado: haceDias(9), hojas: ['Almacen', 'Centros', 'Material', 'Equipo'] },
+    { nombre: 'PROYECCION-SEMANAL.xlsx', tamano: '2.81 MB', modificado: haceDias(5), hojas: ['TD-INICIAL', 'RF AJUSTADO SEMANAL.26'] },
+    { nombre: 'HISTORIAL VENTAS.xlsx', tamano: '4.15 MB', modificado: haceDias(2), hojas: ['VENTAS', 'DESPACHOS'] },
+  ],
+  archivos_dinamicos: [
+    { nombre: 'GD20.xlsx', tamano: '602.7 KB', modificado: haceDias(0), hojas: ['Data'] },
+    { nombre: 'QUERY.xlsx', tamano: '1.60 MB', modificado: haceDias(0), hojas: ['Data'] },
+    { nombre: 'CARTERA.xlsx', tamano: '9.61 MB', modificado: haceDias(3), hojas: ['Q_VCBO_ZSDI_I03_CAD_CLIENTE_000'] },
+  ],
+  archivos_reportes: [
+    { nombre: 'VENTAS_BI_2026-10-26_0612.xlsx', tamano: '1.21 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
+    { nombre: 'DESPACHO_BI_2026-10-26_0612.xlsx', tamano: '0.88 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
+    { nombre: 'DESPACHO_MES_2026-10-26_0612.xlsx', tamano: '0.74 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
+  ],
+  env_vars: [
+    { clave: 'SAP_LOGON_PATH', valor: 'C:\\Program Files (x86)\\SAP\\FrontEnd\\SAPgui\\saplogon.exe', descripcion: 'Ruta al ejecutable SAP Logon', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_AMBIENT', valor: '1. ERP PRD - PRODUCCION', descripcion: 'Entrada exacta en SAP Logon', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_SYSTEM', valor: 'E05', descripcion: 'Sistema esperado para control', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_MANDANTE', valor: '300', descripcion: 'Mandante de producción', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_USER', valor: 'bot_reportes', descripcion: 'Usuario SAP Scripting', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_PASSWORD', valor: 'demo', descripcion: 'Contraseña SAP', categoria: 'sap', esSecreto: true, activa: true },
+    { clave: 'SAP_IDIOMA', valor: 'ES', descripcion: 'Idioma de inicio de sesión', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'DB_SERVER', valor: '192.168.100.75:1433', descripcion: 'Servidor SQL Server (VPN requerida)', categoria: 'db', esSecreto: false, activa: true },
+    { clave: 'DB_NAME', valor: 'Reportes_Itacamba', descripcion: 'Base de datos de producción', categoria: 'db', esSecreto: false, activa: true },
+    { clave: 'DB_USER', valor: 'sa_bot', descripcion: 'Usuario SQL Server', categoria: 'db', esSecreto: false, activa: true },
+    { clave: 'DB_PASSWORD', valor: 'demo', descripcion: 'Contraseña SQL Server', categoria: 'db', esSecreto: true, activa: true },
+    { clave: 'PATH_INSUMOS_FIJOS', valor: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\fijos', descripcion: 'Carpeta de insumos fijos (Referencias, Proyección)', categoria: 'rutas', esSecreto: false, activa: true },
+    { clave: 'PATH_INSUMOS_DINAMICOS', valor: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\dinamicos', descripcion: 'Carpeta de insumos diarios (GD20, QUERY, CARTERA)', categoria: 'rutas', esSecreto: false, activa: true },
+    { clave: 'PATH_REPORTES_SALIDA', valor: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\reports', descripcion: 'Destino de los reportes BI generados', categoria: 'rutas', esSecreto: false, activa: true },
+  ],
+  execution_profiles: [
+    {
+      id: 'diaria',
+      nombre: 'Corrida Diaria Matutina',
+      descripcion: 'Corte a ayer (< hoy). Ejecuta automáticamente cada mañana para actualizar el reporte diario.',
+      modo: 'diaria',
+      incluirHoy: false,
+      frecuencia: 'diaria',
+      horaFija: '06:00',
+      horaInicioVentana: '06:00',
+      horaFinVentana: '22:00',
+      intervaloHoras: 24,
+      diasSemana: ['L', 'M', 'X', 'J', 'V'],
+      fechaDesde: hoyISO(-30),
+      fechaHasta: hoyISO(),
+      activa: true,
+    },
+    {
+      id: 'cierre',
+      nombre: 'Cierre Contable de Mes',
+      descripcion: 'Incluye el día de corte completo para consolidar el mes cerrado con base GD20.',
+      modo: 'cierre',
+      incluirHoy: true,
+      frecuencia: 'diaria',
+      horaFija: '20:00',
+      horaInicioVentana: '18:00',
+      horaFinVentana: '23:59',
+      intervaloHoras: 24,
+      diasSemana: ['L', 'M', 'X', 'J', 'V', 'S', 'D'],
+      fechaDesde: hoyISO(-31),
+      fechaHasta: hoyISO(),
+      activa: false,
+    },
+    {
+      id: 'periodica',
+      nombre: 'Ciclo Intradía (Cada 4 Horas)',
+      descripcion: 'Repite ejecuciones automáticas cada 4 horas en ventana operativa (08:00 a 18:00).',
+      modo: 'diaria',
+      incluirHoy: false,
+      frecuencia: 'intervalo',
+      horaFija: '08:00',
+      horaInicioVentana: '08:00',
+      horaFinVentana: '18:00',
+      intervaloHoras: 4,
+      diasSemana: ['L', 'M', 'X', 'J', 'V'],
+      fechaDesde: hoyISO(-15),
+      fechaHasta: hoyISO(),
+      activa: false,
+    },
+    {
+      id: 'rango',
+      nombre: 'Reproceso por Rango Libre',
+      descripcion: 'Rango manual de fechas para auditorías o reprocesos históricos específicos.',
+      modo: 'rango',
+      incluirHoy: true,
+      frecuencia: 'manual',
+      horaFija: '12:00',
+      horaInicioVentana: '00:00',
+      horaFinVentana: '23:59',
+      intervaloHoras: 24,
+      diasSemana: ['L', 'M', 'X', 'J', 'V'],
+      fechaDesde: hoyISO(-60),
+      fechaHasta: hoyISO(),
+      activa: false,
+    },
+  ],
+  sap_tasks: [
+    {
+      id: 'gd20',
+      tcode: 'GD20',
+      titulo: 'Ventas Contables (GD20)',
+      ayuda: 'Alimenta la tabla BASE PANEL y VENTAS BI en SQL Server.',
+      destino: 'GD20.xlsx',
+      variante: 'Prueba_GD20',
+      layout: '/DEFAULT',
+      ledger: 'VC',
+      periodoTipo: 'mes_actual',
+      campos: [
+        { id: 'ledger', etiqueta: 'Ledger', valor: 'VC' },
+        { id: 'variante', etiqueta: 'Variante SAP', valor: 'Prueba_GD20' },
+        { id: 'periodo', etiqueta: 'Período / Mes Contable', valor: String(new Date().getMonth() + 1), tipo: 'number', nota: 'Mes contable en SAP' },
+        { id: 'layout', etiqueta: 'Layout de Columnas', valor: '/DEFAULT', nota: 'Disposición de exportación' },
+      ],
+    },
+    {
+      id: 'zbcs',
+      tcode: 'ZBCS',
+      titulo: 'Despachos ZBCS (Query)',
+      ayuda: 'Alimenta las tablas QUERY, DESPACHO BI y DESPACHO MES.',
+      destino: 'QUERY.xlsx',
+      variante: 'IM',
+      layout: '/DESPACHOS',
+      ledger: 'N/A',
+      periodoTipo: 'rango',
+      campos: [
+        { id: 'desde', etiqueta: 'Fecha Desde', valor: hoyISO(-90), tipo: 'date' },
+        { id: 'hasta', etiqueta: 'Fecha Hasta', valor: hoyISO(-1), tipo: 'date' },
+        { id: 'variante', etiqueta: 'Variante / Layout', valor: 'IM', nota: 'Variante de selección ZBCS' },
+      ],
+    },
+    {
+      id: 'cartera',
+      tcode: 'ZSDI',
+      titulo: 'Cartera de Clientes & Cadena',
+      ayuda: 'Maestro de clientes, líneas de crédito y sucursales.',
+      destino: 'CARTERA.xlsx',
+      variante: 'CAD_CLIENTE',
+      layout: '/CARTERA',
+      ledger: 'N/A',
+      periodoTipo: 'mes_actual',
+      campos: [
+        { id: 'variante', etiqueta: 'Variante SAP', valor: 'CAD_CLIENTE' },
+        { id: 'layout', etiqueta: 'Layout', valor: '/CARTERA', nota: 'Estructura de columnas exportadas' },
+      ],
+    },
+  ],
+};
+
+document.addEventListener('alpine:init', () => {
+  Alpine.data('consola', () => ({
+    api: null,
+    vista: 'inicio',
+    subFuentes: 'archivos',
+    tema: 'system',
+    cargando: true,
+    secciones: [
+      { id: 'inicio', nombre: 'Panel de Ejecución', corto: 'Ejecución', icono: 'home', ayuda: 'Inicia la corrida del bot, monitorea etapas y sigue trazas en vivo.' },
+      { id: 'fuentes', nombre: 'Insumos y Fuentes', corto: 'Fuentes', icono: 'sources', ayuda: 'Archivos físicos en OneDrive (3 rutas) y gestión de descargas SAP.' },
+      { id: 'reportes', nombre: 'Reportes Generados', corto: 'Reportes', icono: 'reports', ayuda: 'Archivos Excel finales generados y listos para Power BI.' },
+      { id: 'config', nombre: 'Configuración (.env)', corto: 'Ajustes', icono: 'settings', ayuda: 'Conexiones a SQL Server, SAP GUI, credenciales y rutas.' },
+    ],
+    conexiones: {
+      sql: { estado: 'unknown', mensaje: 'Sin probar' },
+      sap: { estado: 'unknown', mensaje: 'Sin probar' },
+    },
+    schedulerActivo: true,
+
+    // GESTIÓN DE CONFIGURACIONES DE EJECUCIÓN (PROFILES)
+    configuraciones: DEMO.execution_profiles,
+    configuracionActivaId: 'diaria',
+    editCfg: {},
+    eliminarCfgId: null,
+    eliminarCfgNombre: '',
+
+    // TAREAS DE DESCARGA SAP
+    tareasSap: DEMO.sap_tasks,
+    editSap: {},
+    eliminarSapId: null,
+    eliminarSapNombre: '',
+
+    pasos: PASOS,
+    estado: { step_statuses: {}, step_times: {}, has_error: false, finished: false, error_message: null },
+    ejecutando: false,
+    deteniendo: false,
+    ultimaCorrida: null,
+    sondeo: null,
+    logs: [],
+    filtroLog: 'todo',
+    seguirLog: true,
+    rutas: {},
+    archivos: { PATH_INSUMOS_FIJOS: [], PATH_INSUMOS_DINAMICOS: [], PATH_REPORTES_SALIDA: [] },
+    gruposArchivos: [
+      { clave: 'PATH_INSUMOS_FIJOS', titulo: 'Archivos Fijos del Área', ayuda: 'Gestionados por el área comercial y logística.', vigenciaDias: 45,
+        esperados: [
+          { patron: 'REFERENCIAS', origen: 'Referencias y maestros del área' },
+          { patron: 'PROYECCION-SEMANAL', origen: 'Proyección semanal ajustada' },
+          { patron: 'HISTORIAL VENTAS', origen: 'Histórico de despachos y ventas' },
+        ] },
+      { clave: 'PATH_INSUMOS_DINAMICOS', titulo: 'Descargas Diarias (Insumos)', ayuda: 'Descargas de SAP y correo para la corrida diaria.', vigenciaDias: 1,
+        esperados: [
+          { patron: 'GD20', origen: 'SAP · Transacción GD20' },
+          { patron: 'QUERY', origen: 'SAP · Transacción ZBCS' },
+          { patron: 'CARTERA', origen: 'Reporte diario de cartera de clientes' },
+        ] },
+      { clave: 'PATH_REPORTES_SALIDA', titulo: 'Carpeta de Reportes Generados', ayuda: 'Destino final donde se depositan los Excel procesados.', vigenciaDias: 1,
+        esperados: [
+          { patron: 'VENTAS_BI', origen: 'Generado automáticamente por el bot' },
+          { patron: 'DESPACHO_BI', origen: 'Generado automáticamente por el bot' },
+          { patron: 'DESPACHO_MES', origen: 'Generado automáticamente por el bot' },
+        ] },
+    ],
+    env: [],
+    busquedaEnv: '',
+    guardando: false,
+    eliminadas: 0,
+    gruposEnv: [
+      { id: 'sap', titulo: 'SAP GUI & Scripting', prueba: 'sap' },
+      { id: 'db', titulo: 'Base de Datos SQL Server', prueba: 'sql' },
+      { id: 'rutas', titulo: 'Rutas OneDrive & Almacenamiento' },
+      { id: 'mail', titulo: 'Correo y Notificaciones' },
+      { id: 'custom', titulo: 'Otras Variables' },
+    ],
+    dialogo: null,
+    borrador: {},
+    errorBorrador: '',
+    toasts: [],
+
+    iniciar() {
+      try { this.tema = localStorage.getItem('tema') || 'system'; } catch (e) {}
+      this.aplicarTema();
+
+      const conectar = () => {
+        this.api = window.pywebview.api;
+        this.recargar();
+        this.probar('sql', true);
+        this.probar('sap', true);
+      };
+
+      if (window.pywebview && window.pywebview.api) {
+        conectar();
+      } else {
+        window.addEventListener('pywebviewready', conectar, { once: true });
+        setTimeout(() => { if (!this.api) this.cargarDatos(DEMO); }, 500);
+      }
+    },
+
+    apiTiene(nombre) {
+      return !!(this.api && typeof this.api[nombre] === 'function');
+    },
+
+    async llamar(nombre, ...args) {
+      if (!this.apiTiene(nombre)) return null;
+      try {
+        return await this.api[nombre](...args);
+      } catch (e) {
+        this.avisar('Error en motor: ' + (e && e.message ? e.message : e), 'error');
+        return null;
+      }
+    },
+
+    async recargar() {
+      if (!this.api) {
+        this.cargarDatos(DEMO);
+        return;
+      }
+      this.cargando = true;
+      const r = await this.llamar('get_initial_state');
+      if (r && r.status === 'ok') {
+        this.cargarDatos(r);
+      }
+      this.cargando = false;
+    },
+
+    cargarDatos(r) {
+      this.rutas = r.paths || {};
+      this.archivos = {
+        PATH_INSUMOS_FIJOS: r.archivos_fijos || [],
+        PATH_INSUMOS_DINAMICOS: r.archivos_dinamicos || [],
+        PATH_REPORTES_SALIDA: r.archivos_reportes || [],
+      };
+      this.env = (r.env_vars || []).map(v => ({
+        ...v,
+        valorOriginal: v.valor,
+        activaOriginal: v.activa,
+        nuevoSecreto: '',
+        nueva: false,
+      }));
+      if (r.execution_profiles && r.execution_profiles.length) {
+        this.configuraciones = r.execution_profiles.map(p => ({
+          ...p,
+          fechaDesde: p.fechaDesde || hoyISO(-30),
+          fechaHasta: p.fechaHasta || hoyISO(),
+        }));
+      }
+      if (r.sap_tasks && r.sap_tasks.length) {
+        this.tareasSap = r.sap_tasks;
+      }
+      this.schedulerActivo = r.scheduler_active !== undefined ? r.scheduler_active : true;
+
+      const ult = (r.archivos_reportes || []).map(a => a.modificado).sort().pop();
+      this.ultimaCorrida = ult ? this.haceCuanto(ult) : null;
+      this.cargando = false;
+    },
+
+    ir(id) {
+      this.vista = id;
+      window.scrollTo({ top: 0 });
+    },
+
+    seccionActual() {
+      return this.secciones.find(s => s.id === this.vista) || this.secciones[0];
+    },
+
+    ponerTema(t) {
+      this.tema = t;
+      try { localStorage.setItem('tema', t); } catch (e) {}
+      this.aplicarTema();
+    },
+
+    aplicarTema() {
+      const root = document.documentElement;
+      if (this.tema === 'system') {
+        root.removeAttribute('data-theme');
+      } else {
+        root.setAttribute('data-theme', this.tema);
+      }
+    },
+
+    atajos(e) {
+      if (e.key === 'Escape' && this.dialogo) {
+        this.dialogo = null;
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && this.vista === 'inicio') {
+        e.preventDefault();
+        this.ejecutando ? this.detener() : this.ejecutar();
+        return;
+      }
+      if (e.key === '/' && this.vista === 'config' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        this.$refs.buscarEnv.focus();
+      }
+    },
+
+    async probar(cual, silencioso = false) {
+      const c = this.conexiones[cual];
+      c.estado = 'run';
+      c.mensaje = 'Probando conexión…';
+
+      let r;
+      if (!this.api) {
+        await new Promise(res => setTimeout(res, 500));
+        r = cual === 'sql'
+          ? { ok: true, message: 'Demostración: SQL Server simulado OK.' }
+          : { ok: true, message: 'Demostración: SAP GUI simulado OK.' };
+      } else {
+        r = await this.llamar(cual === 'sql' ? 'test_sql_connection' : 'test_sap_logon');
+      }
+
+      if (!r) {
+        c.estado = 'unknown';
+        c.mensaje = 'No se pudo contactar el servicio';
+        return;
+      }
+
+      c.estado = r.ok ? 'ok' : 'err';
+      c.mensaje = r.message;
+      if (!silencioso) {
+        this.avisar(r.message, r.ok ? 'success' : 'error');
+      }
+    },
+
+    async alternarPlanificador() {
+      const nuevo = !this.schedulerActivo;
+      this.schedulerActivo = nuevo;
+      if (this.api) {
+        const r = await this.llamar('toggle_scheduler', nuevo);
+        if (r && r.message) this.avisar(r.message, nuevo ? 'success' : 'warn');
+      } else {
+        this.avisar(`Planificador automático ${nuevo ? 'ACTIVADO' : 'PAUSADO'} (simulado)`, nuevo ? 'success' : 'warn');
+      }
+    },
+
+    // -------------------------------------------------------------
+    // GESTIÓN DE CONFIGURACIONES DE EJECUCIÓN (PROFILES)
+    // -------------------------------------------------------------
+    configuracionActiva() {
+      return this.configuraciones.find(c => c.id === this.configuracionActivaId) || this.configuraciones[0] || {};
+    },
+
+    seleccionarConfiguracion(id) {
+      this.configuracionActivaId = id;
+      const c = this.configuracionActiva();
+      this.avisar(`Perfil activo: ${c.nombre}`, 'info');
+    },
+
+    iconoModo(m) {
+      if (m === 'diaria') return '☀️';
+      if (m === 'cierre') return '🏁';
+      return '📅';
+    },
+
+    textoCicloCorto(c) {
+      if (!c) return '';
+      if (c.frecuencia === 'manual') return 'Manual';
+      if (c.frecuencia === 'diaria') return (c.horaFija || '06:00') + ' hs';
+      if (c.frecuencia === 'intervalo') return 'Cada ' + (c.intervaloHoras || 4) + 'h';
+      return '06:00';
+    },
+
+    badgeModo(m) {
+      if (m === 'diaria') return { clase: 'b-ok', texto: '☀️ Corrida Diaria (< hoy)' };
+      if (m === 'cierre') return { clase: 'b-run', texto: '🏁 Cierre Contable de Mes (Día completo)' };
+      return { clase: 'b-warn', texto: '📅 Reproceso por Rango Libre' };
+    },
+
+    aplicarPresetRango(dias) {
+      const c = this.configuracionActiva();
+      c.fechaHasta = hoyISO();
+      c.fechaDesde = hoyISO(-dias);
+      this.avisar(`Rango fijado: últimos ${dias} días`, 'info');
+    },
+
+    abrirModalConfiguracion(cfg) {
+      if (cfg) {
+        this.editCfg = JSON.parse(JSON.stringify(cfg));
+        this.editCfg.esNueva = false;
+      } else {
+        this.editCfg = {
+          id: 'cfg_' + Date.now(),
+          nombre: 'Nueva Configuración',
+          descripcion: 'Configuración personalizada para corridas específicas.',
+          modo: 'diaria',
+          incluirHoy: false,
+          frecuencia: 'diaria',
+          horaFija: '06:00',
+          horaInicioVentana: '06:00',
+          horaFinVentana: '22:00',
+          intervaloHoras: 24,
+          diasSemana: ['L', 'M', 'X', 'J', 'V'],
+          fechaDesde: hoyISO(-30),
+          fechaHasta: hoyISO(),
+          esNueva: true,
+          esPersonalizada: true,
+        };
+      }
+      this.dialogo = 'configuracion';
+    },
+
+    alternarDia(d) {
+      if (!this.editCfg.diasSemana) this.editCfg.diasSemana = [];
+      const idx = this.editCfg.diasSemana.indexOf(d);
+      if (idx >= 0) this.editCfg.diasSemana.splice(idx, 1);
+      else this.editCfg.diasSemana.push(d);
+    },
+
+    async guardarConfiguracion() {
+      const idx = this.configuraciones.findIndex(c => c.id === this.editCfg.id);
+      if (idx >= 0) {
+        this.configuraciones[idx] = { ...this.editCfg };
+      } else {
+        this.configuraciones.push({ ...this.editCfg, esPersonalizada: true });
+        this.configuracionActivaId = this.editCfg.id;
+      }
+      this.dialogo = null;
+      this.avisar('Configuración de ejecución guardada con éxito', 'success');
+
+      if (this.api) {
+        await this.llamar('save_execution_profiles', JSON.stringify(this.configuraciones));
+      }
+    },
+
+    pedirConfirmarEliminarCfg(c) {
+      if (this.configuraciones.length <= 1) {
+        this.avisar('No puedes eliminar el único perfil de ejecución configurado', 'warn');
+        return;
+      }
+      this.eliminarCfgId = c.id;
+      this.eliminarCfgNombre = c.nombre;
+      this.dialogo = 'confirmar_eliminar_cfg';
+    },
+
+    async ejecutarEliminarCfg() {
+      if (!this.eliminarCfgId) return;
+      this.configuraciones = this.configuraciones.filter(c => c.id !== this.eliminarCfgId);
+      this.configuracionActivaId = this.configuraciones[0].id;
+      this.dialogo = null;
+      this.avisar(`Perfil "${this.eliminarCfgNombre}" eliminado`, 'warn');
+
+      if (this.api) {
+        await this.llamar('save_execution_profiles', JSON.stringify(this.configuraciones));
+      }
+    },
+
+    async eliminarConfiguracion(id) {
+      if (this.configuraciones.length <= 1) return;
+      this.configuraciones = this.configuraciones.filter(c => c.id !== id);
+      this.configuracionActivaId = this.configuraciones[0].id;
+      this.avisar('Configuración eliminada', 'warn');
+
+      if (this.api) {
+        await this.llamar('save_execution_profiles', JSON.stringify(this.configuraciones));
+      }
+    },
+
+    textoCorte() {
+      const c = this.configuracionActiva();
+      const f = c.fechaHasta || hoyISO();
+      const [y, m, d] = f.split('-').map(Number);
+      const fecha = new Date(y, m - 1, d - (c.incluirHoy ? 0 : 1));
+      const strFecha = fecha.toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
+      return `${c.modo === 'diaria' ? 'Ayer' : (c.modo === 'cierre' ? 'Cierre Mes' : 'Rango')} (${strFecha})`;
+    },
+
+    textoCiclo(c) {
+      if (!c) return '—';
+      if (c.frecuencia === 'manual') return 'Solo Manual';
+      if (c.frecuencia === 'diaria') {
+        const dias = (c.diasSemana || []).join('');
+        return `Diario ${c.horaFija || '06:00'} (${dias || 'L-V'})`;
+      }
+      if (c.frecuencia === 'intervalo') {
+        return `Cada ${c.intervaloHoras || 4}h (${c.horaInicioVentana || '08:00'} a ${c.horaFinVentana || '18:00'})`;
+      }
+      return 'Diaria';
+    },
+
+    // -------------------------------------------------------------
+    // GESTIÓN DE DESCARGAS SAP
+    // -------------------------------------------------------------
+    textoPeriodoSap(p) {
+      if (p === 'mes_actual') return 'Mes en curso (Automático)';
+      if (p === 'acumulado') return 'Acumulado Anual (Ene - Hoy)';
+      if (p === 'rango') return 'Rango Fechas (Dinámico)';
+      if (p === 'fijo') return 'Parámetros Fijos';
+      return 'Automático';
+    },
+
+    abrirModalSapTarea(t) {
+      if (t) {
+        this.editSap = JSON.parse(JSON.stringify(t));
+        if (!this.editSap.campos) this.editSap.campos = [];
+        if (!this.editSap.periodoTipo) this.editSap.periodoTipo = 'mes_actual';
+        if (!this.editSap.ledger) this.editSap.ledger = '';
+        this.editSap.esNueva = false;
+      } else {
+        this.editSap = {
+          id: 'sap_' + Date.now(),
+          tcode: 'GD20',
+          titulo: 'Nueva Tarea de Descarga SAP',
+          ayuda: 'Descarga automatizada vía SAP GUI Scripting.',
+          destino: 'NUEVO_REPORTE.xlsx',
+          variante: 'DEFAULT',
+          layout: '/DEFAULT',
+          ledger: '',
+          periodoTipo: 'mes_actual',
+          campos: [
+            { id: 'variante', etiqueta: 'Variante SAP', valor: 'DEFAULT', nota: 'Variante de selección' },
+            { id: 'layout', etiqueta: 'Layout de Columnas', valor: '/DEFAULT', nota: 'Disposición ALV' },
+          ],
+          esNueva: true,
+          esPersonalizada: true,
+        };
+      }
+      this.dialogo = 'sap_tarea';
+    },
+
+    agregarCampoEditSap() {
+      if (!this.editSap.campos) this.editSap.campos = [];
+      const num = this.editSap.campos.length + 1;
+      this.editSap.campos.push({
+        id: 'param_' + num,
+        etiqueta: 'Parámetro ' + num,
+        valor: '',
+        tipo: 'text',
+        nota: ''
+      });
+    },
+
+    quitarCampoEditSap(idx) {
+      if (this.editSap.campos && this.editSap.campos.length > idx) {
+        this.editSap.campos.splice(idx, 1);
+      }
+    },
+
+    async guardarSapTarea() {
+      const idx = this.tareasSap.findIndex(t => t.id === this.editSap.id);
+      if (idx >= 0) {
+        this.tareasSap[idx] = { ...this.editSap };
+      } else {
+        this.tareasSap.push({ ...this.editSap, esPersonalizada: true });
+      }
+      this.dialogo = null;
+      this.avisar('Tarea de descarga SAP guardada correctamente', 'success');
+
+      if (this.api) {
+        await this.llamar('save_sap_tasks', JSON.stringify(this.tareasSap));
+      }
+    },
+
+    duplicarSapTarea(t) {
+      const clon = JSON.parse(JSON.stringify(t));
+      clon.id = 'sap_' + Date.now();
+      clon.titulo = clon.titulo + ' (Copia)';
+      clon.destino = 'COPIA_' + clon.destino;
+      clon.esPersonalizada = true;
+      this.tareasSap.push(clon);
+      this.avisar(`Tarea duplicada: ${clon.titulo}`, 'success');
+
+      if (this.api) {
+        this.llamar('save_sap_tasks', JSON.stringify(this.tareasSap));
+      }
+    },
+
+    async restaurarTareasSapPredeterminadas() {
+      this.tareasSap = JSON.parse(JSON.stringify(DEMO.sap_tasks));
+      this.avisar('Tareas SAP restablecidas a configuración estándar', 'info');
+
+      if (this.api) {
+        await this.llamar('save_sap_tasks', JSON.stringify(this.tareasSap));
+      }
+    },
+
+    pedirConfirmarEliminarSap(t) {
+      this.eliminarSapId = t.id;
+      this.eliminarSapNombre = t.titulo;
+      this.dialogo = 'confirmar_eliminar_sap';
+    },
+
+    async ejecutarEliminarSap() {
+      if (!this.eliminarSapId) return;
+      this.tareasSap = this.tareasSap.filter(t => t.id !== this.eliminarSapId);
+      this.dialogo = null;
+      this.avisar(`Descarga "${this.eliminarSapNombre}" eliminada`, 'warn');
+
+      if (this.api) {
+        await this.llamar('save_sap_tasks', JSON.stringify(this.tareasSap));
+      }
+    },
+
+    async eliminarSapTarea(id) {
+      this.tareasSap = this.tareasSap.filter(t => t.id !== id);
+      this.avisar('Tarea de descarga eliminada', 'warn');
+
+      if (this.api) {
+        await this.llamar('save_sap_tasks', JSON.stringify(this.tareasSap));
+      }
+    },
+
+    async descargarSap(t) {
+      const params = Object.fromEntries((t.campos || []).map(c => [c.id, c.valor]));
+      params.tcode = t.tcode;
+      params.destino = t.destino;
+      params.variante = t.variante;
+      params.layout = t.layout;
+      params.ledger = t.ledger;
+
+      const r = await this.llamar('download_sap', t.id, JSON.stringify(params));
+      if (r) {
+        this.avisar(r.message || 'Descarga solicitada', r.status === 'ok' ? 'success' : 'error');
+      } else {
+        this.avisar(`Descarga simulada de ${t.tcode} iniciada`, 'info');
+      }
+    },
+
+    // -------------------------------------------------------------
+    // EJECUCIÓN DEL PIPELINE
+    // -------------------------------------------------------------
+    async ejecutar() {
+      if (this.ejecutando) return;
+      if (this.conexiones.sql.estado === 'err') {
+        this.avisar('SQL Server no responde. Conecta la VPN y prueba la conexión antes de continuar.', 'error');
+        return;
+      }
+
+      const cfg = this.configuracionActiva();
+      this.estado = {
+        step_statuses: { 1: 'running', 2: 'pending', 3: 'pending', 4: 'pending', 5: 'pending', 6: 'pending' },
+        step_times: {},
+        has_error: false,
+        finished: false,
+        error_message: null
+      };
+      this.filtroLog = 'todo';
+
+      if (!this.api) {
+        return this.simular();
+      }
+
+      const payload = {
+        modo: cfg.modo,
+        fechaDesde: cfg.fechaDesde,
+        fechaHasta: cfg.fechaHasta,
+        incluirHoy: cfg.incluirHoy,
+        configuracionId: cfg.id,
+      };
+
+      const r = await this.llamar('start_pipeline', JSON.stringify(payload));
+      if (!r || r.status === 'error' || r.status === 'busy') {
+        this.avisar((r && r.message) || 'No se pudo iniciar la corrida', 'error');
+        return;
+      }
+
+      this.ejecutando = true;
+      this.avisar(`Iniciando ${cfg.nombre}…`, 'info');
+      this.sondeo = setInterval(() => this.leerAvance(), 600);
+    },
+
+    async leerAvance() {
+      const r = await this.llamar('get_execution_updates');
+      if (!r) return;
+
+      if (r.state) this.estado = r.state;
+      if (r.logs && r.logs.length) this.agregarLogs(r.logs);
+
+      if (!r.is_running) {
+        clearInterval(this.sondeo);
+        this.sondeo = null;
+        this.ejecutando = false;
+        this.deteniendo = false;
+        this.ultimaCorrida = 'hace un momento';
+
+        if (this.estado.has_error) {
+          this.avisar('La ejecución se detuvo por un error en el pipeline', 'error');
+        } else if (this.estado.finished) {
+          this.avisar('¡Pipeline completado con éxito!', 'success');
+          this.recargar();
+        }
+      }
+    },
+
+    async detener() {
+      if (!this.ejecutando) return;
+      this.deteniendo = true;
+      if (!this.api) {
+        this.detenerSimulacion();
+        return;
+      }
+      const r = await this.llamar('stop_pipeline');
+      this.avisar((r && r.message) || 'Solicitud de parada enviada', 'warn');
+    },
+
+    simular() {
+      this.ejecutando = true;
+      let paso = 1;
+      const t0 = Date.now();
+      const cfg = this.configuracionActiva();
+      const tick = () => {
+        if (!this.ejecutando) return;
+        const st = { ...this.estado.step_statuses }, tm = { ...this.estado.step_times };
+        st[paso] = 'success';
+        tm[paso] = ((Date.now() - t0) / 1000 / paso).toFixed(1) + 's';
+        this.agregarLogs([{ tipo: 'info', mensaje: `Paso ${paso} (${PASOS[paso - 1].nombre}) completado con éxito en ${tm[paso]}` }]);
+        paso++;
+        if (paso <= PASOS.length) {
+          st[paso] = 'running';
+        }
+        this.estado = { ...this.estado, step_statuses: st, step_times: tm };
+
+        if (paso > PASOS.length) {
+          this.estado.finished = true;
+          this.ejecutando = false;
+          this.ultimaCorrida = 'hace un momento';
+          this.avisar('Simulación completada con éxito', 'success');
+        } else {
+          this.sondeo = setTimeout(tick, 900);
+        }
+      };
+      this.agregarLogs([{ tipo: 'info', mensaje: `Iniciando corrida: ${cfg.nombre} (Modo ${cfg.modo.toUpperCase()})` }]);
+      this.sondeo = setTimeout(tick, 800);
+    },
+
+    detenerSimulacion() {
+      clearTimeout(this.sondeo);
+      this.ejecutando = false;
+      this.deteniendo = false;
+      const st = Object.fromEntries(Object.entries(this.estado.step_statuses).map(([k, v]) => [k, v === 'running' ? 'pending' : v]));
+      this.estado = { ...this.estado, step_statuses: st, has_error: true, error_message: 'Ejecución cancelada por el usuario.' };
+      this.agregarLogs([{ tipo: 'error', mensaje: 'Ejecución cancelada por el usuario' }]);
+    },
+
+    claseDot(e) {
+      return { ok: 'ok', err: 'err', run: 'run', warn: 'warn' }[e] || '';
+    },
+
+    textoEstado(e) {
+      return { ok: 'Conectado', err: 'Sin conexión', run: 'Probando…', warn: 'Revisar' }[e] || 'Sin probar';
+    },
+
+    estadoPaso(id) {
+      return (this.estado.step_statuses || {})[id] || 'pending';
+    },
+
+    claseStep(id) {
+      return { success: 'done', running: 'running', error: 'error' }[this.estadoPaso(id)] || '';
+    },
+
+    tiempoPaso(id) {
+      const t = (this.estado.step_times || {})[id];
+      if (this.estadoPaso(id) === 'running') return 'ejecutando…';
+      return t && t !== '-' ? t : '';
+    },
+
+    pasosCompletos() {
+      return this.pasos.filter(p => this.estadoPaso(p.id) === 'success').length;
+    },
+
+    textoProgreso() {
+      if (this.ejecutando) {
+        const p = this.pasos.find(x => this.estadoPaso(x.id) === 'running');
+        return p ? 'Procesando: ' + p.nombre + '…' : 'Iniciando…';
+      }
+      if (this.estado.has_error) return 'Detenido por error.';
+      if (this.estado.finished) return 'Todos los pasos finalizaron con éxito.';
+      return 'Listo para iniciar.';
+    },
+
+    badgeEjecucion() {
+      if (this.ejecutando) return { clase: 'b-run', texto: 'En curso' };
+      if (this.estado.has_error) return { clase: 'b-err', texto: 'Con error' };
+      if (this.estado.finished) return { clase: 'b-ok', texto: 'Completado' };
+      return { clase: 'b-idle', texto: 'Listo' };
+    },
+
+    agregarLogs(nuevos) {
+      const ahora = () => new Date().toTimeString().slice(0, 8);
+      for (const l of nuevos) {
+        this.logs.push({
+          id: l.id || (Date.now() + Math.random()),
+          hora: l.hora || ahora(),
+          tipo: l.tipo || 'info',
+          mensaje: l.mensaje,
+        });
+      }
+      if (this.logs.length > 1000) this.logs.splice(0, this.logs.length - 1000);
+      if (this.seguirLog) {
+        this.$nextTick(() => {
+          const el = this.$refs.log;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      }
+    },
+
+    logsFiltrados() {
+      return this.filtroLog === 'error' ? this.logs.filter(l => l.tipo === 'error') : this.logs;
+    },
+
+    async copiarLog() {
+      const txt = this.logsFiltrados().map(l => `${l.hora}  ${l.mensaje}`).join('\n');
+      try {
+        await navigator.clipboard.writeText(txt);
+        this.avisar('Registro copiado al portapapeles', 'success');
+      } catch (e) {
+        this.avisar('No se pudo copiar el registro', 'error');
+      }
+    },
+
+    esperadosDe(g) {
+      const lista = this.archivos[g.clave] || [];
+      const usados = new Set();
+      const filas = g.esperados.map(e => {
+        const cand = lista.filter(a => a.nombre.toUpperCase().startsWith(e.patron)).sort((a, b) => (b.modificado || '').localeCompare(a.modificado || ''));
+        if (cand[0]) usados.add(cand[0].nombre);
+        return { ...e, archivo: cand[0] || null };
+      });
+      lista.filter(a => !usados.has(a.nombre)).forEach(a => {
+        filas.push({ patron: a.nombre, origen: 'Archivo adicional detectado en disco', archivo: a, extra: true });
+      });
+      return filas;
+    },
+
+    estadoArchivo(e, g) {
+      if (!e.archivo) return { clase: 'b-err', texto: 'Falta' };
+      if (e.extra) return { clase: 'b-idle', texto: 'No se usa' };
+      return this.esReciente(e.archivo.modificado, g.vigenciaDias) ? { clase: 'b-ok', texto: 'Al día' } : { clase: 'b-warn', texto: 'Desactualizado' };
+    },
+
+    alertasFuentes() {
+      return this.gruposArchivos.reduce((n, g) => n + this.esperadosDe(g).filter(e => ['b-err', 'b-warn'].includes(this.estadoArchivo(e, g).clase)).length, 0);
+    },
+
+    fecha(s) {
+      if (!s) return null;
+      const d = new Date(String(s).replace(' ', 'T'));
+      return isNaN(d) ? null : d;
+    },
+
+    esReciente(s, dias) {
+      const d = this.fecha(s);
+      if (!d) return false;
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const lim = new Date(hoy.getTime() - (dias - 1) * 86400000);
+      return d >= lim;
+    },
+
+    haceCuanto(s) {
+      const d = this.fecha(s);
+      if (!d) return s || '';
+      const min = Math.round((Date.now() - d.getTime()) / 60000);
+      if (min < 1) return 'hace un momento';
+      if (min < 60) return `hace ${min} min`;
+      const h = Math.round(min / 60);
+      if (h < 24 && d.getDate() === new Date().getDate()) return `hoy, ${d.toTimeString().slice(0, 5)}`;
+      const dias = Math.round(h / 24);
+      if (dias <= 1) return `ayer, ${d.toTimeString().slice(0, 5)}`;
+      return `hace ${dias} días`;
+    },
+
+    async abrirCarpeta(clave) {
+      if (!this.api) return this.avisar('En modo navegador no se pueden abrir carpetas físicas', 'warn');
+      const r = await this.llamar('open_folder', clave);
+      if (r && r.status !== 'ok') this.avisar(r.message || 'No se pudo abrir la carpeta', 'error');
+    },
+
+    reportesAgrupados() {
+      const tipos = [
+        { tipo: 'VENTAS_BI', titulo: 'VENTAS BI' },
+        { tipo: 'DESPACHO_BI', titulo: 'DESPACHO BI' },
+        { tipo: 'DESPACHO_MES', titulo: 'DESPACHO MES' },
+        { tipo: 'HISTORIAL', titulo: 'HISTORIAL VENTAS' },
+      ];
+      const lista = this.archivos.PATH_REPORTES_SALIDA || [];
+      return tipos.map(t => {
+        const fs = lista.filter(a => a.nombre.toUpperCase().startsWith(t.tipo)).sort((a, b) => (b.modificado || '').localeCompare(a.modificado || ''));
+        return { ...t, ultimo: fs[0] || null, anteriores: Math.max(fs.length - 1, 0) };
+      });
+    },
+
+    async abrirExcel(a) {
+      if (!a) return;
+      if (!this.api) return this.avisar('En modo navegador no se abren archivos nativos', 'warn');
+      const r = await this.llamar('open_file_excel', a.nombre);
+      if (r && r.status !== 'ok') this.avisar(r.message || 'No se pudo abrir el archivo', 'error');
+    },
+
+    variablesDe(cat) {
+      const q = this.busquedaEnv.trim().toLowerCase();
+      return this.env.filter(v => (v.categoria || 'custom') === cat &&
+        (!q || v.clave.toLowerCase().includes(q) || (v.descripcion || '').toLowerCase().includes(q) || (!v.esSecreto && String(v.valor).toLowerCase().includes(q))));
+    },
+
+    estaModificada(v) {
+      return v.nueva || v.activa !== v.activaOriginal || (v.esSecreto ? v.nuevoSecreto !== '' : v.valor !== v.valorOriginal);
+    },
+
+    cambiosEnv() {
+      return this.env.filter(v => this.estaModificada(v)).length + (this.eliminadas || 0);
+    },
+
+    descartarEnv() {
+      this.env = this.env.filter(v => !v.nueva).map(v => ({ ...v, valor: v.valorOriginal, activa: v.activaOriginal, nuevoSecreto: '' }));
+      this.eliminadas = 0;
+    },
+
+    nuevaVariable() {
+      this.borrador = { clave: '', valor: '', descripcion: '', categoria: 'custom', esSecreto: false };
+      this.errorBorrador = '';
+      this.dialogo = 'nueva';
+      this.$nextTick(() => this.$refs.nvClave && this.$refs.nvClave.focus());
+    },
+
+    agregarVariable() {
+      const clave = (this.borrador.clave || '').trim();
+      if (!/^[A-Z][A-Z0-9_]*$/.test(clave)) {
+        this.errorBorrador = 'Usa mayúsculas, números y guión bajo; debe iniciar con una letra.';
+        return;
+      }
+      if (this.env.some(v => v.clave === clave)) {
+        this.errorBorrador = 'Ya existe una variable con ese nombre.';
+        return;
+      }
+      const b = this.borrador;
+      this.env.push({
+        clave,
+        valor: b.esSecreto ? '' : b.valor,
+        nuevoSecreto: b.esSecreto ? b.valor : '',
+        descripcion: b.descripcion,
+        categoria: b.categoria,
+        esSecreto: b.esSecreto,
+        activa: true,
+        activaOriginal: true,
+        valorOriginal: '',
+        nueva: true,
+      });
+      this.dialogo = null;
+      this.avisar('Variable añadida. Presiona "Guardar en disco" para aplicarla.', 'info');
+    },
+
+    quitarVariable(v) {
+      this.env = this.env.filter(x => x !== v);
+      if (!v.nueva) this.eliminadas = (this.eliminadas || 0) + 1;
+    },
+
+    payloadEnv() {
+      return this.env.map(v => ({
+        clave: v.clave,
+        valor: v.esSecreto ? (v.nuevoSecreto !== '' ? v.nuevoSecreto : v.valorOriginal) : v.valor,
+        descripcion: v.descripcion || '',
+        categoria: v.categoria || 'custom',
+        esSecreto: !!v.esSecreto,
+        activa: !!v.activa,
+      }));
+    },
+
+    async guardarEnv() {
+      if (!this.api) {
+        this.env = this.env.map(v => ({
+          ...v,
+          valorOriginal: v.esSecreto ? (v.nuevoSecreto || v.valorOriginal) : v.valor,
+          activaOriginal: v.activa,
+          nuevoSecreto: '',
+          nueva: false,
+        }));
+        this.eliminadas = 0;
+        return this.avisar('Modo demostración: cambios aplicados solo en pantalla', 'warn');
+      }
+      this.guardando = true;
+      const r = await this.llamar('save_env_variables', JSON.stringify(this.payloadEnv()));
+      this.guardando = false;
+      if (r && r.status === 'ok') {
+        this.avisar(r.message || 'Configuración guardada en archivo .env', 'success');
+        this.eliminadas = 0;
+        this.recargar();
+      } else {
+        this.avisar((r && r.message) || 'Error al guardar configuración', 'error');
+      }
+    },
+
+    vistaEnv() {
+      const lineas = [];
+      for (const g of this.gruposEnv) {
+        const vs = this.env.filter(v => (v.categoria || 'custom') === g.id);
+        if (!vs.length) continue;
+        lineas.push(`# ====================================================================`);
+        lineas.push(`# ${g.titulo.toUpperCase()}`);
+        lineas.push(`# ====================================================================`);
+        for (const v of vs) {
+          if (v.descripcion) lineas.push(`# ${v.descripcion}`);
+          const val = v.esSecreto ? '********' : v.valor;
+          lineas.push((v.activa ? '' : '# [DESACTIVADA] ') + `${v.clave}=${val}`);
+        }
+        lineas.push('');
+      }
+      return lineas.join('\n');
+    },
+
+    avisar(mensaje, tipo = 'info') {
+      const id = Date.now() + Math.random();
+      this.toasts.push({ id, mensaje, tipo });
+      if (this.toasts.length > 3) this.toasts.shift();
+      setTimeout(() => {
+        this.toasts = this.toasts.filter(t => t.id !== id);
+      }, tipo === 'error' ? 7000 : 4000);
+    },
+
+    icono(n) {
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[n] || ''}</svg>`;
+    },
+  }));
+});
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.9/cdn.min.js"></script>
+</body>
+</html>

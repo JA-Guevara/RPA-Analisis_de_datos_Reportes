@@ -1,0 +1,1308 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Itacamba · Consola de Reportes</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f141c;
+    --surface: #161d28;
+    --surface-2: #1c2532;
+    --surface-3: #232e3d;
+    --line: #2a3546;
+    --line-soft: #222c3a;
+    --text: #e6ebf2;
+    --text-2: #aab4c3;
+    --text-3: #7d899b;
+    --accent: #3fb7a5;
+    --accent-strong: #2a9c8b;
+    --accent-ink: #06231f;
+    --accent-soft: rgba(63, 183, 165, .14);
+    --ok: #46b97a;
+    --ok-soft: rgba(70, 185, 122, .14);
+    --warn: #d9a441;
+    --warn-soft: rgba(217, 164, 65, .14);
+    --err: #e06a6a;
+    --err-soft: rgba(224, 106, 106, .14);
+    --idle: #7d899b;
+    --idle-soft: rgba(125, 137, 155, .14);
+    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.18);
+    --radius: 10px;
+    --radius-sm: 7px;
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Cascadia Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --sidebar: 228px;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f3f5f8;
+    --surface: #ffffff;
+    --surface-2: #f7f9fb;
+    --surface-3: #eef2f6;
+    --line: #dde3ea;
+    --line-soft: #e8edf2;
+    --text: #18212d;
+    --text-2: #4a5566;
+    --text-3: #6b7686;
+    --accent: #1f8a7a;
+    --accent-strong: #187365;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(31, 138, 122, .10);
+    --ok: #2f8f5b;
+    --ok-soft: rgba(47, 143, 91, .10);
+    --warn: #a8741a;
+    --warn-soft: rgba(168, 116, 26, .12);
+    --err: #c24848;
+    --err-soft: rgba(194, 72, 72, .10);
+    --idle: #6b7686;
+    --idle-soft: rgba(107, 118, 134, .10);
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 6px 18px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f3f5f8; --surface: #ffffff; --surface-2: #f7f9fb; --surface-3: #eef2f6;
+      --line: #dde3ea; --line-soft: #e8edf2; --text: #18212d; --text-2: #4a5566; --text-3: #6b7686;
+      --accent: #1f8a7a; --accent-strong: #187365; --accent-ink: #ffffff; --accent-soft: rgba(31,138,122,.10);
+      --ok: #2f8f5b; --ok-soft: rgba(47,143,91,.10); --warn: #a8741a; --warn-soft: rgba(168,116,26,.12);
+      --err: #c24848; --err-soft: rgba(194,72,72,.10); --idle: #6b7686; --idle-soft: rgba(107,118,134,.10);
+      --shadow: 0 1px 2px rgba(16,24,40,.05), 0 6px 18px rgba(16,24,40,.06);
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.55 var(--font); -webkit-font-smoothing: antialiased;
+  }
+  [x-cloak] { display: none !important; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 3px solid var(--bg); }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+  .muted { color: var(--text-2); }
+  .faint { color: var(--text-3); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .shell { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: 100vh; }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; padding: 18px 12px;
+    background: var(--surface); border-right: 1px solid var(--line-soft);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .brand b { display: block; font-size: 14px; letter-spacing: .2px; }
+  .brand small { display: block; color: var(--text-3); font-size: 12px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav button {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px;
+    background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer;
+    color: var(--text-2); text-align: left; font-weight: 500;
+  }
+  .nav button:hover { background: var(--surface-2); color: var(--text); }
+  .nav button[aria-current="page"] { background: var(--accent-soft); color: var(--text); }
+  .nav button[aria-current="page"] svg { color: var(--accent); }
+  .nav .count { margin-left: auto; font-size: 12px; padding: 0 7px; border-radius: 99px; background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+  .sidebar-foot { margin-top: auto; display: grid; gap: 8px; padding: 0 4px; }
+  .sidebar-foot .seg { grid-auto-columns: 1fr; }
+  .sidebar-foot .seg button { padding: 6px 4px; font-size: 13px; }
+
+  .main { min-width: 0; display: flex; flex-direction: column; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 12px;
+    padding: 14px 28px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--line-soft);
+  }
+  .topbar h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  .topbar .sub { color: var(--text-3); font-size: 13px; }
+  .topbar .spacer { flex: 1; }
+  .content { padding: 24px 28px 96px; max-width: 1280px; width: 100%; }
+  .mobile-nav { display: none; }
+
+  .grid { display: grid; gap: 16px; }
+  .cols-run { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+  .cols-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .stack { display: grid; gap: 16px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .between { justify-content: space-between; }
+
+  .card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card-h { padding: 16px 18px 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card-h h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .card-h p { margin: 2px 0 0; color: var(--text-3); font-size: 13px; }
+  .card-b { padding: 16px 18px 18px; }
+  .divider { height: 1px; background: var(--line-soft); margin: 0; border: 0; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 36px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid var(--line);
+    background: var(--surface-2); color: var(--text); font-weight: 500; cursor: pointer; white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .btn:hover:not(:disabled) { background: var(--surface-3); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
+  .btn-danger { background: var(--err-soft); border-color: transparent; color: var(--err); font-weight: 600; }
+  .btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--err) 22%, transparent); }
+  .btn-ghost { background: none; border-color: transparent; color: var(--text-2); }
+  .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+  .btn-lg { height: 46px; padding: 0 20px; font-size: 15px; }
+  .btn-sm { height: 30px; padding: 0 10px; font-size: 13px; }
+  .icon-btn { width: 36px; padding: 0; }
+  .kbd { font-family: var(--mono); font-size: 11px; padding: 1px 5px; border: 1px solid currentColor; border-radius: 4px; opacity: .7; }
+
+  .seg { display: inline-grid; grid-auto-flow: column; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 9px; }
+  .seg button { border: 0; background: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; color: var(--text-2); font-weight: 500; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+
+  .field { display: grid; gap: 6px; }
+  .field label, .label { font-size: 13px; color: var(--text-2); font-weight: 500; }
+  .input {
+    height: 36px; width: 100%; padding: 0 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  }
+  .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .input.mono { font-size: 13px; }
+  .hint { font-size: 12.5px; color: var(--text-3); }
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 99px; background: var(--surface-3); border: 1px solid var(--line); transition: background .15s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text-2); transition: transform .15s, background .15s; }
+  .switch input:checked + span { background: var(--accent); border-color: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(16px); background: #fff; }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 99px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+  .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .badge.plain::before { display: none; }
+  .b-ok { background: var(--ok-soft); color: var(--ok); }
+  .b-warn { background: var(--warn-soft); color: var(--warn); }
+  .b-err { background: var(--err-soft); color: var(--err); }
+  .b-idle { background: var(--idle-soft); color: var(--idle); }
+  .b-run { background: var(--accent-soft); color: var(--accent); }
+  .chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--surface-3); color: var(--text-2); font-size: 12px; }
+
+  .conn { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--line-soft); background: var(--surface); cursor: pointer; font-size: 13px; color: var(--text-2); }
+  .conn:hover { border-color: var(--line); color: var(--text); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.err { background: var(--err); } .dot.warn { background: var(--warn); }
+  .dot.run { background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+
+  .banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius); border: 1px solid; font-size: 13.5px; }
+  .banner svg { flex: none; margin-top: 2px; }
+  .banner.info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+  .banner.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
+  .banner.err { background: var(--err-soft); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
+  .banner.ok { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+
+  .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line-soft); border: 1px solid var(--line-soft); border-radius: var(--radius-sm); overflow: hidden; }
+  .summary > div { background: var(--surface-2); padding: 10px 12px; }
+  .summary span { display: block; font-size: 12px; color: var(--text-3); }
+  .summary strong { font-weight: 600; font-size: 14px; }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; }
+  .step { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: start; padding: 10px 0; position: relative; }
+  .step:not(:last-child)::after { content: ""; position: absolute; left: 13px; top: 38px; bottom: -6px; width: 2px; background: var(--line-soft); }
+  .step.done:not(:last-child)::after { background: var(--ok); opacity: .5; }
+  .step-ico { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; border: 2px solid var(--line); color: var(--text-3); background: var(--surface); position: relative; z-index: 1; }
+  .step.done .step-ico { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .step.running .step-ico { border-color: var(--accent); color: var(--accent); }
+  .step.running .step-ico::before { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--accent); animation: spin 1s linear infinite; }
+  .step.error .step-ico { background: var(--err); border-color: var(--err); color: #fff; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .step-name { font-weight: 600; }
+  .step-desc { font-size: 13px; color: var(--text-3); }
+  .step-time { font-family: var(--mono); font-size: 12.5px; color: var(--text-3); padding-top: 4px; }
+  .progress { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+  .progress > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s ease; }
+
+  .log { height: 280px; overflow: auto; padding: 10px 0; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; background: var(--surface-2); border-top: 1px solid var(--line-soft); border-radius: 0 0 var(--radius) var(--radius); }
+  .log-line { display: grid; grid-template-columns: 70px 1fr; gap: 10px; padding: 1px 16px; }
+  .log-line:hover { background: var(--surface-3); }
+  .log-line .t { color: var(--text-3); user-select: none; }
+  .log-line.error .m { color: var(--err); }
+  .log-line.warn .m { color: var(--warn); }
+  .log-line.success .m { color: var(--ok); }
+  .log-empty { padding: 32px 16px; text-align: center; color: var(--text-3); font-family: var(--font); }
+
+  .list { display: grid; }
+  .item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line-soft); }
+  .item:first-child { border-top: 0; }
+  .file-ico { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-3); color: var(--text-2); }
+  .item .name { font-weight: 600; word-break: break-word; }
+  .item .meta { font-size: 12.5px; color: var(--text-3); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .path { font-family: var(--mono); font-size: 12px; color: var(--text-3); word-break: break-all; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line-soft); margin-bottom: 16px; overflow-x: auto; }
+  .tabs button { border: 0; background: none; padding: 10px 12px; cursor: pointer; color: var(--text-2); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .tbl th { text-align: left; font-weight: 600; font-size: 12.5px; color: var(--text-3); padding: 10px 18px; border-bottom: 1px solid var(--line-soft); background: var(--surface-2); position: sticky; top: 0; }
+  .tbl td { padding: 10px 18px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl-wrap { max-height: 520px; overflow: auto; border-radius: 0 0 var(--radius) var(--radius); }
+
+  .env-group summary { list-style: none; cursor: pointer; padding: 14px 18px; display: flex; align-items: center; gap: 10px; }
+  .env-group summary::-webkit-details-marker { display: none; }
+  .env-group summary .chev { transition: transform .15s; color: var(--text-3); }
+  .env-group[open] summary .chev { transform: rotate(90deg); }
+  .env-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(220px, 1.4fr) auto; gap: 14px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line-soft); }
+  .env-row.dirty { box-shadow: inset 3px 0 0 var(--warn); }
+  .env-row.off .env-key { color: var(--text-3); text-decoration: line-through; }
+  .env-key { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .savebar {
+    position: fixed; left: calc(var(--sidebar) + 28px); right: 28px; bottom: 18px; z-index: 30;
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+  }
+
+  .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(5, 9, 15, .55); display: grid; place-items: center; padding: 16px; }
+  .dialog { width: min(520px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  .dialog-h { padding: 18px 20px 6px; display: flex; justify-content: space-between; gap: 12px; }
+  .dialog-h h3 { margin: 0; font-size: 16px; }
+  .dialog-b { padding: 10px 20px 4px; display: grid; gap: 14px; }
+  .dialog-f { padding: 16px 20px 18px; display: flex; justify-content: flex-end; gap: 8px; }
+  pre.preview { margin: 0; max-height: 360px; overflow: auto; padding: 14px; background: var(--surface-2); border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-all; }
+
+  .toasts { position: fixed; right: 20px; top: 76px; z-index: 60; display: grid; gap: 8px; width: min(380px, calc(100vw - 40px)); }
+  .toast { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 13.5px; }
+  .toast .dot { margin-top: 6px; }
+
+  .empty { padding: 28px 18px; text-align: center; color: var(--text-3); }
+  .skeleton { height: 14px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  @media (max-width: 1100px) { .cols-run { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .topbar { padding: 12px 16px; flex-wrap: wrap; }
+    .content { padding: 16px 16px 120px; }
+    .mobile-nav {
+      display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      background: var(--surface); border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    }
+    .mobile-nav button { border: 0; background: none; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; font-size: 11.5px; color: var(--text-3); cursor: pointer; border-radius: 8px; }
+    .mobile-nav button[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+    .savebar { left: 12px; right: 12px; bottom: 76px; }
+    .env-row { grid-template-columns: 1fr; gap: 8px; }
+    .summary { grid-template-columns: 1fr; }
+    .conn-label { display: none; }
+    .topbar .sub, .topbar .spacer, .kbd { display: none; }
+    .topbar > div:first-child { flex: 1; }
+    .conn { padding: 0 10px; }
+    .toasts { top: 12px; right: 12px; left: 12px; width: auto; }
+    .item { grid-template-columns: auto 1fr; }
+    .item > :last-child { grid-column: 1 / -1; justify-content: flex-start; }
+    .tbl th:nth-child(2), .tbl td:nth-child(2) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div x-data="consola()" x-init="iniciar()" @keydown.window="atajos($event)" class="shell">
+
+  <aside class="sidebar" aria-label="Navegación principal">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">IT</div>
+      <div><b>Itacamba</b><small>Consola de reportes</small></div>
+    </div>
+    <nav class="nav">
+      <template x-for="s in secciones" :key="s.id">
+        <button type="button" @click="ir(s.id)" :aria-current="vista === s.id ? 'page' : null">
+          <span x-html="icono(s.icono)"></span>
+          <span x-text="s.nombre"></span>
+          <span class="count" x-show="s.id === 'fuentes' && alertasFuentes() > 0" x-text="alertasFuentes()"></span>
+        </button>
+      </template>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="seg" role="group" aria-label="Tema">
+        <button type="button" :aria-pressed="tema === 'system'" @click="ponerTema('system')" title="Seguir al sistema">Auto</button>
+        <button type="button" :aria-pressed="tema === 'light'" @click="ponerTema('light')">Claro</button>
+        <button type="button" :aria-pressed="tema === 'dark'" @click="ponerTema('dark')">Oscuro</button>
+      </div>
+      <span class="hint" x-text="api ? 'Conectado al motor local' : 'Modo demostración'"></span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 x-text="seccionActual().nombre"></h1>
+        <div class="sub" x-text="seccionActual().ayuda"></div>
+      </div>
+      <div class="spacer"></div>
+      <button type="button" class="conn" @click="probar('sql')" :title="conexiones.sql.mensaje">
+        <span class="dot" :class="claseDot(conexiones.sql.estado)"></span>
+        <span>SQL Server</span>
+        <span class="faint conn-label" x-text="textoEstado(conexiones.sql.estado)"></span>
+      </button>
+      <button type="button" class="conn" @click="probar('sap')" :title="conexiones.sap.mensaje">
+        <span class="dot" :class="claseDot(conexiones.sap.estado)"></span>
+        <span>SAP</span>
+        <span class="faint conn-label" x-text="textoEstado(conexiones.sap.estado)"></span>
+      </button>
+    </header>
+
+    <main class="content" id="contenido">
+      <div class="banner warn" x-show="!api" x-cloak style="margin-bottom:16px">
+        <span x-html="icono('info')"></span>
+        <div><b>Modo demostración.</b> Esta vista no está conectada al motor de Python: los archivos, variables y la ejecución son datos de ejemplo. Abre la consola desde el bot para trabajar con datos reales.</div>
+      </div>
+
+      <!-- INICIO -->
+      <section x-show="vista === 'inicio'" class="stack" aria-labelledby="t-inicio">
+        <h2 id="t-inicio" class="sr-only">Inicio</h2>
+        <div class="grid cols-run">
+          <div class="card">
+            <div class="card-h">
+              <div>
+                <h2>Ejecutar el bot</h2>
+                <p>Carga los Excel, calcula en SQL Server y genera los reportes.</p>
+              </div>
+              <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
+            </div>
+            <div class="card-b stack">
+              <div class="field">
+                <span class="label" id="lbl-modo">Tipo de corrida</span>
+                <div class="seg" role="group" aria-labelledby="lbl-modo">
+                  <button type="button" :aria-pressed="params.modo === 'diaria'" @click="ponerModo('diaria')" :disabled="ejecutando">Diaria</button>
+                  <button type="button" :aria-pressed="params.modo === 'cierre'" @click="ponerModo('cierre')" :disabled="ejecutando">Cierre de mes</button>
+                </div>
+                <span class="hint" x-text="params.modo === 'diaria' ? 'Procesa hasta ayer: el día en curso queda fuera porque aún está incompleto.' : 'Incluye el día de hoy para cerrar el mes completo.'"></span>
+              </div>
+
+              <div class="summary">
+                <div><span>Datos hasta</span><strong x-text="textoCorte()"></strong></div>
+                <div><span>Día en curso</span><strong x-text="params.incluirHoy ? 'Incluido' : 'Excluido'"></strong></div>
+                <div><span>Última corrida</span><strong x-text="ultimaCorrida || 'Sin registro'"></strong></div>
+              </div>
+
+              <details>
+                <summary class="hint" style="cursor:pointer">Opciones avanzadas</summary>
+                <div class="row" style="margin-top:12px; align-items:flex-end">
+                  <div class="field" style="min-width:200px">
+                    <label for="corte">Fecha de corte</label>
+                    <input id="corte" class="input" type="date" x-model="params.fechaHasta" :disabled="ejecutando">
+                  </div>
+                  <label class="row" style="height:36px">
+                    <span class="switch"><input type="checkbox" x-model="params.incluirHoy" :disabled="ejecutando"><span></span></span>
+                    <span>Incluir el día de corte</span>
+                  </label>
+                </div>
+              </details>
+
+              <div class="row">
+                <button type="button" class="btn btn-lg" style="flex:1"
+                        :class="ejecutando ? 'btn-danger' : 'btn-primary'"
+                        :disabled="deteniendo"
+                        @click="ejecutando ? detener() : ejecutar()">
+                  <span x-html="icono(ejecutando ? 'stop' : 'play')"></span>
+                  <span x-text="ejecutando ? (deteniendo ? 'Deteniendo…' : 'Detener') : 'Ejecutar ahora'"></span>
+                  <span class="kbd" x-show="!ejecutando">Ctrl ⏎</span>
+                </button>
+              </div>
+
+              <div class="banner err" x-show="estado.has_error && !ejecutando" x-cloak role="alert">
+                <span x-html="icono('alert')"></span>
+                <div>
+                  <b>La ejecución se detuvo.</b>
+                  <div x-text="estado.error_message"></div>
+                  <button type="button" class="btn btn-sm btn-ghost" style="margin:6px 0 0 -10px" @click="filtroLog = 'error'">Ver errores en el registro</button>
+                </div>
+              </div>
+              <div class="banner ok" x-show="estado.finished && !estado.has_error && !ejecutando" x-cloak>
+                <span x-html="icono('check')"></span>
+                <div><b>Ejecución completada.</b> Los reportes están listos. <button type="button" class="btn btn-sm btn-ghost" style="margin-left:-6px" @click="ir('reportes')">Ver reportes</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h">
+              <div>
+                <h2>Progreso</h2>
+                <p x-text="textoProgreso()"></p>
+              </div>
+              <span class="mono faint" x-text="pasosCompletos() + ' / ' + pasos.length"></span>
+            </div>
+            <div class="card-b">
+              <div class="progress" role="progressbar" aria-label="Progreso de la ejecución" aria-valuemin="0" :aria-valuemax="pasos.length" :aria-valuenow="pasosCompletos()" style="margin-bottom:8px">
+                <div :style="'width:' + (pasosCompletos() / pasos.length * 100) + '%'"></div>
+              </div>
+              <ol class="steps">
+                <template x-for="p in pasos" :key="p.id">
+                  <li class="step" :class="claseStep(p.id)">
+                    <span class="step-ico">
+                      <template x-if="estadoPaso(p.id) === 'success'"><span x-html="icono('check-sm')"></span></template>
+                      <template x-if="estadoPaso(p.id) === 'error'"><span>!</span></template>
+                      <template x-if="!['success','error'].includes(estadoPaso(p.id))"><span x-text="p.id"></span></template>
+                    </span>
+                    <div>
+                      <div class="step-name" x-text="p.nombre"></div>
+                      <div class="step-desc" x-text="p.desc"></div>
+                    </div>
+                    <span class="step-time" x-text="tiempoPaso(p.id)"></span>
+                  </li>
+                </template>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h" style="padding-bottom:12px">
+            <div>
+              <h2>Registro</h2>
+              <p>Mensajes del motor en tiempo real.</p>
+            </div>
+            <div class="row">
+              <div class="seg" role="group" aria-label="Filtrar registro">
+                <button type="button" :aria-pressed="filtroLog === 'todo'" @click="filtroLog = 'todo'">Todo</button>
+                <button type="button" :aria-pressed="filtroLog === 'error'" @click="filtroLog = 'error'">
+                  Errores <span x-show="logs.filter(l => l.tipo === 'error').length" x-text="'(' + logs.filter(l => l.tipo === 'error').length + ')'"></span>
+                </button>
+              </div>
+              <button type="button" class="btn btn-sm btn-ghost" @click="copiarLog()" title="Copiar registro">Copiar</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="logs = []">Limpiar</button>
+            </div>
+          </div>
+          <div class="log" x-ref="log" role="log" aria-live="polite" @scroll="seguirLog = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 24">
+            <template x-for="l in logsFiltrados()" :key="l.id">
+              <div class="log-line" :class="l.tipo"><span class="t" x-text="l.hora"></span><span class="m" x-text="l.mensaje"></span></div>
+            </template>
+            <div class="log-empty" x-show="logsFiltrados().length === 0" x-text="filtroLog === 'error' ? 'Sin errores registrados.' : 'Todavía no hay mensajes. Ejecuta el bot para ver el avance aquí.'"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FUENTES -->
+      <section x-show="vista === 'fuentes'" x-cloak aria-labelledby="t-fuentes">
+        <h2 id="t-fuentes" class="sr-only">Fuentes</h2>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" :aria-selected="subFuentes === 'archivos'" @click="subFuentes = 'archivos'">Archivos de entrada</button>
+          <button type="button" role="tab" :aria-selected="subFuentes === 'sap'" @click="subFuentes = 'sap'">Descargas SAP</button>
+          <button type="button" role="tab" :aria-selected="subFuentes === 'mapeo'" @click="subFuentes = 'mapeo'">Columnas esperadas</button>
+        </div>
+
+        <div x-show="subFuentes === 'archivos'" class="grid cols-3">
+          <template x-for="g in gruposArchivos" :key="g.clave">
+            <div class="card">
+              <div class="card-h">
+                <div>
+                  <h2 x-text="g.titulo"></h2>
+                  <p x-text="g.ayuda"></p>
+                </div>
+                <button type="button" class="btn btn-sm" @click="abrirCarpeta(g.clave)" :title="'Abrir ' + (rutas[g.clave] || '')">
+                  <span x-html="icono('folder')"></span> Abrir
+                </button>
+              </div>
+              <div class="card-b" style="padding-bottom:6px"><div class="path" x-text="rutas[g.clave] || 'Ruta no configurada'"></div></div>
+              <div class="list">
+                <template x-for="e in esperadosDe(g)" :key="e.patron">
+                  <div class="item">
+                    <span class="file-ico" x-html="icono('file')"></span>
+                    <div style="min-width:0">
+                      <div class="name" x-text="e.archivo ? e.archivo.nombre : e.patron"></div>
+                      <div class="meta">
+                        <template x-if="e.archivo">
+                          <span><span x-text="'Modificado ' + haceCuanto(e.archivo.modificado)"></span> · <span x-text="e.archivo.tamano"></span></span>
+                        </template>
+                        <template x-if="!e.archivo"><span x-text="e.origen"></span></template>
+                      </div>
+                    </div>
+                    <span class="badge" :class="estadoArchivo(e, g).clase" x-text="estadoArchivo(e, g).texto"></span>
+                  </div>
+                </template>
+                <div class="empty" x-show="cargando"><div class="skeleton" style="width:70%; margin:0 auto"></div></div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="subFuentes === 'sap'" class="stack">
+          <div class="banner info">
+            <span x-html="icono('info')"></span>
+            <div>Antes de descargar, SAP debe estar abierto en el ambiente correcto. <b x-text="conexiones.sap.mensaje || 'Prueba la conexión para ver su estado.'"></b></div>
+          </div>
+          <div class="grid cols-3">
+            <template x-for="t in tareasSap" :key="t.id">
+              <div class="card">
+                <div class="card-h">
+                  <div>
+                    <h2 x-text="t.titulo"></h2>
+                    <p x-text="t.ayuda"></p>
+                  </div>
+                  <span class="chip mono" x-text="t.tcode"></span>
+                </div>
+                <div class="card-b stack">
+                  <template x-for="c in t.campos" :key="c.id">
+                    <div class="field">
+                      <label :for="t.id + c.id" x-text="c.etiqueta"></label>
+                      <input class="input mono" :id="t.id + c.id" :type="c.tipo || 'text'" x-model="c.valor">
+                      <span class="hint" x-show="c.nota" x-text="c.nota"></span>
+                    </div>
+                  </template>
+                  <div class="row between">
+                    <span class="hint" x-text="'Guarda en: ' + t.destino"></span>
+                    <button type="button" class="btn btn-primary btn-sm" @click="descargarSap(t)" :disabled="!apiTiene('download_sap')"
+                            :title="apiTiene('download_sap') ? 'Descargar desde SAP' : 'El motor todavía no expone la descarga desde SAP'">
+                      <span x-html="icono('download')"></span> Descargar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div x-show="subFuentes === 'mapeo'" class="card">
+          <div class="card-h" style="padding-bottom:14px">
+            <div>
+              <h2>Columnas que el bot espera en cada archivo</h2>
+              <p>Si SAP cambia un título, aquí ves qué columna dejará de cargarse.</p>
+            </div>
+            <input class="input" style="max-width:240px" type="search" placeholder="Buscar columna…" x-model="busquedaMapeo" aria-label="Buscar columna">
+          </div>
+          <div class="card-b" style="padding-top:0">
+            <div class="seg" role="group" aria-label="Archivo">
+              <template x-for="m in Object.keys(mapeos)" :key="m">
+                <button type="button" :aria-pressed="mapeoActivo === m" @click="mapeoActivo = m" x-text="m.toUpperCase()"></button>
+              </template>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr><th>Título en el Excel</th><th>Campo en la base</th><th>Tipo</th><th>Obligatoria</th></tr></thead>
+              <tbody>
+                <template x-for="c in camposMapeo()" :key="c.campo">
+                  <tr>
+                    <td x-text="c.origen || '—'"></td>
+                    <td class="mono" x-text="c.campo"></td>
+                    <td><span class="chip mono" x-text="c.tipo"></span></td>
+                    <td><span class="badge plain" :class="c.requerido ? 'b-warn' : 'b-idle'" x-text="c.requerido ? 'Sí' : 'No'"></span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div class="empty" x-show="camposMapeo().length === 0">Sin columnas para mostrar.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- REPORTES -->
+      <section x-show="vista === 'reportes'" x-cloak class="stack" aria-labelledby="t-rep">
+        <h2 id="t-rep" class="sr-only">Reportes</h2>
+        <div class="row between">
+          <span class="path" x-text="rutas.PATH_REPORTES_SALIDA || ''"></span>
+          <div class="row">
+            <button type="button" class="btn btn-sm" @click="recargar()"><span x-html="icono('refresh')"></span> Actualizar</button>
+            <button type="button" class="btn btn-sm" @click="abrirCarpeta('PATH_REPORTES_SALIDA')"><span x-html="icono('folder')"></span> Abrir carpeta</button>
+          </div>
+        </div>
+        <div class="grid cols-3">
+          <template x-for="r in reportesAgrupados()" :key="r.tipo">
+            <div class="card">
+              <div class="card-h">
+                <div>
+                  <h2 x-text="r.titulo"></h2>
+                  <p x-text="r.ultimo ? 'Generado ' + haceCuanto(r.ultimo.modificado) : 'Aún no generado'"></p>
+                </div>
+                <span class="badge" :class="r.ultimo ? (esReciente(r.ultimo.modificado, 1) ? 'b-ok' : 'b-warn') : 'b-idle'"
+                      x-text="r.ultimo ? (esReciente(r.ultimo.modificado, 1) ? 'Al día' : 'Antiguo') : 'Sin archivo'"></span>
+              </div>
+              <div class="card-b stack">
+                <template x-if="r.ultimo">
+                  <div class="stack" style="gap:10px">
+                    <div class="mono" style="word-break:break-all" x-text="r.ultimo.nombre"></div>
+                    <div class="row"><template x-for="h in r.ultimo.hojas" :key="h"><span class="chip" x-text="h"></span></template></div>
+                    <div class="hint" x-text="r.ultimo.tamano + (r.anteriores ? ' · ' + r.anteriores + ' versión(es) anterior(es) en la carpeta' : '')"></div>
+                  </div>
+                </template>
+                <div class="row">
+                  <button type="button" class="btn btn-primary btn-sm" :disabled="!r.ultimo" @click="abrirExcel(r.ultimo)">
+                    <span x-html="icono('excel')"></span> Abrir en Excel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- CONFIGURACIÓN -->
+      <section x-show="vista === 'config'" x-cloak class="stack" aria-labelledby="t-cfg">
+        <h2 id="t-cfg" class="sr-only">Configuración</h2>
+        <div class="row between">
+          <input class="input" style="max-width:320px" type="search" x-ref="buscarEnv" placeholder="Buscar variable…  ( / )" x-model="busquedaEnv" aria-label="Buscar variable">
+          <div class="row">
+            <button type="button" class="btn btn-sm" @click="dialogo = 'vista'"><span x-html="icono('eye')"></span> Vista previa .env</button>
+            <button type="button" class="btn btn-sm" @click="nuevaVariable()"><span x-html="icono('plus')"></span> Nueva variable</button>
+          </div>
+        </div>
+        <div class="banner info">
+          <span x-html="icono('lock')"></span>
+          <div>Las contraseñas no se muestran. Para cambiar una, escribe el valor nuevo; si dejas el campo vacío se conserva la actual.</div>
+        </div>
+
+        <template x-for="g in gruposEnv" :key="g.id">
+          <details class="card env-group" open x-show="variablesDe(g.id).length > 0">
+            <summary>
+              <span class="chev" x-html="icono('chevron')"></span>
+              <span style="font-weight:600" x-text="g.titulo"></span>
+              <span class="chip" x-text="variablesDe(g.id).length"></span>
+              <span style="flex:1"></span>
+              <template x-if="g.prueba">
+                <button type="button" class="btn btn-sm" @click.prevent="probar(g.prueba)">
+                  <span class="dot" :class="claseDot(conexiones[g.prueba].estado)"></span> Probar conexión
+                </button>
+              </template>
+            </summary>
+            <template x-for="v in variablesDe(g.id)" :key="v.clave">
+              <div class="env-row" :class="{ dirty: estaModificada(v), off: !v.activa }">
+                <div style="min-width:0">
+                  <div class="env-key" x-text="v.clave"></div>
+                  <div class="hint" x-text="v.descripcion"></div>
+                </div>
+                <div>
+                  <template x-if="v.esSecreto">
+                    <input class="input mono" type="password" autocomplete="new-password" :placeholder="v.valorOriginal ? '•••••••• configurada' : 'Sin configurar'"
+                           x-model="v.nuevoSecreto" :disabled="!v.activa" :aria-label="'Nuevo valor de ' + v.clave">
+                  </template>
+                  <template x-if="!v.esSecreto">
+                    <input class="input mono" type="text" x-model="v.valor" :disabled="!v.activa" :aria-label="'Valor de ' + v.clave">
+                  </template>
+                </div>
+                <div class="row" style="justify-content:flex-end">
+                  <label class="switch" :title="v.activa ? 'Desactivar' : 'Activar'">
+                    <input type="checkbox" x-model="v.activa" :aria-label="'Activar ' + v.clave"><span></span>
+                  </label>
+                  <button type="button" class="btn btn-ghost btn-sm icon-btn" x-show="v.nueva || v.categoria === 'custom'" @click="quitarVariable(v)" :aria-label="'Eliminar ' + v.clave" title="Eliminar">
+                    <span x-html="icono('trash')"></span>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </details>
+        </template>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Navegación">
+    <template x-for="s in secciones" :key="s.id">
+      <button type="button" @click="ir(s.id)" :aria-current="vista === s.id ? 'page' : null">
+        <span x-html="icono(s.icono)"></span><span x-text="s.corto"></span>
+      </button>
+    </template>
+  </nav>
+
+  <div class="savebar" x-show="vista === 'config' && cambiosEnv() > 0" x-cloak role="region" aria-label="Cambios sin guardar">
+    <span class="dot warn"></span>
+    <span><b x-text="cambiosEnv()"></b> cambio(s) sin guardar</span>
+    <span style="flex:1"></span>
+    <button type="button" class="btn btn-ghost btn-sm" @click="descartarEnv()">Descartar</button>
+    <button type="button" class="btn btn-primary btn-sm" @click="guardarEnv()" :disabled="guardando" x-text="guardando ? 'Guardando…' : 'Guardar'"></button>
+  </div>
+
+  <div class="overlay" x-show="dialogo" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" x-show="dialogo === 'nueva'" aria-labelledby="dn-t">
+      <div class="dialog-h"><h3 id="dn-t">Nueva variable</h3><button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button></div>
+      <div class="dialog-b">
+        <div class="field">
+          <label for="nv-clave">Nombre</label>
+          <input id="nv-clave" class="input mono" x-model="borrador.clave" @input="borrador.clave = borrador.clave.toUpperCase().replace(/[^A-Z0-9_]/g, '_')" placeholder="EJEMPLO_VARIABLE" x-ref="nvClave">
+          <span class="hint" x-show="errorBorrador" x-text="errorBorrador" style="color:var(--err)"></span>
+        </div>
+        <div class="field">
+          <label for="nv-grupo">Grupo</label>
+          <select id="nv-grupo" class="input" x-model="borrador.categoria">
+            <template x-for="g in gruposEnv" :key="g.id"><option :value="g.id" x-text="g.titulo"></option></template>
+          </select>
+        </div>
+        <div class="field">
+          <label for="nv-valor">Valor</label>
+          <input id="nv-valor" class="input mono" :type="borrador.esSecreto ? 'password' : 'text'" x-model="borrador.valor" autocomplete="new-password">
+        </div>
+        <label class="row"><span class="switch"><input type="checkbox" x-model="borrador.esSecreto"><span></span></span> Es una contraseña o clave</label>
+        <div class="field">
+          <label for="nv-desc">Descripción</label>
+          <input id="nv-desc" class="input" x-model="borrador.descripcion" placeholder="Para qué se usa">
+        </div>
+      </div>
+      <div class="dialog-f">
+        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
+        <button type="button" class="btn btn-primary" @click="agregarVariable()">Agregar</button>
+      </div>
+    </div>
+
+    <div class="dialog" role="dialog" aria-modal="true" x-show="dialogo === 'vista'" style="width:min(720px,100%)" aria-labelledby="dv-t">
+      <div class="dialog-h"><h3 id="dv-t">Vista previa del archivo .env</h3><button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button></div>
+      <div class="dialog-b"><pre class="preview" x-text="vistaEnv()"></pre><span class="hint">Los valores secretos se muestran ocultos.</span></div>
+      <div class="dialog-f"><button type="button" class="btn btn-primary" @click="dialogo = null">Cerrar</button></div>
+    </div>
+  </div>
+
+  <div class="toasts" aria-live="polite" aria-atomic="false">
+    <template x-for="t in toasts" :key="t.id">
+      <div class="toast" x-transition>
+        <span class="dot" :class="t.tipo === 'error' ? 'err' : (t.tipo === 'success' ? 'ok' : (t.tipo === 'warn' ? 'warn' : 'run'))"></span>
+        <span x-text="t.mensaje"></span>
+      </div>
+    </template>
+  </div>
+</div>
+
+<script>
+const ICONOS = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  sources: '<path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  reports: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  play: '<path d="M7 4v16l13-8z" fill="currentColor" stroke="none"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  'check-sm': '<path d="m5 12 4 4 10-10" stroke-width="3"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14.8-4M4 4v4h4M4 13a8 8 0 0 0 14.8 4M20 20v-4h-4"/>',
+  excel: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m9 8 6 8M15 8l-6 8"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+};
+
+const PASOS = [
+  { id: 1, nombre: 'Base de datos', desc: 'Conexión a SQL Server y versión del esquema' },
+  { id: 2, nombre: 'Referencias', desc: 'Catálogos de REFERENCIAS.xlsx' },
+  { id: 3, nombre: 'Cartera', desc: 'Clientes y donaciones' },
+  { id: 4, nombre: 'Despachos', desc: 'QUERY (ZBCS) del mes' },
+  { id: 5, nombre: 'Ventas', desc: 'GD20, BASE PANEL y VENTAS BI' },
+  { id: 6, nombre: 'Reportes', desc: 'Exportación de los Excel finales' },
+];
+
+const DEMO = {
+  paths: {
+    PATH_INSUMOS_FIJOS: 'C:\\…\\Documentos ITACAMBA\\Archivos\\fijos',
+    PATH_INSUMOS_DINAMICOS: 'C:\\…\\Documentos ITACAMBA\\Archivos\\dinamicos',
+    PATH_REPORTES_SALIDA: 'C:\\…\\Documentos ITACAMBA\\Archivos\\reports',
+  },
+  archivos_fijos: [
+    { nombre: 'REFERENCIAS.xlsx', tamano: '21.2 KB', modificado: haceDias(9), hojas: ['Almacen', 'Centros', 'Material', 'Equipo'] },
+    { nombre: 'PROYECCION-SEMANAL.xlsx', tamano: '2.81 MB', modificado: haceDias(5), hojas: ['TD-INICIAL', 'RF AJUSTADO SEMANAL.26'] },
+  ],
+  archivos_dinamicos: [
+    { nombre: 'GD20.xlsx', tamano: '602.7 KB', modificado: haceDias(0), hojas: ['Sheet1'] },
+    { nombre: 'QUERY.xlsx', tamano: '1.60 MB', modificado: haceDias(0), hojas: ['base'] },
+    { nombre: 'CARTERA.xlsx', tamano: '9.61 MB', modificado: haceDias(3), hojas: ['Q_VCBO_ZSDI_I03_CAD_CLIENTE_000'] },
+  ],
+  archivos_reportes: [
+    { nombre: 'VENTAS_BI_2026-10-26_0612.xlsx', tamano: '1.21 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
+    { nombre: 'VENTAS_BI_2026-10-25_0611.xlsx', tamano: '1.19 MB', modificado: haceDias(1), hojas: ['Data', 'CONTROL'] },
+    { nombre: 'DESPACHO_BI_2026-10-26_0612.xlsx', tamano: '0.88 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
+    { nombre: 'DESPACHO_MES_2026-10-26_0612.xlsx', tamano: '0.74 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
+  ],
+  env_vars: [
+    { clave: 'SAP_LOGON_PATH', valor: 'C:\\Program Files (x86)\\SAP\\FrontEnd\\SAPgui\\saplogon.exe', descripcion: 'Programa SAP Logon', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_ENTRADA', valor: '<texto exacto de la entrada en SAP Logon>', descripcion: 'Ambiente al que se conecta', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_SISTEMA', valor: 'E05', descripcion: 'Sistema esperado (se verifica al entrar)', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_MANDANTE', valor: '300', descripcion: 'Mandante', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_USUARIO', valor: 'usuario_sap', descripcion: 'Usuario SAP', categoria: 'sap', esSecreto: false, activa: true },
+    { clave: 'SAP_PASSWORD', valor: 'demo', descripcion: 'Contraseña SAP', categoria: 'sap', esSecreto: true, activa: true },
+    { clave: 'DB_SERVER', valor: 'servidor-sql', descripcion: 'Servidor SQL Server', categoria: 'db', esSecreto: false, activa: true },
+    { clave: 'DB_NAME', valor: 'Reportes_Itacamba_V2', descripcion: 'Base de datos', categoria: 'db', esSecreto: false, activa: true },
+    { clave: 'DB_USER', valor: 'usuario_bd', descripcion: 'Usuario de base de datos', categoria: 'db', esSecreto: false, activa: true },
+    { clave: 'DB_PASSWORD', valor: 'demo', descripcion: 'Contraseña de base de datos', categoria: 'db', esSecreto: true, activa: true },
+    { clave: 'DB_DRIVER', valor: 'ODBC Driver 18 for SQL Server', descripcion: 'Driver ODBC', categoria: 'db', esSecreto: false, activa: true },
+    { clave: 'PATH_INSUMOS_FIJOS', valor: 'C:\\…\\Archivos\\fijos', descripcion: 'Excel del área (referencias, proyección)', categoria: 'rutas', esSecreto: false, activa: true },
+    { clave: 'PATH_INSUMOS_DINAMICOS', valor: 'C:\\…\\Archivos\\dinamicos', descripcion: 'Descargas diarias (GD20, QUERY, CARTERA)', categoria: 'rutas', esSecreto: false, activa: true },
+    { clave: 'PATH_REPORTES_SALIDA', valor: 'C:\\…\\Archivos\\reports', descripcion: 'Reportes generados', categoria: 'rutas', esSecreto: false, activa: true },
+  ],
+  mapeos_reales: {
+    gd20: [
+      { campo: 'ejercicio', tipo: 'VARCHAR(10)', origen: 'Ejercicio', requerido: true },
+      { campo: 'documento_comercial', tipo: 'BIGINT', origen: 'Documento comercial', requerido: true },
+      { campo: 'numero_cuenta', tipo: 'BIGINT', origen: 'Número de cuenta', requerido: true },
+      { campo: 'cliente', tipo: 'BIGINT', origen: 'Cliente', requerido: true },
+      { campo: 'fe_contabilizacion', tipo: 'DATETIME', origen: 'Fe.contabilización', requerido: true },
+      { campo: 'sector', tipo: 'VARCHAR(10)', origen: 'Sector', requerido: false },
+      { campo: 'cond_pago', tipo: 'VARCHAR(20)', origen: '(sin título, columna 46)', requerido: false },
+    ],
+    query: [
+      { campo: 'nro_pedido', tipo: 'BIGINT', origen: 'N° PEDIDO', requerido: true },
+      { campo: 'fecha_salida', tipo: 'DATETIME', origen: 'FECHA SALIDA', requerido: false },
+      { campo: 'cantidad_ton', tipo: 'NUMERIC(18,4)', origen: 'CANTIDAD TON.', requerido: true },
+    ],
+    cartera: [
+      { campo: 'cliente', tipo: 'BIGINT', origen: 'Cliente', requerido: true },
+      { campo: 'nombre_cliente', tipo: 'VARCHAR(500)', origen: '(columna 2, sin título)', requerido: true },
+    ],
+  },
+};
+
+function haceDias(n) {
+  const d = new Date(Date.now() - n * 86400000);
+  const p = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function hoyISO(delta = 0) {
+  const d = new Date(Date.now() + delta * 86400000);
+  const p = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+document.addEventListener('alpine:init', () => {
+  Alpine.data('consola', () => ({
+    api: null,
+    vista: 'inicio',
+    subFuentes: 'archivos',
+    tema: 'system',
+    cargando: true,
+    secciones: [
+      { id: 'inicio', nombre: 'Inicio', corto: 'Inicio', icono: 'home', ayuda: 'Ejecuta el bot y sigue su avance.' },
+      { id: 'fuentes', nombre: 'Fuentes', corto: 'Fuentes', icono: 'sources', ayuda: 'Archivos de entrada, descargas SAP y columnas esperadas.' },
+      { id: 'reportes', nombre: 'Reportes', corto: 'Reportes', icono: 'reports', ayuda: 'Excel generados para Power BI y el área.' },
+      { id: 'config', nombre: 'Configuración', corto: 'Ajustes', icono: 'settings', ayuda: 'Conexiones, rutas y credenciales del archivo .env.' },
+    ],
+    conexiones: {
+      sql: { estado: 'unknown', mensaje: 'Sin probar' },
+      sap: { estado: 'unknown', mensaje: 'Sin probar' },
+    },
+    params: { modo: 'diaria', fechaHasta: hoyISO(), incluirHoy: false },
+    pasos: PASOS,
+    estado: { step_statuses: {}, step_times: {}, has_error: false, finished: false, error_message: null },
+    ejecutando: false,
+    deteniendo: false,
+    ultimaCorrida: null,
+    sondeo: null,
+    logs: [],
+    filtroLog: 'todo',
+    seguirLog: true,
+    rutas: {},
+    archivos: { PATH_INSUMOS_FIJOS: [], PATH_INSUMOS_DINAMICOS: [], PATH_REPORTES_SALIDA: [] },
+    gruposArchivos: [
+      { clave: 'PATH_INSUMOS_FIJOS', titulo: 'Archivos del área', ayuda: 'Se actualizan cuando el área los cambia.', vigenciaDias: 45,
+        esperados: [{ patron: 'REFERENCIAS', origen: 'Lo entrega el área' }, { patron: 'PROYECCION-SEMANAL', origen: 'Lo entrega el área cada semana' }] },
+      { clave: 'PATH_INSUMOS_DINAMICOS', titulo: 'Descargas diarias', ayuda: 'Deben ser de hoy antes de ejecutar.', vigenciaDias: 1,
+        esperados: [{ patron: 'GD20', origen: 'SAP · transacción GD20' }, { patron: 'QUERY', origen: 'SAP · transacción ZBCS' }, { patron: 'CARTERA', origen: 'Llega por correo' }] },
+    ],
+    tareasSap: [
+      { id: 'gd20', tcode: 'GD20', titulo: 'Ventas contables', ayuda: 'Base de BASE PANEL y VENTAS BI.', destino: 'GD20.xlsx',
+        campos: [
+          { id: 'ledger', etiqueta: 'Ledger', valor: 'VC' },
+          { id: 'variante', etiqueta: 'Variante', valor: 'Prueba_GD20' },
+          { id: 'periodo', etiqueta: 'Período', valor: String(new Date().getMonth() + 1), tipo: 'number', nota: 'Campo F9008025 del script grabado; falta confirmar que sea el mes.' },
+          { id: 'layout', etiqueta: 'Layout', valor: '', nota: 'Nombre del layout (hoy se elige por la fila 16).' },
+        ] },
+      { id: 'zbcs', tcode: 'ZBCS', titulo: 'Despachos', ayuda: 'Base de QUERY, DESPACHO BI y DESPACHO MES.', destino: 'QUERY.xlsx',
+        campos: [
+          { id: 'desde', etiqueta: 'Desde', valor: hoyISO(-90), tipo: 'date' },
+          { id: 'hasta', etiqueta: 'Hasta', valor: hoyISO(-1), tipo: 'date' },
+          { id: 'variante', etiqueta: 'Variante / layout', valor: 'IM', nota: 'Pendiente de grabar el script de ZBCS.' },
+        ] },
+    ],
+    mapeos: {},
+    mapeoActivo: '',
+    busquedaMapeo: '',
+    env: [],
+    busquedaEnv: '',
+    guardando: false,
+    eliminadas: 0,
+    gruposEnv: [
+      { id: 'sap', titulo: 'SAP', prueba: 'sap' },
+      { id: 'db', titulo: 'Base de datos', prueba: 'sql' },
+      { id: 'rutas', titulo: 'Carpetas' },
+      { id: 'mail', titulo: 'Correo' },
+      { id: 'api', titulo: 'Servicios externos' },
+      { id: 'custom', titulo: 'Otras' },
+    ],
+    dialogo: null,
+    borrador: {},
+    errorBorrador: '',
+    toasts: [],
+
+    iniciar() {
+      try { this.tema = localStorage.getItem('tema') || 'system'; } catch (e) {}
+      this.aplicarTema();
+      const conectar = () => { this.api = window.pywebview.api; this.recargar(); this.probar('sql', true); this.probar('sap', true); };
+      if (window.pywebview && window.pywebview.api) conectar();
+      else {
+        window.addEventListener('pywebviewready', conectar, { once: true });
+        setTimeout(() => { if (!this.api) this.cargarDatos(DEMO); }, 600);
+      }
+    },
+
+    apiTiene(nombre) { return !!(this.api && typeof this.api[nombre] === 'function'); },
+
+    async llamar(nombre, ...args) {
+      if (!this.apiTiene(nombre)) return null;
+      try { return await this.api[nombre](...args); }
+      catch (e) { this.avisar('Error del motor: ' + (e && e.message ? e.message : e), 'error'); return null; }
+    },
+
+    async recargar() {
+      if (!this.api) { this.cargarDatos(DEMO); return; }
+      this.cargando = true;
+      const r = await this.llamar('get_initial_state');
+      if (r && r.status === 'ok') this.cargarDatos(r);
+      this.cargando = false;
+    },
+
+    cargarDatos(r) {
+      this.rutas = r.paths || {};
+      this.archivos = {
+        PATH_INSUMOS_FIJOS: r.archivos_fijos || [],
+        PATH_INSUMOS_DINAMICOS: r.archivos_dinamicos || [],
+        PATH_REPORTES_SALIDA: r.archivos_reportes || [],
+      };
+      this.env = (r.env_vars || []).map(v => ({
+        ...v,
+        valorOriginal: v.valor,
+        activaOriginal: v.activa,
+        nuevoSecreto: '',
+        nueva: false,
+      }));
+      this.mapeos = Object.fromEntries(Object.entries(r.mapeos_reales || {}).filter(([, v]) => v && v.length));
+      this.mapeoActivo = Object.keys(this.mapeos)[0] || '';
+      const ult = (r.archivos_reportes || []).map(a => a.modificado).sort().pop();
+      this.ultimaCorrida = ult ? this.haceCuanto(ult) : null;
+      this.cargando = false;
+    },
+
+    ir(id) { this.vista = id; window.scrollTo({ top: 0 }); },
+    seccionActual() { return this.secciones.find(s => s.id === this.vista) || this.secciones[0]; },
+
+    ponerTema(t) { this.tema = t; try { localStorage.setItem('tema', t); } catch (e) {} this.aplicarTema(); },
+    aplicarTema() {
+      const root = document.documentElement;
+      if (this.tema === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', this.tema);
+    },
+
+    atajos(e) {
+      if (e.key === 'Escape' && this.dialogo) { this.dialogo = null; return; }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && this.vista === 'inicio') {
+        e.preventDefault(); this.ejecutando ? this.detener() : this.ejecutar(); return;
+      }
+      if (e.key === '/' && this.vista === 'config' && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault(); this.$refs.buscarEnv.focus();
+      }
+    },
+
+    async probar(cual, silencioso = false) {
+      const c = this.conexiones[cual];
+      c.estado = 'run'; c.mensaje = 'Probando…';
+      let r;
+      if (!this.api) {
+        await new Promise(res => setTimeout(res, 500));
+        r = cual === 'sql' ? { ok: true, message: 'Demostración: conexión simulada.' } : { ok: false, message: 'Demostración: SAP no está abierto.' };
+      } else {
+        r = await this.llamar(cual === 'sql' ? 'test_sql_connection' : 'test_sap_logon');
+      }
+      if (!r) { c.estado = 'unknown'; c.mensaje = 'No se pudo probar'; return; }
+      c.estado = r.ok ? 'ok' : 'err';
+      c.mensaje = r.message;
+      if (!silencioso) this.avisar(r.message, r.ok ? 'success' : 'error');
+    },
+
+    claseDot(e) { return { ok: 'ok', err: 'err', run: 'run', warn: 'warn' }[e] || ''; },
+    textoEstado(e) { return { ok: 'Conectado', err: 'Sin conexión', run: 'Probando…', warn: 'Revisar' }[e] || 'Sin probar'; },
+
+    ponerModo(m) {
+      this.params.modo = m;
+      this.params.incluirHoy = m === 'cierre';
+      this.params.fechaHasta = hoyISO();
+    },
+    textoCorte() {
+      const f = this.params.fechaHasta;
+      if (!f) return '—';
+      const [y, m, d] = f.split('-').map(Number);
+      const fecha = new Date(y, m - 1, d - (this.params.incluirHoy ? 0 : 1));
+      return fecha.toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
+    },
+
+    async ejecutar() {
+      if (this.ejecutando) return;
+      if (this.conexiones.sql.estado === 'err') {
+        this.avisar('SQL Server no responde. Revisa la VPN y prueba la conexión antes de ejecutar.', 'error');
+        return;
+      }
+      this.estado = { step_statuses: { 1: 'running' }, step_times: {}, has_error: false, finished: false, error_message: null };
+      this.filtroLog = 'todo';
+      if (!this.api) return this.simular();
+      const r = await this.llamar('start_pipeline', JSON.stringify(this.params));
+      if (!r || r.status === 'error' || r.status === 'busy') {
+        this.avisar((r && r.message) || 'No se pudo iniciar', 'error');
+        return;
+      }
+      this.ejecutando = true;
+      this.avisar('Ejecución iniciada', 'info');
+      this.sondeo = setInterval(() => this.leerAvance(), 700);
+    },
+
+    async leerAvance() {
+      const r = await this.llamar('get_execution_updates');
+      if (!r) return;
+      if (r.state) this.estado = r.state;
+      if (r.logs && r.logs.length) this.agregarLogs(r.logs);
+      if (!r.is_running) {
+        clearInterval(this.sondeo); this.sondeo = null;
+        this.ejecutando = false; this.deteniendo = false;
+        this.ultimaCorrida = 'hace un momento';
+        if (this.estado.has_error) this.avisar('La ejecución se detuvo con un error', 'error');
+        else if (this.estado.finished) { this.avisar('Ejecución completada', 'success'); this.recargar(); }
+      }
+    },
+
+    async detener() {
+      if (!this.ejecutando) return;
+      this.deteniendo = true;
+      if (!this.api) { this.detenerSimulacion(); return; }
+      const r = await this.llamar('stop_pipeline');
+      this.avisar((r && r.message) || 'Solicitud de detención enviada. El paso en curso terminará antes de parar.', 'warn');
+    },
+
+    simular() {
+      this.ejecutando = true;
+      let paso = 1;
+      const t0 = Date.now();
+      const tick = () => {
+        if (!this.ejecutando) return;
+        const st = { ...this.estado.step_statuses }, tm = { ...this.estado.step_times };
+        st[paso] = 'success'; tm[paso] = ((Date.now() - t0) / 1000 / paso).toFixed(1) + 's';
+        this.agregarLogs([{ tipo: 'info', mensaje: `Paso ${paso} (${PASOS[paso - 1].nombre}) completado — simulación` }]);
+        paso++;
+        if (paso <= PASOS.length) st[paso] = 'running';
+        this.estado = { ...this.estado, step_statuses: st, step_times: tm };
+        if (paso > PASOS.length) {
+          this.estado.finished = true; this.ejecutando = false; this.ultimaCorrida = 'hace un momento';
+          this.avisar('Simulación completada', 'success');
+        } else this.sondeo = setTimeout(tick, 900);
+      };
+      this.agregarLogs([{ tipo: 'info', mensaje: `Inicio de simulación (modo ${this.params.modo})` }]);
+      this.sondeo = setTimeout(tick, 900);
+    },
+    detenerSimulacion() {
+      clearTimeout(this.sondeo);
+      this.ejecutando = false; this.deteniendo = false;
+      const st = Object.fromEntries(Object.entries(this.estado.step_statuses).map(([k, v]) => [k, v === 'running' ? 'pending' : v]));
+      this.estado = { ...this.estado, step_statuses: st, has_error: true, error_message: 'Ejecución cancelada por el usuario.' };
+      this.agregarLogs([{ tipo: 'error', mensaje: 'Ejecución cancelada por el usuario' }]);
+    },
+
+    estadoPaso(id) { return (this.estado.step_statuses || {})[id] || 'pending'; },
+    claseStep(id) { return { success: 'done', running: 'running', error: 'error' }[this.estadoPaso(id)] || ''; },
+    tiempoPaso(id) {
+      const t = (this.estado.step_times || {})[id];
+      if (this.estadoPaso(id) === 'running') return 'en curso';
+      return t && t !== '-' ? t : '';
+    },
+    pasosCompletos() { return this.pasos.filter(p => this.estadoPaso(p.id) === 'success').length; },
+    textoProgreso() {
+      if (this.ejecutando) {
+        const p = this.pasos.find(x => this.estadoPaso(x.id) === 'running');
+        return p ? 'Ahora: ' + p.nombre.toLowerCase() + '…' : 'Iniciando…';
+      }
+      if (this.estado.has_error) return 'Detenido antes de terminar.';
+      if (this.estado.finished) return 'Todos los pasos terminaron.';
+      return 'Esperando ejecución.';
+    },
+    badgeEjecucion() {
+      if (this.ejecutando) return { clase: 'b-run', texto: 'En curso' };
+      if (this.estado.has_error) return { clase: 'b-err', texto: 'Con error' };
+      if (this.estado.finished) return { clase: 'b-ok', texto: 'Completado' };
+      return { clase: 'b-idle', texto: 'Listo' };
+    },
+
+    agregarLogs(nuevos) {
+      const ahora = () => new Date().toTimeString().slice(0, 8);
+      for (const l of nuevos) {
+        this.logs.push({ id: l.id || (Date.now() + Math.random()), hora: l.hora || ahora(), tipo: l.tipo || 'info', mensaje: l.mensaje });
+      }
+      if (this.logs.length > 1000) this.logs.splice(0, this.logs.length - 1000);
+      if (this.seguirLog) this.$nextTick(() => { const el = this.$refs.log; if (el) el.scrollTop = el.scrollHeight; });
+    },
+    logsFiltrados() { return this.filtroLog === 'error' ? this.logs.filter(l => l.tipo === 'error') : this.logs; },
+    async copiarLog() {
+      const txt = this.logsFiltrados().map(l => `${l.hora}  ${l.mensaje}`).join('\n');
+      try { await navigator.clipboard.writeText(txt); this.avisar('Registro copiado', 'success'); }
+      catch (e) { this.avisar('No se pudo copiar el registro', 'error'); }
+    },
+
+    esperadosDe(g) {
+      const lista = this.archivos[g.clave] || [];
+      const usados = new Set();
+      const filas = g.esperados.map(e => {
+        const cand = lista.filter(a => a.nombre.toUpperCase().startsWith(e.patron)).sort((a, b) => (b.modificado || '').localeCompare(a.modificado || ''));
+        if (cand[0]) usados.add(cand[0].nombre);
+        return { ...e, archivo: cand[0] || null };
+      });
+      lista.filter(a => !usados.has(a.nombre)).forEach(a => filas.push({ patron: a.nombre, origen: 'Archivo adicional', archivo: a, extra: true }));
+      return filas;
+    },
+    estadoArchivo(e, g) {
+      if (!e.archivo) return { clase: 'b-err', texto: 'Falta' };
+      if (e.extra) return { clase: 'b-idle', texto: 'No se usa' };
+      return this.esReciente(e.archivo.modificado, g.vigenciaDias) ? { clase: 'b-ok', texto: 'Al día' } : { clase: 'b-warn', texto: 'Desactualizado' };
+    },
+    alertasFuentes() {
+      return this.gruposArchivos.reduce((n, g) => n + this.esperadosDe(g).filter(e => ['b-err', 'b-warn'].includes(this.estadoArchivo(e, g).clase)).length, 0);
+    },
+    fecha(s) { if (!s) return null; const d = new Date(String(s).replace(' ', 'T')); return isNaN(d) ? null : d; },
+    esReciente(s, dias) {
+      const d = this.fecha(s); if (!d) return false;
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const lim = new Date(hoy.getTime() - (dias - 1) * 86400000);
+      return d >= lim;
+    },
+    haceCuanto(s) {
+      const d = this.fecha(s); if (!d) return s || '';
+      const min = Math.round((Date.now() - d.getTime()) / 60000);
+      if (min < 1) return 'hace un momento';
+      if (min < 60) return `hace ${min} min`;
+      const h = Math.round(min / 60);
+      if (h < 24 && d.getDate() === new Date().getDate()) return `hoy, ${d.toTimeString().slice(0, 5)}`;
+      const dias = Math.round(h / 24);
+      if (dias <= 1) return `ayer, ${d.toTimeString().slice(0, 5)}`;
+      return `hace ${dias} días`;
+    },
+    async abrirCarpeta(clave) {
+      if (!this.api) return this.avisar('En modo demostración no se abren carpetas', 'warn');
+      const r = await this.llamar('open_folder', clave);
+      if (r && r.status !== 'ok') this.avisar(r.message || 'No se pudo abrir la carpeta', 'error');
+    },
+
+    reportesAgrupados() {
+      const tipos = [
+        { tipo: 'VENTAS_BI', titulo: 'VENTAS BI' },
+        { tipo: 'DESPACHO_BI', titulo: 'DESPACHO BI' },
+        { tipo: 'DESPACHO_MES', titulo: 'DESPACHO MES' },
+        { tipo: 'HISTORIAL', titulo: 'HISTORIAL VENTAS' },
+      ];
+      const lista = this.archivos.PATH_REPORTES_SALIDA || [];
+      return tipos.map(t => {
+        const fs = lista.filter(a => a.nombre.toUpperCase().startsWith(t.tipo)).sort((a, b) => (b.modificado || '').localeCompare(a.modificado || ''));
+        return { ...t, ultimo: fs[0] || null, anteriores: Math.max(fs.length - 1, 0) };
+      });
+    },
+    async abrirExcel(a) {
+      if (!a) return;
+      if (!this.api) return this.avisar('En modo demostración no se abren archivos', 'warn');
+      const r = await this.llamar('open_file_excel', a.nombre);
+      if (r && r.status !== 'ok') this.avisar(r.message || 'No se pudo abrir el archivo', 'error');
+    },
+
+    async descargarSap(t) {
+      const params = Object.fromEntries(t.campos.map(c => [c.id, c.valor]));
+      const r = await this.llamar('download_sap', t.id, JSON.stringify(params));
+      if (r) this.avisar(r.message || 'Descarga solicitada', r.status === 'ok' ? 'success' : 'error');
+    },
+
+    camposMapeo() {
+      const q = this.busquedaMapeo.trim().toLowerCase();
+      return (this.mapeos[this.mapeoActivo] || []).filter(c => !q || (c.campo + ' ' + (c.origen || '')).toLowerCase().includes(q));
+    },
+
+    variablesDe(cat) {
+      const q = this.busquedaEnv.trim().toLowerCase();
+      return this.env.filter(v => (v.categoria || 'custom') === cat &&
+        (!q || v.clave.toLowerCase().includes(q) || (v.descripcion || '').toLowerCase().includes(q) || (!v.esSecreto && String(v.valor).toLowerCase().includes(q))));
+    },
+    estaModificada(v) {
+      return v.nueva || v.activa !== v.activaOriginal || (v.esSecreto ? v.nuevoSecreto !== '' : v.valor !== v.valorOriginal);
+    },
+    cambiosEnv() { return this.env.filter(v => this.estaModificada(v)).length + (this.eliminadas || 0); },
+    descartarEnv() {
+      this.env = this.env.filter(v => !v.nueva).map(v => ({ ...v, valor: v.valorOriginal, activa: v.activaOriginal, nuevoSecreto: '' }));
+      this.eliminadas = 0;
+    },
+    nuevaVariable() {
+      this.borrador = { clave: '', valor: '', descripcion: '', categoria: 'custom', esSecreto: false };
+      this.errorBorrador = '';
+      this.dialogo = 'nueva';
+      this.$nextTick(() => this.$refs.nvClave && this.$refs.nvClave.focus());
+    },
+    agregarVariable() {
+      const clave = (this.borrador.clave || '').trim();
+      if (!/^[A-Z][A-Z0-9_]*$/.test(clave)) { this.errorBorrador = 'Usa mayúsculas, números y guion bajo; debe empezar con una letra.'; return; }
+      if (this.env.some(v => v.clave === clave)) { this.errorBorrador = 'Ya existe una variable con ese nombre.'; return; }
+      const b = this.borrador;
+      this.env.push({ clave, valor: b.esSecreto ? '' : b.valor, nuevoSecreto: b.esSecreto ? b.valor : '', descripcion: b.descripcion, categoria: b.categoria,
+        esSecreto: b.esSecreto, activa: true, activaOriginal: true, valorOriginal: '', nueva: true });
+      this.dialogo = null;
+      this.avisar('Variable agregada. Guarda para aplicarla.', 'info');
+    },
+    quitarVariable(v) {
+      this.env = this.env.filter(x => x !== v);
+      if (!v.nueva) this.eliminadas = (this.eliminadas || 0) + 1;
+    },
+    payloadEnv() {
+      return this.env.map(v => ({
+        clave: v.clave,
+        valor: v.esSecreto ? (v.nuevoSecreto !== '' ? v.nuevoSecreto : v.valorOriginal) : v.valor,
+        descripcion: v.descripcion || '',
+        categoria: v.categoria || 'custom',
+        esSecreto: !!v.esSecreto,
+        activa: !!v.activa,
+      }));
+    },
+    async guardarEnv() {
+      if (!this.api) {
+        this.env = this.env.map(v => ({ ...v, valorOriginal: v.esSecreto ? (v.nuevoSecreto || v.valorOriginal) : v.valor, activaOriginal: v.activa, nuevoSecreto: '', nueva: false }));
+        this.eliminadas = 0;
+        return this.avisar('Demostración: cambios aplicados solo en pantalla', 'warn');
+      }
+      this.guardando = true;
+      const r = await this.llamar('save_env_variables', JSON.stringify(this.payloadEnv()));
+      this.guardando = false;
+      if (r && r.status === 'ok') { this.avisar(r.message || 'Configuración guardada', 'success'); this.eliminadas = 0; this.recargar(); }
+      else this.avisar((r && r.message) || 'No se pudo guardar', 'error');
+    },
+    vistaEnv() {
+      const lineas = [];
+      for (const g of this.gruposEnv) {
+        const vs = this.env.filter(v => (v.categoria || 'custom') === g.id);
+        if (!vs.length) continue;
+        lineas.push(`# ${g.titulo.toUpperCase()}`);
+        for (const v of vs) {
+          if (v.descripcion) lineas.push(`# ${v.descripcion}`);
+          const val = v.esSecreto ? '********' : v.valor;
+          lineas.push((v.activa ? '' : '# [DESACTIVADA] ') + `${v.clave}=${val}`);
+        }
+        lineas.push('');
+      }
+      return lineas.join('\n');
+    },
+
+    avisar(mensaje, tipo = 'info') {
+      const id = Date.now() + Math.random();
+      this.toasts.push({ id, mensaje, tipo });
+      if (this.toasts.length > 3) this.toasts.shift();
+      setTimeout(() => { this.toasts = this.toasts.filter(t => t.id !== id); }, tipo === 'error' ? 7000 : 4000);
+    },
+
+    icono(n) {
+      return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONOS[n] || ''}</svg>`;
+    },
+  }));
+});
+</script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.14.9/cdn.min.js"></script>
+</body>
+</html>

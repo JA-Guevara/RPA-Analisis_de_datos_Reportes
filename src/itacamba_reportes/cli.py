@@ -91,6 +91,11 @@ def run_all(force_cartera: bool = False, is_fin_de_mes: bool = False, corte_fech
 
 
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:
+        argv = ["run-all"]
+
     parser = argparse.ArgumentParser(
         prog="itacamba-reportes",
         description="Pipeline ETL Database-First Itacamba Reportes.",
@@ -135,9 +140,15 @@ def main(argv: list[str] | None = None) -> int:
     p_sap.add_argument("--filename", "-f", default="EXPORT", help="Nombre base del archivo a exportar.")
     p_sap.add_argument("--target-dir", "-d", default=None, help="Directorio destino donde ubicar el archivo.")
 
+    subparsers.add_parser("ui", help="Inicia la interfaz gráfica de usuario en ventana de escritorio.")
+
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "ui":
+            from itacamba_reportes.ui import launch_gui
+            return launch_gui()
+
         if args.command == "download-sap":
             from itacamba_reportes.sap import SapDownloadConfig, SapSessionManager
             from itacamba_reportes.sap.actions import execute_download_report

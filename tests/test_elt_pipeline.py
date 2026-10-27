@@ -512,6 +512,16 @@ class TestEltPipeline(unittest.TestCase):
                         docstring_findings.append(f"{py_file.name}:{node.name if hasattr(node, 'name') else 'module'}")
         self.assertEqual(docstring_findings, [])
 
+    def test_cli_default_to_run_all(self):
+        from unittest.mock import patch
+        from itacamba_reportes.cli import main
+
+        with patch("itacamba_reportes.cli.run_all", return_value=0) as mock_run_all, \
+             patch("itacamba_reportes.cli.ensure_schema_current"):
+            result = main([])
+            self.assertEqual(result, 0)
+            mock_run_all.assert_called_once_with(force_cartera=False, is_fin_de_mes=False, corte_fecha=None)
+
 
 if __name__ == "__main__":
     unittest.main()

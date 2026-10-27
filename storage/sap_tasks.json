@@ -1,0 +1,93 @@
+[
+  {
+    "id": "gd20",
+    "tcode": "GD20",
+    "titulo": "Ventas Contables (GD20)",
+    "ayuda": "Alimenta la tabla BASE PANEL y VENTAS BI en SQL Server.",
+    "destino": "GD20.xlsx",
+    "variante": "Prueba_GD20",
+    "layout": "/DEFAULT",
+    "ledger": "VC",
+    "periodoTipo": "mes_actual",
+    "campos": [
+      {
+        "id": "ledger",
+        "etiqueta": "Ledger",
+        "valor": "VC"
+      },
+      {
+        "id": "variante",
+        "etiqueta": "Variante SAP",
+        "valor": "Prueba_GD20"
+      },
+      {
+        "id": "periodo",
+        "etiqueta": "Período / Mes Contable",
+        "valor": "10",
+        "tipo": "number",
+        "nota": "Mes contable en SAP"
+      },
+      {
+        "id": "layout",
+        "etiqueta": "Layout de Columnas",
+        "valor": "/DEFAULT",
+        "nota": "Disposición de exportación"
+      }
+    ]
+  },
+  {
+    "id": "zbcs",
+    "tcode": "ZBCS",
+    "titulo": "Despachos ZBCS (Query)",
+    "ayuda": "Alimenta las tablas QUERY, DESPACHO BI y DESPACHO MES.",
+    "destino": "QUERY.xlsx",
+    "variante": "IM",
+    "layout": "/DESPACHOS",
+    "ledger": "N/A",
+    "periodoTipo": "rango",
+    "campos": [
+      {
+        "id": "desde",
+        "etiqueta": "Fecha Desde",
+        "valor": "2026-07-28",
+        "tipo": "date"
+      },
+      {
+        "id": "hasta",
+        "etiqueta": "Fecha Hasta",
+        "valor": "2026-10-25",
+        "tipo": "date"
+      },
+      {
+        "id": "variante",
+        "etiqueta": "Variante / Layout",
+        "valor": "IM",
+        "nota": "Variante de selección ZBCS"
+      }
+    ]
+  },
+  {
+    "id": "cartera",
+    "tcode": "ZSDI",
+    "titulo": "Cartera de Clientes & Cadena",
+    "ayuda": "Maestro de clientes, líneas de crédito y sucursales.",
+    "destino": "CARTERA.xlsx",
+    "variante": "CAD_CLIENTE",
+    "layout": "/CARTERA",
+    "ledger": "N/A",
+    "periodoTipo": "mes_actual",
+    "campos": [
+      {
+        "id": "variante",
+        "etiqueta": "Variante SAP",
+        "valor": "CAD_CLIENTE"
+      },
+      {
+        "id": "layout",
+        "etiqueta": "Layout",
+        "valor": "/CARTERA",
+        "nota": "Estructura de columnas exportadas"
+      }
+    ]
+  }
+]

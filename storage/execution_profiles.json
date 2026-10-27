@@ -1,0 +1,92 @@
+[
+  {
+    "id": "diaria",
+    "nombre": "Corrida Diaria Matutina",
+    "descripcion": "Corte a ayer (< hoy). Genera y actualiza los reportes comerciales al inicio de jornada.",
+    "modo": "diaria",
+    "incluirHoy": false,
+    "frecuencia": "diaria",
+    "horaFija": "06:00",
+    "horaInicioVentana": "06:00",
+    "horaFinVentana": "22:00",
+    "intervaloHoras": 24,
+    "diasSemana": [
+      "L",
+      "M",
+      "X",
+      "J",
+      "V"
+    ],
+    "fechaDesde": "2026-09-27",
+    "fechaHasta": "2026-10-27",
+    "activa": true
+  },
+  {
+    "id": "cierre",
+    "nombre": "Cierre Contable de Mes",
+    "descripcion": "Incluye el día de corte completo para consolidar el mes cerrado con base GD20.",
+    "modo": "cierre",
+    "incluirHoy": true,
+    "frecuencia": "diaria",
+    "horaFija": "20:00",
+    "horaInicioVentana": "18:00",
+    "horaFinVentana": "23:59",
+    "intervaloHoras": 24,
+    "diasSemana": [
+      "L",
+      "M",
+      "X",
+      "J",
+      "V",
+      "S",
+      "D"
+    ],
+    "fechaDesde": "2026-09-26",
+    "fechaHasta": "2026-10-27",
+    "activa": false
+  },
+  {
+    "id": "periodica",
+    "nombre": "Ciclo Intradía (Cada 4 Horas)",
+    "descripcion": "Repite ejecuciones automáticas cada 4 horas en ventana operativa (08:00 a 18:00).",
+    "modo": "diaria",
+    "incluirHoy": false,
+    "frecuencia": "intervalo",
+    "horaFija": "08:00",
+    "horaInicioVentana": "08:00",
+    "horaFinVentana": "18:00",
+    "intervaloHoras": 4,
+    "diasSemana": [
+      "L",
+      "M",
+      "X",
+      "J",
+      "V"
+    ],
+    "fechaDesde": "2026-10-12",
+    "fechaHasta": "2026-10-27",
+    "activa": false
+  },
+  {
+    "id": "rango",
+    "nombre": "Reproceso por Rango Libre",
+    "descripcion": "Rango manual de fechas para auditorías o reprocesos históricos específicos.",
+    "modo": "rango",
+    "incluirHoy": true,
+    "frecuencia": "manual",
+    "horaFija": "12:00",
+    "horaInicioVentana": "00:00",
+    "horaFinVentana": "23:59",
+    "intervaloHoras": 24,
+    "diasSemana": [
+      "L",
+      "M",
+      "X",
+      "J",
+      "V"
+    ],
+    "fechaDesde": "2026-08-28",
+    "fechaHasta": "2026-10-27",
+    "activa": false
+  }
+]
