@@ -112,3 +112,48 @@ def ensure_schema_current() -> None:
         )
         upgrade_db()
     ensure_all_tables_exist()
+
+
+def truncate_all_tables(reset_state: bool = True) -> list[str]:
+    from sqlalchemy import inspect, text
+    eng = get_engine()
+    is_sqlite = eng.dialect.name == "sqlite"
+    cleared = []
+    with eng.begin() as conn:
+        insp = inspect(conn)
+        for table in Base.metadata.sorted_tables:
+            if insp.has_table(table.name):
+                if is_sqlite:
+                    conn.execute(table.delete())
+                else:
+                    try:
+                        conn.execute(text(f"TRUNCATE TABLE [{table.name}]"))
+                    except Exception:
+                        conn.execute(table.delete())
+                cleared.append(table.name)
+    if reset_state:
+        from itacamba_reportes.core.state import clear_pipeline_state
+        clear_pipeline_state()
+    logger.info("Tablas vaciadas exitosamente (%d tablas): %s", len(cleared), cleared)
+    return cleared
+
+
+def drop_all_tables(reset_state: bool = True) -> list[str]:
+    from sqlalchemy import inspect, text
+    eng = get_engine()
+    dropped = []
+    with eng.begin() as conn:
+        insp = inspect(conn)
+        for table in reversed(Base.metadata.sorted_tables):
+            if insp.has_table(table.name):
+                conn.execute(text(f"DROP TABLE [{table.name}]"))
+                dropped.append(table.name)
+        if insp.has_table("alembic_version"):
+            conn.execute(text("DROP TABLE alembic_version"))
+            dropped.append("alembic_version")
+    if reset_state:
+        from itacamba_reportes.core.state import clear_pipeline_state
+        clear_pipeline_state()
+    logger.info("Tablas eliminadas exitosamente (%d tablas): %s", len(dropped), dropped)
+    return dropped
+

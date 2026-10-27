@@ -497,6 +497,51 @@ class TestEltPipeline(unittest.TestCase):
         finally:
             conn_mod.set_engine(orig_engine)
 
+    def test_clean_and_truncate_all_tables(self):
+        from sqlalchemy import create_engine, inspect, text
+        from sqlalchemy.pool import StaticPool
+        import itacamba_reportes.core.db.connection as conn_mod
+        from itacamba_reportes.core.db.base import Base
+        from itacamba_reportes.core.db.schema import drop_all_tables, truncate_all_tables
+        from itacamba_reportes.cli import main
+
+        mem_eng = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(mem_eng)
+        orig_engine = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+
+        try:
+            # 1. Insertar un registro en una tabla
+            with mem_eng.begin() as conn:
+                conn.execute(text("INSERT INTO int_ref_centro (centro, nombre) VALUES ('C1', 'TEST')"))
+            
+            with mem_eng.connect() as conn:
+                count = conn.execute(text("SELECT COUNT(*) FROM int_ref_centro")).scalar()
+                self.assertEqual(count, 1)
+
+            # 2. Ejecutar truncate_all_tables
+            cleared = truncate_all_tables(reset_state=True)
+            self.assertIn("int_ref_centro", cleared)
+            with mem_eng.connect() as conn:
+                count_after = conn.execute(text("SELECT COUNT(*) FROM int_ref_centro")).scalar()
+                self.assertEqual(count_after, 0)
+
+            # 3. Probar CLI clean-db --force
+            res = main(["clean-db", "--force"])
+            self.assertEqual(res, 0)
+
+            # 4. Probar drop_all_tables
+            dropped = drop_all_tables(reset_state=True)
+            self.assertIn("int_ref_centro", dropped)
+            insp = inspect(mem_eng)
+            self.assertFalse(insp.has_table("int_ref_centro"))
+        finally:
+            conn_mod.set_engine(orig_engine)
+
     def test_zero_docstrings_in_src(self):
         import ast
         import glob

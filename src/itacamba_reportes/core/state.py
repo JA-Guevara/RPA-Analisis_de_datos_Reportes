@@ -73,3 +73,13 @@ def save_file_signature(key: str, file_path: Path) -> None:
         state["files"] = {}
     state["files"][key] = compute_file_signature(file_path)
     save_pipeline_state(state)
+
+
+def clear_pipeline_state() -> None:
+    if STATE_PATH.exists():
+        try:
+            STATE_PATH.unlink()
+            logger.info("Estado de pipeline_state.json reseteado exitosamente.")
+        except Exception as exc:
+            logger.warning("No se pudo eliminar pipeline_state.json: %s", exc)
+

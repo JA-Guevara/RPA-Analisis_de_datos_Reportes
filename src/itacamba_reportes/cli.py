@@ -103,6 +103,9 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("test-db", help="Verifica la conexión a SQL Server y muestra diagnóstico detallado.")
+    p_clean = subparsers.add_parser("clean-db", help="Limpia/vacia todas las tablas de la base de datos y resetea firmas de estado.")
+    p_clean.add_argument("--force", "-y", action="store_true", help="Omite la confirmación interactiva.")
+    p_clean.add_argument("--drop", action="store_true", help="Elimina las tablas por completo (DROP) en lugar de solo vaciarlas (TRUNCATE/DELETE).")
     p_init = subparsers.add_parser("init-db", help="Aplica las migraciones Alembic pendientes y asegura todas las tablas.")
     p_init.add_argument("--reset-alembic", action="store_true", help="Reinicia tabla de versiones de Alembic para forzar ejecución limpia.")
     subparsers.add_parser("run-referencias", help="Pipeline REFERENCIAS -> tablas int_ref_*.")
@@ -189,6 +192,22 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "init-db":
             upgrade_db(reset_alembic=getattr(args, "reset_alembic", False))
+            return 0
+
+        if args.command == "clean-db":
+            from itacamba_reportes.core.db.schema import truncate_all_tables, drop_all_tables
+            if not getattr(args, "force", False):
+                accion = "ELIMINAR" if getattr(args, "drop", False) else "VACIAR"
+                confirm = input(f"ADVERTENCIA: Se van a {accion} todas las tablas en la Base de Datos. ¿Continuar? (s/N): ").strip().lower()
+                if confirm not in ("s", "si", "y", "yes"):
+                    logger.info("Operación cancelada por el usuario.")
+                    return 0
+            if getattr(args, "drop", False):
+                dropped = drop_all_tables(reset_state=True)
+                logger.info("Base de datos reseteada: %d tablas eliminadas.", len(dropped))
+            else:
+                cleared = truncate_all_tables(reset_state=True)
+                logger.info("Base de datos limpiada: %d tablas vaciadas.", len(cleared))
             return 0
 
         ensure_schema_current()

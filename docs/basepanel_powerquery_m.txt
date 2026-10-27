@@ -1,0 +1,213 @@
+section Section1;
+
+shared #"CARTERA DE CATASTRO" = let
+    Origen = Excel.Workbook(File.Contents("C:\Users\yasminzt\OneDrive - Votorantim\IM\BASE REPORTES\Actualizacion\archivos\CARTERA.xlsx"), null, true),
+    Q_VCBO_ZSDI_I03_CAD_CLIENTE_000_Sheet = Origen{[Item="Q_VCBO_ZSDI_I03_CAD_CLIENTE_000",Kind="Sheet"]}[Data],
+    #"Columnas con nombre cambiado1" = Table.RenameColumns(Q_VCBO_ZSDI_I03_CAD_CLIENTE_000_Sheet,{{"Column1", "Cliente"}, {"Column3", "Attribute 10"}, {"Column4", "Población"}, {"Column5", "Barrio"}, {"Column6", "Attribute 7"}, {"Column7", "Attribute 6"}, {"Column8", "Región"}, {"Column10", "Grupo de cuentas"}, {"Column12", "Teléfono"}, {"Column13", "N.I.F 1"}, {"Column14", "Código postal"}, {"Column15", "GCD: CódEmplazFiscal"}, {"Column16", "Calle"}, {"Column17", "Inclusion date"}, {"Column18", "Tipo de operación"}, {"Column19", "ZEMAILADD"}, {"Column20", "ZVCRISK"}, {"Column21", "Vía de pago"}, {"Column22", "Sector"}, {"Column24", "Canal Distribución"}, {"Column26", "Organización de Ventas"}, {"Column28", "Oficina de Ventas"}, {"Column30", "Grupo de vendedores"}, {"Column32", "Representante ventas"}, {"Column34", "Coordinador Ventas"}, {"Column35", "Coordinador"}, {"Column37", "Canal"}, {"Column36", "Trilha"}, {"Column38", "Condición pago"}, {"Column39", "Contador"}, {"Column33", "Vendedor"}, {"Column31", "Equipo"}}),
+    #"Filas superiores quitadas" = Table.Skip(#"Columnas con nombre cambiado1",7),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Filas superiores quitadas",{{"Cliente", Int64.Type}, {"Inclusion date", type date}}),
+    #"Texto en mayúsculas" = Table.TransformColumns(#"Tipo cambiado",{{"Column9", Text.Upper, type text}}),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Texto en mayúsculas","POTOSÍ","POTOSI",Replacer.ReplaceText,{"Column9"}),
+    #"Valor reemplazado1" = Table.ReplaceValue(#"Valor reemplazado","BO/PT","POTOSI",Replacer.ReplaceText,{"Column9"})
+in
+    #"Valor reemplazado1";
+
+shared GD20 = let
+    Origen = Excel.Workbook(File.Contents("C:\Users\yasminzt\OneDrive - Votorantim\IM\BASE REPORTES\Actualizacion\archivos\GD20.xlsx"), null, true),
+    Data_Sheet = Origen{[Item="Data",Kind="Sheet"]}[Data],
+    #"Encabezados promovidos" = Table.PromoteHeaders(Data_Sheet, [PromoteAllScalars=true]),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"Ejercicio", Int64.Type}, {"Sociedad", Int64.Type}, {"Organización ventas", Int64.Type}, {"Centro", type text}, {"División", type text}, {"Oficina de ventas", type text}, {"Canal distribución", Int64.Type}, {"Sector", Int64.Type}, {"Número de cuenta", Int64.Type}, {"Centro de beneficio", type text}, {"Material", Int64.Type}, {"Unidad medida base", type text}, {"Período contable", Int64.Type}, {"Clave de país/región", type text}, {"Región", type text}, {"Población", type text}, {"Grupo de vendedores", type text}, {"Cliente", Int64.Type}, {"Emisor Orden", Int64.Type}, {"Customer number (Bill-to", Int64.Type}, {"Customer number (rebate reci", Int64.Type}, {"Grupo de clientes 2", type text}, {"Atributo 6", type text}, {"Atributo 7", type text}, {"Atributo 10", type text}, {"Clase de factura", type text}, {"Nombre del usuario", type text}, {"Texto", type text}, {"Nº documento", Int64.Type}, {"Cantidad", type number}, {"Moneda de sociedad", type number}, {"Fe.contabilización", type date}, {"Fecha de entrada", type date}, {"Fecha valor", type date}, {"Documento comercial", Int64.Type}, {"Hora de entrada", type datetime}, {"Moneda transacción", type number}, {"Clave Moneda transacción", type text}, {"Moneda fuerte", type number}, {"Clave Moneda fuerte", type text}, {"Nº doc.referencia", Int64.Type}, {"Nº documento_1", Int64.Type}, {"Incoterms", type text}, {"Incoterms (parte 2)", type text}, {"Clase de documento", type text}, {"", type text}, {"Días 1", Int64.Type}, {"_2", type text}}),
+    #"Filas en blanco eliminadas" = Table.SelectRows(#"Tipo cambiado", each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null}))),
+    #"Columnas con nombre cambiado" = Table.RenameColumns(#"Filas en blanco eliminadas",{{"Clave de país/región", "Clave de país"}, {"Región", "Región SAP"}, {"Población", "Población SAP"}, {"Cliente", "Pagador/ Responsable de Pago"}, {"Emisor Orden", "Emisor Orden/ Solicitante"}, {"Customer number (rebate reci", "Destinatario"}, {"Nº documento_1", "Nº documento2"}, {"", "Cond. Pago"}, {"_2", "E"}, {"Incoterms (parte 2)", "Incoterms, parte 2"}}),
+    #"Filas ordenadas" = Table.Sort(#"Columnas con nombre cambiado",{{"Número de cuenta", Order.Ascending}}),
+    #"Errores reemplazados" = Table.ReplaceErrorValues(#"Filas ordenadas", {{"Sector", 0}})
+in
+    #"Errores reemplazados";
+
+shared QUERY = let
+    Origen = Excel.Workbook(File.Contents("C:\Users\yasminzt\OneDrive - Votorantim\IM\BASE REPORTES\Actualizacion\archivos\QUERY.xlsx"), null, true),
+    Hoja1_Sheet = Origen{[Item="Data",Kind="Sheet"]}[Data],
+    #"Columnas con nombre cambiado" = Table.RenameColumns(Hoja1_Sheet,{{"Column2", "Fecha creac."}, {"Column3", "Documento venta"}, {"Column4", "Incoterms"}, {"Column5", "Centro Proveedor"}, {"Column6", "Cod. Centro Receptor"}, {"Column7", "Material"}, {"Column8", "Ds Material"}, {"Column9", "Ruta"}, {"Column10", "Ds Ruta"}, {"Column11", "Cod. Destinatario mcía."}, {"Column12", "Destinatario mcía."}, {"Column13", "Cod. Pagador mcía."}, {"Column14", "Pagador mcía."}, {"Column15", "Cantidad"}, {"Column16", "Precio pedido"}, {"Column17", "Unid. Venta"}, {"Column18", "Ds Centro Proveedor"}, {"Column19", "Ds Centro Receptor"}, {"Column20", "Fecha facturación"}, {"Column21", "Nro de factura"}, {"Column22", "Tipo pos. ped."}, {"Column23", "Documento Referencia"}, {"Column24", "Código Ferretero"}, {"Column1", "Fecha salida"}}),
+    #"Filas superiores quitadas1" = Table.Skip(#"Columnas con nombre cambiado",1),
+    #"Tipo cambiado1" = Table.TransformColumnTypes(#"Filas superiores quitadas1",{{"Fecha salida", type date}, {"Fecha creac.", type date}}),
+    #"Personalizada agregada" = Table.AddColumn(#"Tipo cambiado1", "Día natural", each if [Ds Material] = "CLINQUER" and [Fecha salida] = null
+then [#"Fecha creac."]
+else [Fecha salida]),
+    #"Tipo cambiado2" = Table.TransformColumnTypes(#"Personalizada agregada",{{"Día natural", type date}}),
+    #"Columnas quitadas" = Table.RemoveColumns(#"Tipo cambiado2",{"Fecha salida", "Fecha creac."}),
+    #"Columnas reordenadas1" = Table.ReorderColumns(#"Columnas quitadas",{"Día natural", "Documento venta", "Incoterms", "Centro Proveedor", "Cod. Centro Receptor", "Material", "Ds Material", "Ruta", "Ds Ruta", "Cod. Destinatario mcía.", "Destinatario mcía.", "Cod. Pagador mcía.", "Pagador mcía.", "Cantidad", "Precio pedido", "Unid. Venta", "Ds Centro Proveedor", "Ds Centro Receptor", "Fecha facturación", "Nro de factura", "Tipo pos. ped.", "Documento Referencia", "Código Ferretero"}),
+    #"Filas ordenadas" = Table.Sort(#"Columnas reordenadas1",{{"Cod. Destinatario mcía.", Order.Descending}}),
+    #"Filas filtradas" = Table.SelectRows(#"Filas ordenadas", each ([Día natural] <> null)),
+    #"Despacho (t)" = Table.AddColumn(#"Filas filtradas", "Despacho(t)", each if List.Contains(
+    {
+        "4B06|4495",
+        "4B06|4689",
+        "4B05|4689",
+        "4B04|4495",
+        "4B06|5181",
+        "4B05|5181",
+        "4B05|5217",
+        "4B09|5217",
+        "4B06|5217",
+        "4B63|5217",
+        "4B06|4496",
+        "4B05|4496",
+        "4B60|4689",
+        "4B60|4495",
+        "4B05|4495",
+        "4B1A|4495",
+        "4B1A|6497"
+    },
+    [Centro Proveedor] & "|" & [#"Cod. Destinatario mcía."]
+)
+then 0
+else [Cantidad]),
+    #"Traslados (t)" = Table.AddColumn(#"Despacho (t)", "Traslados (t)", each [Cantidad]-[#"Despacho (t)"]),
+    Día = Table.AddColumn(#"Traslados (t)", "Día", each Date.Day([Día natural])),
+    Mes = Table.AddColumn(Día, "Mes", each Date.Month([Día natural])),
+    Año = Table.AddColumn(Mes, "Año", each Date.Year([Día natural])),
+    #"Centro de distribución" = Table.AddColumn(
+    Año,
+    "Centro de Distribución",
+    each
+        if [Centro Proveedor] = "4B09" then "CD COCHABAMBA"
+        else if [Centro Proveedor] = "4B06" then "FABRICA YACUSES"
+        else if [Centro Proveedor] = "4B05" then "CD GUARACACHI"
+        else if [Centro Proveedor] = "4B01" then "FAB. GB MINERALES"
+        else if [Centro Proveedor] = "4B03" then "VCBO - CD SANTA CRUZ"
+        else if [Centro Proveedor] = "4B04" then "VCBO - MOLIENDA"
+        else if [Centro Proveedor] = "4B60" then "CD EL ALTO"
+        else if [Centro Proveedor] = "4B63" then "CD MONTERO"
+        else if [Centro Proveedor] = "4B94" then "CHACHI"
+        else if [Centro Proveedor] = "4B1A" then "CENTRO INSUMOS"
+        else if [Centro Proveedor] = "4B3A" then "CD INSUMOS"
+        else null
+        ),
+    #"Columnas reordenadas" = Table.ReorderColumns(#"Centro de distribución",{"Centro Proveedor", "Ds Centro Proveedor", "Material", "Ds Material", "Día natural", "Documento venta", "Cod. Destinatario mcía.", "Destinatario mcía.",  "Incoterms", "Cod. Centro Receptor", "Ds Centro Receptor", "Ruta", "Ds Ruta", "Cantidad", "Despacho(t)",  "Traslados (t)", "Día", "Mes", "Año", "Centro de Distribución"}),
+    #"Valor reemplazado2" = Table.ReplaceValue(#"Columnas reordenadas","CALCÁREO CORRECTIVO DE SUELO BRÓTER M30%","BRÓTER MIX AZCALMAG 30+",Replacer.ReplaceText,{"Ds Material"}),
+    #"Valor reemplazado3" = Table.ReplaceValue(#"Valor reemplazado2","CALCÁREO CORRECTIVO DE SUELO BRÓTER DOLO","BRÓTER DOLOMITA 86+",Replacer.ReplaceText,{"Ds Material"}),
+    #"Valor reemplazado5" = Table.ReplaceValue(#"Valor reemplazado3","","0",Replacer.ReplaceValue,{"Cod. Pagador mcía."}),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Valor reemplazado5",null,0,Replacer.ReplaceValue,{"Nro de factura"}),
+    #"Valor reemplazado1" = Table.ReplaceValue(#"Valor reemplazado",null,0,Replacer.ReplaceValue,{"Cod. Pagador mcía."}),
+    #"Valor reemplazado4" = Table.ReplaceValue(#"Valor reemplazado1","","0",Replacer.ReplaceValue,{"Cod. Centro Receptor"}),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Valor reemplazado4",{{"Centro Proveedor", type text}, {"Ds Centro Proveedor", type text}, {"Material", Int64.Type}, {"Ds Material", type text}, {"Día natural", type date}, {"Documento venta", Int64.Type}, {"Cod. Destinatario mcía.", Int64.Type}, {"Destinatario mcía.", type text}, {"Incoterms", type text}, {"Cod. Centro Receptor", type text}, {"Ds Centro Receptor", type text}, {"Cod. Pagador mcía.", Int64.Type}, {"Pagador mcía.", type text}, {"Ruta", type text}, {"Precio pedido", Int64.Type}, {"Unid. Venta", type text}, {"Ds Ruta", type text},  {"Cantidad", type number}, {"Despacho(t)", type number}, {"Fecha facturación", type date}, {"Nro de factura", Int64.Type}, {"Tipo pos. ped.", type text}, {"Documento Referencia", type any}, {"Código Ferretero", type any}, {"Traslados (t)", Int64.Type}, {"Día", Int64.Type}, {"Mes", Int64.Type}, {"Año", Int64.Type}, {"Centro de Distribución", type text}}),
+    #"Valor reemplazado7" = Table.ReplaceValue(#"Tipo cambiado","#","0",Replacer.ReplaceText,{"Cod. Centro Receptor"})
+in
+    #"Valor reemplazado7";
+
+shared #"RF-AJUSTADO-SEMANAL" = let
+    Origen = Excel.Workbook(File.Contents("C:\Users\yasminzt\OneDrive - Votorantim\IM\BASE REPORTES\Actualizacion\archivos\PROYECCION-SEMANAL.xlsx"), null, true),
+    #"RF AJUSTADO SEMANAL-OCT 24_Sheet" = Origen{[Item="RF AJUSTADO SEMANAL.26",Kind="Sheet"]}[Data],
+    #"Encabezados promovidos" = Table.PromoteHeaders(#"RF AJUSTADO SEMANAL-OCT 24_Sheet", [PromoteAllScalars=true]),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"GERENCIA", type text}, {"EQUIPO", type text}, {"DEPARTAMENTO", type text}, {"INCOTERMS", type text}, {"CENTRO DISTRIBUCIÓN", type text}, {"MATERIAL", type text}, {"LOCALIDAD IM", type text}, {"CODIGO CLIENTE", Int64.Type}, {"DIA", Int64.Type}, {"RF", type number}, {"RF AJUSTADO _ IM", type number}, {"cruce", type number}, {"diferencia", Int64.Type}, {"Column14", type any}, {"Column15", type any}}),
+    #"Columnas quitadas" = Table.RemoveColumns(#"Tipo cambiado",{ "cruce", "diferencia", "Column14", "Column15"}),
+    #"Columnas con nombre cambiado" = Table.RenameColumns(#"Columnas quitadas",{ {"DIA", "Día"}, {"CENTRO DISTRIBUCIÓN", "Centro de Distribución"}, {"MATERIAL", "Producto"}, {"LOCALIDAD IM", "Localidad"}, {"INCOTERMS", "Incoterms"}, {"DEPARTAMENTO", "Departamento"}}),
+    #"Errores reemplazados" = Table.ReplaceErrorValues(#"Columnas con nombre cambiado", {{"CODIGO CLIENTE", 0}}),
+    #"Filas en blanco eliminadas" = Table.SelectRows(#"Errores reemplazados", each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null})))
+in
+    #"Filas en blanco eliminadas";
+
+shared DESPACHO = let
+    Origen = Excel.CurrentWorkbook(){[Name="QUERY"]}[Content],
+    Personalizado1 = Table.TransformColumnTypes(Origen,{{"Centro Proveedor", type text}, {"Ds Centro Proveedor", type text}, {"Material", Int64.Type}, {"Ds Material", type text}, {"Día natural", type date}, {"Documento venta", Int64.Type}, {"Cod. Destinatario mcía.", Int64.Type}, {"Destinatario mcía.", type text}, {"Incoterms", type text}, {"Cod. Centro Receptor", type text}, {"Ds Centro Receptor", type text} , {"Ruta", type text}, {"Ds Ruta", type text}, {"Cantidad", type number}, {"Despacho(t)", type number}, {"Departamento", type text}, {"Traslados (t)", Int64.Type}, {"Día", Int64.Type}, {"Mes", Int64.Type}, {"Año", Int64.Type},  {"Centro de Distribución", type text},  {"Localidad", type text},  {"VENDEDOR", type text}, {"DESARROLLADOR", type text}, {"CODIGO CLIENTE", Int64.Type}, {"EQUIPO", type text}, {"GERENCIA", type text}, {"RT", type text},{"Semana", type text}}),
+    #"Filas en blanco eliminadas" = Table.SelectRows(Personalizado1, each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null}))),
+    #"Errores reemplazados" = Table.ReplaceErrorValues(#"Filas en blanco eliminadas", {{"GERENCIA", " "}}),
+    #"Errores reemplazados1" = Table.ReplaceErrorValues(#"Errores reemplazados", {{"EQUIPO", " "}}),
+    #"Errores reemplazados2" = Table.ReplaceErrorValues(#"Errores reemplazados1", {{"CODIGO CLIENTE", 0}}),
+    #"Errores reemplazados3" = Table.ReplaceErrorValues(#"Errores reemplazados2", {{"DESARROLLADOR", " "}}),
+    #"Errores reemplazados4" = Table.ReplaceErrorValues(#"Errores reemplazados3", {{"VENDEDOR", " "}}),
+    #"Columna duplicada" = Table.DuplicateColumn(#"Errores reemplazados4", "Ds Material", "Producto")
+in
+    #"Columna duplicada";
+
+shared #"DESPACHO MES" = let
+    Origen = Table.Combine({#"RF-AJUSTADO-SEMANAL", DESPACHO}),
+    #"Columnas quitadas" = Table.RemoveColumns(Origen,{"Centro Proveedor", "Ds Centro Proveedor", "Material", "Ds Material", "Documento venta", "Cod. Destinatario mcía.", "Destinatario mcía.", "Cod. Centro Receptor", "Ds Centro Receptor", "Ruta", "Ds Ruta", "Cantidad", "Traslados (t)", "Mes", "Año",  "VENDEDOR", "DESARROLLADOR", "x", "Semana", "LOCALIDAD IM", "Día natural", "Column16", "Cod. Pagador mcía.", "Pagador mcía.", "Precio pedido", "Unid. Venta", "Fecha facturación", "Nro de factura", "Tipo pos. ped.", "Documento Referencia", "Código Ferretero", "RT"}),
+    Fecha = Table.AddColumn(#"Columnas quitadas", "Fecha", each Date.From(
+#date(
+Date.Year(DateTime.LocalNow()),
+Date.Month(DateTime.LocalNow()),
+[Día]
+)
+)),
+    #"Tipo cambiado1" = Table.TransformColumnTypes(Fecha,{{"Fecha", type date}}),
+    #"Mes insertado" = Table.AddColumn(#"Tipo cambiado1", "Mes", each Date.Month([Fecha]), Int64.Type),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Mes insertado",null,0,Replacer.ReplaceValue,{"Despacho(t)"}),
+    #"Valor reemplazado1" = Table.ReplaceValue(#"Valor reemplazado",null,0,Replacer.ReplaceValue,{"RF AJUSTADO _ IM"}),
+    #"Valor reemplazado2" = Table.ReplaceValue(#"Valor reemplazado1",null,0,Replacer.ReplaceValue,{"RF"}),
+    Proyección = Table.AddColumn(#"Valor reemplazado2", "PROYECCIÓN", each if Date.From([Fecha]) < Date.From(DateTime.LocalNow())
+then [#"Despacho(t)"]
+else [RF AJUSTADO _ IM]),
+    #"Tipo cambiado" = Table.TransformColumnTypes(Proyección,{{"PROYECCIÓN", type number}}),
+    #"Filas filtradas" = Table.SelectRows(#"Tipo cambiado", each ([Producto] = "CEMENTO IM-40 (BIG-BAG )" or [Producto] = "CEMENTO IM-40 (BOLSAS 50KG.)" or [Producto] = "CEMENTO IM-40 (GRANEL TN.)" or [Producto] = "CEMENTO PORTLAND IF-30 50 KG" or [Producto] = "CEMENTO PORTLAND IF-30 BIG BAG" or [Producto] = "CEMENTO PORTLAND IF-30 GRANEL" or [Producto] = "CEMENTO PORTLAND IF-40 50 KG" or [Producto] = "CEMENTO PORTLAND IF-40 50 KG-MQL" or [Producto] = "CEMENTO PORTLAND IP-30 PRO 50 KG-MQL" or [Producto] = "CEMENTO PORTLAND TIPO CPII-C40 BIG BAG")),
+    #"Columnas reordenadas" = Table.ReorderColumns(#"Filas filtradas",{"GERENCIA", "EQUIPO", "Departamento", "Localidad", "Centro de Distribución", "Producto", "Incoterms", "Fecha", "Mes", "Día", "CODIGO CLIENTE", "RF", "Despacho(t)", "RF AJUSTADO _ IM", "PROYECCIÓN"})
+in
+    #"Columnas reordenadas";
+
+shared BASEGD20 = let
+    Origen = Excel.CurrentWorkbook(){[Name="GD20_"]}[Content],
+    #"Tipo cambiado" = Table.TransformColumnTypes(Origen,{{"Ejercicio", Int64.Type}, {"Sociedad", Int64.Type}, {"Organización ventas", Int64.Type}, {"Centro", type text}, {"División", type text}, {"Oficina de ventas", type text}, {"Canal distribución", Int64.Type}, {"Sector", Int64.Type}, {"Número de cuenta", Int64.Type}, {"Centro de beneficio", type text}, {"Material", Int64.Type}, {"Unidad medida base", type text}, {"Período contable", Int64.Type}, {"Clave de país", type text}, {"Región SAP", type text}, {"Población SAP", type text}, {"Grupo de vendedores", type text}, {"Pagador/ Responsable de Pago", Int64.Type}, {"Emisor Orden/ Solicitante", Int64.Type}, {"Customer number (Bill-to", Int64.Type}, {"Destinatario", Int64.Type}, {"Grupo de clientes 2", type text}, {"Atributo 6", type text}, {"Atributo 7", type text}, {"Atributo 10", type text}, {"Clase de factura", type any}, {"Nombre del usuario", type text}, {"Texto", type text}, {"Nº documento", Int64.Type}, {"Cantidad", Int64.Type}, {"Moneda de sociedad", type number}, {"Fe.contabilización", type datetime}, {"Fecha de entrada", type datetime}, {"Fecha valor", type datetime}, {"Documento comercial", Int64.Type}, {"Hora de entrada", type datetime}, {"Moneda transacción", type number}, {"Clave Moneda transacción", type text}, {"Moneda fuerte", type number}, {"Clave Moneda fuerte", type text}, {"Nº doc.referencia", Int64.Type}, {"Nº documento2", Int64.Type}, {"Incoterms", type text}, {"Incoterms, parte 2", type text}, {"Clase de documento", type text}, {"Cond. Pago", type text}, {"Días 1", Int64.Type}, {"E", type text}, {"TIPO DE EMBALAJE", type text}, {"NOMBRE DE PRODUCTO", type text}, {"VOLUMEN TONELADAS", type number}, {"NOMBRE PAGADOR", type text}, {"NOMBRE SOLICITANTE", type text}, {"VENDEDOR SAP", type text}, {"VENDEDOR", type text}, {"VENDEDOR OK", type text}, {"GERENCIA", type text}, {"EQUIPO", type text}, {"CANAL", type text}, {"SUB CANAL", type text}, {"DIA", Int64.Type}, {"MES", Int64.Type}, {"AÑO", Int64.Type}, {"TIPO DE VENTA", type text}, {"LOCALIDAD",  type text}, {"PROVINCIA", type text}, {"DPTO",  type text}, {"REGION M",  type text}, {"INGRESO BRUTO", type number}, {"DPTO PAGADOR", type any}, {"LOCALIDAD PAGADOR", type any}, {"CÓDIGO CLIENTE", Int64.Type}, {"BONIFICACIONES", type any}}),
+    #"Columnas con nombre cambiado" = Table.RenameColumns(#"Tipo cambiado",{{"BONIFICACIONES", "Bonificaciones"}}),
+    #"Columnas quitadas" = Table.RemoveColumns(#"Columnas con nombre cambiado",{"LOCALIDAD PAGADOR", "CÓDIGO CLIENTE", "Nº de transporte"}),
+    #"Tipo cambiado1" = Table.TransformColumnTypes(#"Columnas quitadas",{{"Bonificaciones", type number}, {"Clase de factura", type text}, {"CENTRO DE DISTRIBUCIÓN", type text}, {"ZONA DE ENTREGA", type text}, {"NOMBRE DESTINATARIO", type text}}),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Tipo cambiado1",null,0,Replacer.ReplaceValue,{"Bonificaciones"}),
+    #"Columnas reordenadas" = Table.ReorderColumns(#"Valor reemplazado",{"Ejercicio", "Sociedad", "Organización ventas", "Centro", "División", "Oficina de ventas", "Canal distribución", "Sector", "Número de cuenta", "Centro de beneficio", "Material", "Unidad medida base", "Período contable", "Clave de país", "Región SAP", "Población SAP", "Grupo de vendedores", "Pagador/ Responsable de Pago", "Emisor Orden/ Solicitante", "Customer number (Bill-to", "Destinatario", "Grupo de clientes 2", "Atributo 6", "Atributo 7", "Atributo 10", "Clase de factura", "Nombre del usuario", "Texto", "Nº documento", "Cantidad", "Moneda de sociedad", "Fe.contabilización", "Fecha de entrada", "Fecha valor", "Documento comercial", "Hora de entrada", "Moneda transacción", "Clave Moneda transacción", "Moneda fuerte", "Clave Moneda fuerte", "Nº doc.referencia", "Nº documento2", "Incoterms", "Incoterms, parte 2", "Clase de documento", "Cond. Pago", "Días 1", "E", "TIPO DE EMBALAJE", "NOMBRE DE PRODUCTO", "VOLUMEN TONELADAS", "NOMBRE PAGADOR", "NOMBRE SOLICITANTE", "VENDEDOR SAP", "VENDEDOR", "VENDEDOR OK", "GERENCIA", "EQUIPO", "CANAL", "SUB CANAL", "DIA", "MES", "AÑO", "TIPO DE VENTA", "LOCALIDAD", "PROVINCIA", "DPTO", "REGION M", "INGRESO BRUTO", "DPTO PAGADOR", "Bonificaciones", "CENTRO DE DISTRIBUCIÓN", "ZONA DE ENTREGA", "NOMBRE DESTINATARIO"})
+in
+    #"Columnas reordenadas";
+
+shared #"H DESPACHOS" = let
+    Origen = Excel.Workbook(File.Contents("C:\Users\yasminzt\OneDrive - Votorantim\IM\BASE REPORTES\Actualizacion\archivos\HISTORIAL VENTAS.xlsx"), null, true),
+    DESPACHOS_Sheet = Origen{[Item="DESPACHOS",Kind="Sheet"]}[Data],
+    #"Encabezados promovidos" = Table.PromoteHeaders(DESPACHOS_Sheet, [PromoteAllScalars=true]),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"Centro Proveedor", type text}, {"Ds Centro Proveedor", type text}, {"Material", Int64.Type}, {"Ds Material", type text}, {"Día natural", type date}, {"Documento venta", Int64.Type}, {"Cod. Destinatario mcía.", Int64.Type}, {"Destinatario mcía.", type text}, {"Población", type text}, {"Incoterms", type text}, {"Clase doc.ventas", type text}, {"Cod. Centro Receptor", type text}, {"Ds Centro Receptor", type text}, {"Atributo 7", type text}, {"Departamento Facturación", type text}, {"Clase de expedición", type text}, {"VC - Embalaje", type text}, {"Cod.Transportista", Int64.Type}, {"Transportista", type text}, {"Nombre", type text}, {"Teléfono 1", Int64.Type}, {"Tipo de Servicio Transporte", type text}, {"Placa", type text}, {"Tp. vehiculo", type text}, {"Ruta", type text}, {"Ds Ruta", type text}, {"Distancia(KM)", type text}, {"Nº transporte", Int64.Type}, {"Distancia", Int64.Type}, {"Cantidad", type number}, {"Despacho(t)", type number}, {"Departamento", type text}, {"Traslados (t)", Int64.Type}, {"Mes", Int64.Type}, {"Año", Int64.Type}, {"Grupo de Producto", type text}, {"Tipo de Traslado", type text}, {"Producto", type text}, {"Centro de Distribución", type text}, {"LINK", type text}, {"Provincia", type text}, {"Semana Año", Int64.Type}, {"Traslados", Int64.Type}, {"Zona de descarga", type text}, {"CD", type text}, {"Localidad", type text}, {"Tipo de venta", type text}, {"VENDEDOR", type text}, {"DESARROLLADOR", type text}, {"CODIGO CLIENTE", Int64.Type}, {"EQUIPO", type text}, {"LOCALIDAD IM", type text}, {"INCOTERMS IM", type text}, {"GERENCIA", type text}, {"Semana", type text}, {"x", type text}, {"XX", type any}, {"Columna1", type any}, {"Columna2", type any}})
+in
+    #"Tipo cambiado";
+
+shared #"H VENTAS" = let
+    Origen = Excel.Workbook(File.Contents("C:\Users\yasminzt\OneDrive - Votorantim\IM\BASE REPORTES\Actualizacion\archivos\HISTORIAL VENTAS.xlsx"), null, true),
+    VENTAS_Sheet = Origen{[Item="VENTAS",Kind="Sheet"]}[Data],
+    #"Encabezados promovidos" = Table.PromoteHeaders(VENTAS_Sheet, [PromoteAllScalars=true]),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Encabezados promovidos",{{"Ejercicio", Int64.Type}, {"Sociedad", Int64.Type}, {"Organización ventas", Int64.Type}, {"Centro", type text}, {"División", type text}, {"Oficina de ventas", type text}, {"Canal distribución", Int64.Type}, {"Sector", type text}, {"Número de cuenta", Int64.Type}, {"Centro de beneficio", type text}, {"Material", Int64.Type}, {"Unidad medida base", type text}, {"Período contable", Int64.Type}, {"Clave de país", type text}, {"Región SAP", type text}, {"Población SAP", type text}, {"Grupo de vendedores", type text}, {"Pagador/ Responsable de Pago", Int64.Type}, {"Emisor Orden/ Solicitante", Int64.Type}, {"Customer number (Bill-to", Int64.Type}, {"Destinatario", Int64.Type}, {"Grupo de clientes 2", Int64.Type}, {"Atributo 6", type text}, {"Atributo 7", type text}, {"Atributo 10", type text}, {"Clase de factura", type text}, {"Nombre del usuario", type text}, {"Texto", type text}, {"Nº documento", Int64.Type}, {"Cantidad", type number}, {"Moneda de sociedad", type number}, {"Fe.contabilización", type date}, {"Fecha de entrada", type date}, {"Fecha valor", type date}, {"Documento comercial", Int64.Type}, {"Hora de entrada", type datetime}, {"Moneda transacción", type number}, {"Clave Moneda transacción", type text}, {"Moneda fuerte", type number}, {"Clave Moneda fuerte", type text}, {"Nº doc.referencia", Int64.Type}, {"Nº documento2", Int64.Type}, {"Incoterms", type text}, {"Incoterms, parte 2", type text}, {"Clase de documento", type text}, {"Cond. Pago", type text}, {"Días 1", Int64.Type}, {"E", type text}, {"TIPO DE EMBALAJE", type text}, {"NOMBRE DE PRODUCTO", type text}, {"VOLUMEN TONELADAS", type number}, {"NOMBRE PAGADOR", type any}, {"NOMBRE SOLICITANTE", type text}, {"VENDEDOR SAP", type text}, {"VENDEDOR", type text}, {"VENDEDOR OK", type text}, {"GERENCIA", type text}, {"EQUIPO", type text}, {"CANAL", type text}, {"SUB CANAL", type text}, {"DIA", Int64.Type}, {"MES", Int64.Type}, {"AÑO", Int64.Type}, {"TIPO DE VENTA", type text}, {"LOCALIDAD", type text}, {"PROVINCIA", type text}, {"DPTO", type text}, {"REGION M", type text}, {"INGRESO BRUTO", type number}, {"DPTO PAGADOR", type text}, {"Bonificaciones", type text}, {"CENTRO DE DISTRIBUCIÓN", type text}, {"ZONA DE ENTREGA", type text}, {"NOMBRE DESTINATARIO", type text}}),
+    #"Errores reemplazados" = Table.ReplaceErrorValues(#"Tipo cambiado", {{"DPTO PAGADOR", " "}}),
+    #"Filas en blanco eliminadas" = Table.SelectRows(#"Errores reemplazados", each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null}))),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Filas en blanco eliminadas",null,"0",Replacer.ReplaceValue,{"Bonificaciones"})
+in
+    #"Valor reemplazado";
+
+shared #"DESPACHOS BI" = let
+    Origen = Table.Combine({#"H DESPACHOS", DESPACHO}),
+    #"Columnas quitadas" = Table.RemoveColumns(Origen,{ "Día"}),
+    #"Errores reemplazados" = Table.ReplaceErrorValues(#"Columnas quitadas", {{"GERENCIA", " "}}),
+    #"Errores reemplazados1" = Table.ReplaceErrorValues(#"Errores reemplazados", {{"EQUIPO", " "}}),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Errores reemplazados1","AGENCIA","VENTA INDIRECTA",Replacer.ReplaceText,{"Tipo de venta"}),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Valor reemplazado",{{"x", Int64.Type}})
+in
+    #"Tipo cambiado";
+
+shared #"VENTAS BI" = let
+    Origen = Table.Combine({#"H VENTAS", BASEGD20}),
+    #"Errores reemplazados1" = Table.ReplaceErrorValues(Origen, {{"DPTO PAGADOR", " "}}),
+    #"Filas en blanco eliminadas" = Table.SelectRows(#"Errores reemplazados1", each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null}))),
+    #"Errores reemplazados" = Table.ReplaceErrorValues(#"Filas en blanco eliminadas", {{"DPTO PAGADOR", " "}}),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Errores reemplazados",{{"Fe.contabilización", type date}, {"Fecha de entrada", type date}, {"Fecha valor", type date}, {"Bonificaciones", type number}}),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Tipo cambiado","AGENCIA","VENTA INDIRECTA",Replacer.ReplaceText,{"TIPO DE VENTA"}),
+    #"Tipo cambiado1" = Table.TransformColumnTypes(#"Valor reemplazado",{{"NOMBRE DESTINATARIO", type text}, {"ZONA DE ENTREGA", type text}, {"CENTRO DE DISTRIBUCIÓN", type text}, {"DPTO PAGADOR", type text}}),
+    #"Valor reemplazado1" = Table.ReplaceValue(#"Tipo cambiado1","GENERIC","EXPORTACION",Replacer.ReplaceText,{"DPTO"}),
+    #"Valor reemplazado2" = Table.ReplaceValue(#"Valor reemplazado1","GENERIC","EXPORTACION",Replacer.ReplaceText,{"REGION M"}),
+    #"Valor reemplazado3" = Table.ReplaceValue(#"Valor reemplazado2","GENERIC","EXPORTACION",Replacer.ReplaceText,{"DPTO PAGADOR"})
+in
+    #"Valor reemplazado3";
+
+shared CLIENTES = let
+    Origen = Excel.Workbook(File.Contents("C:\Users\yasminzt\OneDrive - Votorantim\IM\BASE REPORTES\Actualizacion\archivos\CARTERA.xlsx"), null, true),
+    Q_VCBO_ZSDI_I03_CAD_CLIENTE_000_Sheet = Origen{[Item="Q_VCBO_ZSDI_I03_CAD_CLIENTE_000",Kind="Sheet"]}[Data],
+    #"Columnas con nombre cambiado1" = Table.RenameColumns(Q_VCBO_ZSDI_I03_CAD_CLIENTE_000_Sheet,{{"Column1", "Cliente"}, {"Column3", "Attribute 10"}, {"Column4", "Población"}, {"Column5", "Barrio"}, {"Column6", "Attribute 7"}, {"Column7", "Attribute 6"}, {"Column8", "Región"}, {"Column10", "Grupo de cuentas"}, {"Column12", "Teléfono"}, {"Column13", "N.I.F 1"}, {"Column14", "Código postal"}, {"Column15", "GCD: CódEmplazFiscal"}, {"Column16", "Calle"}, {"Column17", "Inclusion date"}, {"Column18", "Tipo de operación"}, {"Column19", "ZEMAILADD"}, {"Column20", "ZVCRISK"}, {"Column21", "Vía de pago"}, {"Column22", "Sector"}, {"Column24", "Canal Distribución"}, {"Column26", "Organización de Ventas"}, {"Column28", "Oficina de Ventas"}, {"Column30", "Grupo de vendedores"}, {"Column32", "Representante ventas"}, {"Column34", "Coordinador Ventas"}, {"Column35", "Coordinador"}, {"Column37", "Canal"}, {"Column36", "Trilha"}, {"Column38", "Condición pago"}, {"Column39", "Contador"}, {"Column33", "Vendedor"}, {"Column31", "Equipo"}}),
+    #"Filas superiores quitadas" = Table.Skip(#"Columnas con nombre cambiado1",7),
+    #"Tipo cambiado" = Table.TransformColumnTypes(#"Filas superiores quitadas",{{"Cliente", Int64.Type}, {"Inclusion date", type date}}),
+    #"Texto en mayúsculas" = Table.TransformColumns(#"Tipo cambiado",{{"Column9", Text.Upper, type text}}),
+    #"Valor reemplazado" = Table.ReplaceValue(#"Texto en mayúsculas","POTOSÍ","POTOSI",Replacer.ReplaceText,{"Column9"}),
+    #"Columnas quitadas" = Table.RemoveColumns(#"Valor reemplazado",{"Attribute 10", "Población", "Barrio", "Attribute 7", "Attribute 6", "Región", "Grupo de cuentas", "Column11", "Teléfono", "N.I.F 1", "Código postal", "GCD: CódEmplazFiscal", "Calle", "Inclusion date", "Tipo de operación", "ZEMAILADD", "ZVCRISK", "Vía de pago", "Sector", "Column23", "Canal Distribución", "Column25", "Organización de Ventas", "Column27", "Oficina de Ventas", "Column29", "Grupo de vendedores", "Equipo", "Representante ventas", "Vendedor", "Coordinador Ventas", "Coordinador", "Trilha", "Condición pago", "Contador"}),
+    #"Duplicados quitados1" = Table.Distinct(#"Columnas quitadas", {"Cliente"}),
+    #"Columnas con nombre cambiado" = Table.RenameColumns(#"Duplicados quitados1",{{"Column9", "DPTO"}})
+in
+    #"Columnas con nombre cambiado";
