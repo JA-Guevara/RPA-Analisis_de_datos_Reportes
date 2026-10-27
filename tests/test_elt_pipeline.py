@@ -624,6 +624,29 @@ class TestEltPipeline(unittest.TestCase):
         finally:
             conn_mod.set_engine(orig_engine)
 
+    def test_cli_argument_normalization(self):
+        from unittest.mock import patch
+        from itacamba_reportes.cli import main
+
+        with patch("itacamba_reportes.cli.run_all", return_value=0) as mock_run_all, \
+             patch("itacamba_reportes.cli.ensure_schema_current"):
+            # Probar 'run all' con espacio
+            res = main(["run", "all"])
+            self.assertEqual(res, 0)
+            mock_run_all.assert_called_once()
+
+            # Probar 'run_all' con guion bajo
+            mock_run_all.reset_mock()
+            res2 = main(["run_all"])
+            self.assertEqual(res2, 0)
+            mock_run_all.assert_called_once()
+
+            # Probar sin argumentos (default)
+            mock_run_all.reset_mock()
+            res3 = main([])
+            self.assertEqual(res3, 0)
+            mock_run_all.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -92,9 +92,25 @@ def run_all(force_cartera: bool = False, is_fin_de_mes: bool = False, corte_fech
 
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
-        argv = sys.argv[1:]
+        argv = list(sys.argv[1:])
     if not argv:
         argv = ["run-all"]
+    elif len(argv) >= 2 and argv[0] == "run" and argv[1] == "all":
+        argv = ["run-all"] + argv[2:]
+    elif len(argv) >= 2 and argv[0] == "clean" and argv[1] == "db":
+        argv = ["clean-db"] + argv[2:]
+    elif len(argv) >= 2 and argv[0] == "init" and argv[1] == "db":
+        argv = ["init-db"] + argv[2:]
+    elif len(argv) >= 2 and argv[0] == "test" and argv[1] == "db":
+        argv = ["test-db"] + argv[2:]
+    elif argv and argv[0] in ("run_all", "all"):
+        argv = ["run-all"] + argv[1:]
+    elif argv and argv[0] in ("clean_db", "cleandb"):
+        argv = ["clean-db"] + argv[1:]
+    elif argv and argv[0] in ("init_db", "initdb"):
+        argv = ["init-db"] + argv[1:]
+    elif argv and argv[0] in ("test_db", "testdb"):
+        argv = ["test-db"] + argv[1:]
 
     parser = argparse.ArgumentParser(
         prog="itacamba-reportes",
