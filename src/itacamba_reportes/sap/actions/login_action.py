@@ -23,9 +23,10 @@ def execute_login(
     selectors: SelectoresLogin | None = None,
 ) -> None:
     sel = selectors or SELECTORES_SAP.login
-    usr = user or os.getenv("SAP_USER")
-    pwd = password or os.getenv("SAP_PASSWORD")
-    mandante = client or os.getenv("SAP_MANDANTE", "300")
+    from itacamba_reportes.core.settings import EnvConfig
+    usr = user or os.getenv("SAP_USER") or os.getenv("SAP_USUARIO") or EnvConfig.SAP_USER
+    pwd = password or os.getenv("SAP_PASSWORD") or EnvConfig.SAP_PASSWORD
+    mandante = client or os.getenv("SAP_MANDANTE") or EnvConfig.SAP_MANDANTE or "300"
 
     if not usr or not pwd:
         raise SapLoginError("Credenciales de SAP no proporcionadas en argumentos ni en variables de entorno (SAP_USER, SAP_PASSWORD)")

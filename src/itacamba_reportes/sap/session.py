@@ -93,7 +93,8 @@ class SapSessionManager:
         # Abre una conexion hacia el ambiente SAP especificado por nombre exacto en SAP Logon.
         from itacamba_reportes.core.settings import EnvConfig
 
-        target_ambient = ambient or os.getenv("SAP_AMBIENT") or EnvConfig.SAP_AMBIENT
+        raw_ambient = ambient or os.getenv("SAP_AMBIENT") or EnvConfig.SAP_AMBIENT
+        target_ambient = str(raw_ambient).strip().strip('"').strip("'")
         logger.info("Abriendo conexion SAP al ambiente: %s", target_ambient)
 
         if self._application is None:
@@ -127,7 +128,8 @@ class SapSessionManager:
         if auto_launch and not self.is_saplogon_running():
             self.launch_saplogon()
 
-        target_ambient = ambient or EnvConfig.SAP_AMBIENT
+        raw_ambient = ambient or EnvConfig.SAP_AMBIENT
+        target_ambient = str(raw_ambient).strip().strip('"').strip("'")
         session = self.open_connection(target_ambient)
         self.maximize()
 

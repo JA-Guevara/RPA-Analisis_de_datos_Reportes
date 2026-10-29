@@ -19,3 +19,6 @@ def execute_logout(
         logger.info("Cierre de sesion SAP ejecutado (/nex)")
     except Exception as exc:
         logger.warning("No se pudo ejecutar el cierre forzado de sesion: %s", exc)
+    finally:
+        session_manager._session = None
+        session_manager._connection = None

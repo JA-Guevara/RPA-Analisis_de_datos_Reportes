@@ -120,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
 
     subparsers.add_parser("test-db", help="Verifica la conexión a SQL Server y muestra diagnóstico detallado.")
     p_test_sap = subparsers.add_parser("test-sap", help="Verifica la conexión a SAP GUI y realiza diagnóstico o prueba de descarga.")
+    p_test_sap.add_argument("--action", choices=["diagnostic", "launch", "login", "logout", "full-auth", "kill", "download"], default=None, help="Acción específica a ejecutar.")
     p_test_sap.add_argument("--check-only", action="store_true", help="Solo verifica la conexión sin descargar.")
     p_test_sap.add_argument("--task", choices=["gd20", "zbcs", "cartera"], default=None, help="Tarea a descargar (gd20, zbcs, cartera).")
     p_test_sap.add_argument("--out-dir", default=None, help="Carpeta de destino para el archivo descargado.")
@@ -219,6 +220,8 @@ def main(argv: list[str] | None = None) -> int:
                 sys.path.insert(0, str(scripts_dir))
             from test_sap import main as run_test_sap
             test_args = []
+            if getattr(args, "action", None):
+                test_args.extend(["--action", args.action])
             if getattr(args, "check_only", False):
                 test_args.append("--check-only")
             if getattr(args, "task", None):
