@@ -99,6 +99,8 @@ def main(argv: list[str] | None = None) -> int:
         argv = ["init-db"] + argv[2:]
     elif len(argv) >= 2 and argv[0] == "test" and argv[1] == "db":
         argv = ["test-db"] + argv[2:]
+    elif len(argv) >= 2 and argv[0] == "test" and argv[1] == "sap":
+        argv = ["test-sap"] + argv[2:]
     elif argv and argv[0] in ("run_all", "all"):
         argv = ["run-all"] + argv[1:]
     elif argv and argv[0] in ("clean_db", "cleandb"):
@@ -107,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
         argv = ["init-db"] + argv[1:]
     elif argv and argv[0] in ("test_db", "testdb"):
         argv = ["test-db"] + argv[1:]
+    elif argv and argv[0] in ("test_sap", "testsap"):
+        argv = ["test-sap"] + argv[1:]
 
     parser = argparse.ArgumentParser(
         prog="itacamba-reportes",
@@ -115,6 +119,12 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("test-db", help="Verifica la conexión a SQL Server y muestra diagnóstico detallado.")
+    p_test_sap = subparsers.add_parser("test-sap", help="Verifica la conexión a SAP GUI y realiza diagnóstico o prueba de descarga.")
+    p_test_sap.add_argument("--check-only", action="store_true", help="Solo verifica la conexión sin descargar.")
+    p_test_sap.add_argument("--task", choices=["gd20", "zbcs", "cartera"], default=None, help="Tarea a descargar (gd20, zbcs, cartera).")
+    p_test_sap.add_argument("--out-dir", default=None, help="Carpeta de destino para el archivo descargado.")
+    p_test_sap.add_argument("--kill", action="store_true", help="Cierra procesos de SAPGUI/SAP Logon activos.")
+    p_test_sap.add_argument("--launch", action="store_true", help="Inicia SAP Logon y conecta al ambiente automáticamente.")
     p_clean = subparsers.add_parser("clean-db", help="Limpia/vacia todas las tablas de la base de datos y resetea firmas de estado.")
     p_clean.add_argument("--force", "-y", action="store_true", help="Omite la confirmación interactiva.")
     p_clean.add_argument("--drop", action="store_true", help="Elimina las tablas por completo (DROP) en lugar de solo vaciarlas (TRUNCATE/DELETE).")
@@ -201,6 +211,25 @@ def main(argv: list[str] | None = None) -> int:
                 logger.info("Versión           : %s", v_str)
                 logger.info("==================================================")
             return 0
+
+        if args.command == "test-sap":
+            root_dir = Path(__file__).resolve().parents[2]
+            scripts_dir = root_dir / "scripts"
+            if str(scripts_dir) not in sys.path:
+                sys.path.insert(0, str(scripts_dir))
+            from test_sap import main as run_test_sap
+            test_args = []
+            if getattr(args, "check_only", False):
+                test_args.append("--check-only")
+            if getattr(args, "task", None):
+                test_args.extend(["--task", args.task])
+            if getattr(args, "out_dir", None):
+                test_args.extend(["--out-dir", args.out_dir])
+            if getattr(args, "kill", False):
+                test_args.append("--kill")
+            if getattr(args, "launch", False):
+                test_args.append("--launch")
+            return run_test_sap(test_args)
 
         if args.command == "init-db":
             upgrade_db(reset_alembic=getattr(args, "reset_alembic", False))

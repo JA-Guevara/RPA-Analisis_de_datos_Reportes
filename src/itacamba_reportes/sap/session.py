@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import subprocess
 import time
 from typing import Any
 
@@ -29,6 +31,125 @@ class SapSessionManager:
         self._connection: Any = None
         self._session: Any = None
 
+    @staticmethod
+    def kill_sap_processes() -> list[str]:
+        # Cierra de forma forzada procesos colgados de SAP GUI y SAP Logon.
+        killed: list[str] = []
+        for proc in ("saplogon.exe", "sapgui.exe"):
+            try:
+                res = subprocess.run(
+                    ["taskkill", "/F", "/IM", proc, "/T"],
+                    capture_output=True,
+                    text=True,
+                )
+                if res.returncode == 0:
+                    killed.append(proc)
+            except Exception:
+                pass
+        time.sleep(1.0)
+        if killed:
+            logger.info("Procesos SAP cerrados: %s", ", ".join(killed))
+        return killed
+
+    @staticmethod
+    def is_saplogon_running() -> bool:
+        # Comprueba si el ejecutable saplogon o sapgui esta activo en Windows.
+        try:
+            output = subprocess.check_output(
+                ["tasklist", "/FI", "IMAGENAME eq sap*", "/FO", "CSV", "/NH"],
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="ignore",
+            )
+            return any("saplogon" in line.lower() or "sapgui" in line.lower() for line in output.splitlines())
+        except Exception:
+            return False
+
+    @classmethod
+    def launch_saplogon(cls, sap_path: str | None = None, wait_timeout: float = 30.0) -> None:
+        # Inicia SAP Logon en segundo plano si no esta en ejecucion y espera al scripting engine.
+        from itacamba_reportes.core.settings import EnvConfig
+
+        executable = sap_path or os.getenv("SAP_LOGON_PATH") or os.getenv("SAP_URL") or EnvConfig.SAP_LOGON_PATH
+        if not cls.is_saplogon_running():
+            logger.info("Iniciando SAP Logon desde: %s", executable)
+            subprocess.Popen([executable])
+            time.sleep(3.0)
+
+        import win32com.client
+        start = time.perf_counter()
+        while time.perf_counter() - start < wait_timeout:
+            try:
+                sap_gui_auto = win32com.client.GetObject("SAPGUI")
+                if sap_gui_auto and sap_gui_auto.GetScriptingEngine:
+                    logger.info("Scripting Engine de SAPGUI detectado y listo")
+                    return
+            except Exception:
+                time.sleep(0.5)
+        raise SapConnectionError(f"Tiempo de espera agotado ({wait_timeout}s) esperando a SAP Logon / SAPGUI")
+
+    def open_connection(self, ambient: str | None = None, sync: bool = True) -> Any:
+        # Abre una conexion hacia el ambiente SAP especificado por nombre exacto en SAP Logon.
+        from itacamba_reportes.core.settings import EnvConfig
+
+        target_ambient = ambient or os.getenv("SAP_AMBIENT") or EnvConfig.SAP_AMBIENT
+        logger.info("Abriendo conexion SAP al ambiente: %s", target_ambient)
+
+        if self._application is None:
+            import win32com.client
+            sap_gui_auto = win32com.client.GetObject("SAPGUI")
+            self._application = sap_gui_auto.GetScriptingEngine
+
+        if self._application.Connections.Count == 0:
+            self._connection = self._application.OpenConnection(target_ambient, sync)
+        else:
+            self._connection = self._application.Children(self.connection_index)
+
+        time.sleep(1.0)
+        self._session = self._connection.Children(self.session_index)
+        logger.info("Sesion de SAP vinculada en conexion al ambiente '%s'", target_ambient)
+        return self._session
+
+    def ensure_connected_and_ready(
+        self,
+        ambient: str | None = None,
+        auto_launch: bool = True,
+        kill_existing: bool = False,
+    ) -> Any:
+        # Ciclo completo de inicializacion: mata si se pide, arranca, conecta, y maneja SSO o login clasico.
+        from itacamba_reportes.core.settings import EnvConfig
+        from itacamba_reportes.sap.actions.login_action import execute_login
+
+        if kill_existing:
+            self.kill_sap_processes()
+
+        if auto_launch and not self.is_saplogon_running():
+            self.launch_saplogon()
+
+        target_ambient = ambient or EnvConfig.SAP_AMBIENT
+        session = self.open_connection(target_ambient)
+        self.maximize()
+
+        time.sleep(0.5)
+        wnd_title = ""
+        try:
+            wnd_title = session.ActiveWindow.Text or ""
+        except Exception:
+            pass
+
+        if "Easy Access" in wnd_title or "Menú" in wnd_title or "SAP" in wnd_title:
+            logger.info("SSO activo detectado en SAP (%s). Sesion lista.", wnd_title)
+        else:
+            execute_login(
+                self,
+                user=EnvConfig.SAP_USER,
+                password=EnvConfig.SAP_PASSWORD,
+                client=EnvConfig.SAP_MANDANTE,
+            )
+
+        return session
+
     def connect(self) -> Any:
         try:
             import win32com.client
@@ -45,6 +166,10 @@ class SapSessionManager:
             ) from exc
 
         try:
+            if self._application.Connections.Count == 0:
+                from itacamba_reportes.core.settings import EnvConfig
+                return self.open_connection(EnvConfig.SAP_AMBIENT)
+
             self._connection = self._application.Children(self.connection_index)
             self._session = self._connection.Children(self.session_index)
             logger.info("Sesion de SAP GUI vinculada exitosamente")

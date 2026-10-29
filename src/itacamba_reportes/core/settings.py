@@ -72,3 +72,14 @@ class EnvConfig:
     DB_PASSWORD: str | None = _get_env("DB_PASSWORD")
     DB_DRIVER: str = _get_env("DB_DRIVER", default="SQL Server")
     DB_TRUST_CERT: bool = _get_bool("DB_TRUST_CERT", default="yes")
+
+    # SAP GUI Scripting & RPA
+    SAP_LOGON_PATH: str = str(_get_env("SAP_LOGON_PATH", default=_get_env("SAP_URL", default=r"C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe")))
+    SAP_PROCESS: str = str(_get_env("SAP_PROCESS", default=_get_env("SAP_PROCCESS", default="saplogon.exe")))
+    SAP_WINDOW_TITLE: str = str(_get_env("SAP_WINDOW_TITLE", default="SAP Logon 770"))
+    SAP_AMBIENT: str = str(_get_env("SAP_AMBIENT", default="# -E05 - S4 RISE - Produção SSO"))
+    SAP_MANDANTE: str = str(_get_env("SAP_MANDANTE", default="300"))
+    SAP_SISTEMA: str = str(_get_env("SAP_SISTEMA", default="E05"))
+    SAP_IDIOMA: str = str(_get_env("SAP_IDIOMA", default="ES"))
+    SAP_USER: str | None = _get_env("SAP_USER", default=_get_env("SAP_USUARIO"))
+    SAP_PASSWORD: str | None = _get_env("SAP_PASSWORD")
