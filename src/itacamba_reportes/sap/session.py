@@ -166,7 +166,7 @@ class SapSessionManager:
             pass
 
         # Si existe el campo de usuario de login, es obligatorio ingresar credenciales
-        if self.element_exists(SELECTORES_SAP.login.usuario):
+        if self.element_exists(SELECTORES_SAP.login.usuario, timeout=5.0):
             logger.info("Detectada pantalla de login en SAP (campo de usuario visible). Ejecutando autenticacion...")
             execute_login(
                 self,
@@ -238,11 +238,22 @@ class SapSessionManager:
             elapsed += step
         raise SapElementNotFoundError(f"Elemento SAP no encontrado tras {timeout:.1f}s: {selector}")
 
-    def element_exists(self, selector: str) -> bool:
-        try:
-            return self.session.findById(selector) is not None
-        except Exception:
-            return False
+    def element_exists(self, selector: str, timeout: float = 0.0, step: float = 0.5) -> bool:
+        if timeout <= 0.0:
+            try:
+                return self.session.findById(selector) is not None
+            except Exception:
+                return False
+        elapsed = 0.0
+        while elapsed < timeout:
+            try:
+                if self.session.findById(selector) is not None:
+                    return True
+            except Exception:
+                pass
+            time.sleep(step)
+            elapsed += step
+        return False
 
     def set_text(self, selector: str, text_value: str, timeout: float = 5.0) -> None:
         el = self.find_element(selector, timeout=timeout)

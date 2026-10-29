@@ -34,8 +34,8 @@ def execute_login(
 
     session_manager.maximize(SELECTORES_SAP.ventana.main)
 
-    # Paso 1: Verificacion de pantalla de autenticacion
-    if session_manager.element_exists(sel.usuario):
+    # Paso 1: Verificacion de pantalla de autenticacion con espera
+    if session_manager.element_exists(sel.usuario, timeout=5.0):
         logger.info("Ingresando credenciales de usuario SAP: %s (Mandante: %s)", usr, mandante)
 
         if session_manager.element_exists(sel.mandante) and mandante:
