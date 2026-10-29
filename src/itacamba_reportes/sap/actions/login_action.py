@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Any
 
+from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.sap.exceptions import SapLoginError
 from itacamba_reportes.sap.selectors import (
     SELECTORES_SAP,
@@ -23,7 +25,6 @@ def execute_login(
     selectors: SelectoresLogin | None = None,
 ) -> None:
     sel = selectors or SELECTORES_SAP.login
-    from itacamba_reportes.core.settings import EnvConfig
     usr = user or os.getenv("SAP_USER") or os.getenv("SAP_USUARIO") or EnvConfig.SAP_USER
     pwd = password or os.getenv("SAP_PASSWORD") or EnvConfig.SAP_PASSWORD
     mandante = client or os.getenv("SAP_MANDANTE") or EnvConfig.SAP_MANDANTE or "300"
@@ -35,27 +36,38 @@ def execute_login(
 
     # Paso 1: Verificacion de pantalla de autenticacion
     if session_manager.element_exists(sel.usuario):
-        logger.info("Ingresando credenciales de usuario SAP: %s", usr)
-        session_manager.set_text(sel.usuario, usr)
-        session_manager.set_text(sel.password, pwd)
+        logger.info("Ingresando credenciales de usuario SAP: %s (Mandante: %s)", usr, mandante)
 
         if session_manager.element_exists(sel.mandante) and mandante:
-            session_manager.set_text(sel.mandante, mandante)
+            session_manager.set_text(sel.mandante, str(mandante))
+
+        session_manager.set_text(sel.usuario, str(usr))
+        session_manager.set_text(sel.password, str(pwd))
 
         if session_manager.element_exists(sel.lenguaje) and lang:
-            session_manager.set_text(sel.lenguaje, lang)
+            session_manager.set_text(sel.lenguaje, str(lang))
 
-        # Paso 2: Envio de credenciales
+        # Paso 2: Envio de credenciales (Enter)
         session_manager.send_vkey(SELECTORES_SAP.barra.btn_enter_key, window_id=SELECTORES_SAP.ventana.main)
+        time.sleep(1.0)
 
-        # Paso 3: Gestion de concurrencia y sesiones previas
+        # Paso 3: Gestion de concurrencia y sesiones previas (Multi-Logon)
         session_manager.handle_multilogon_if_present(selectors=sel)
 
-        # Paso 4: Validacion de mensajes de error en barra de estado
+        # Paso 4: Cerrar modal informativo si existe (ej. password por vencer, avisos)
+        try:
+            active_name = getattr(session_manager.session.ActiveWindow, "Name", "")
+            if active_name != "wnd[0]":
+                session_manager.session.findById(f"{active_name}/tbar[0]/btn[0]").press()
+                time.sleep(0.5)
+        except Exception:
+            pass
+
+        # Paso 5: Validacion de mensajes de error en barra de estado
         msg_type, msg_text = session_manager.get_status_message()
-        if msg_type == "E":
+        if msg_type in ("E", "A"):
             raise SapLoginError(f"Error de login en SAP: {msg_text}")
 
-        logger.info("Autenticacion en SAP completada")
+        logger.info("Autenticacion en SAP completada exitosamente")
     else:
         logger.info("Pantalla de login no detectada, sesion ya activa")

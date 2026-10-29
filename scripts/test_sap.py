@@ -19,6 +19,7 @@ from itacamba_reportes.core.logging_config import setup_logging
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.sap.config import SapDownloadConfig
 from itacamba_reportes.sap.session import SapSessionManager
+from itacamba_reportes.sap.selectors import SELECTORES_SAP
 from itacamba_reportes.sap.actions.login_action import execute_login
 from itacamba_reportes.sap.actions.logout_action import execute_logout
 from itacamba_reportes.sap.actions.download_action import execute_download_report
@@ -135,7 +136,6 @@ def action_launch_and_connect(ambient: str | None = None) -> bool:
     mgr = SapSessionManager()
     t0 = perf_counter()
     try:
-        print("-> Verificando ejecutable de SAP Logon...")
         if not SapSessionManager.is_saplogon_running():
             print("-> SAP Logon no está corriendo. Iniciando ejecutable...")
             mgr.launch_saplogon(sap_path=EnvConfig.SAP_LOGON_PATH, wait_timeout=30.0)
@@ -161,19 +161,16 @@ def action_launch_and_connect(ambient: str | None = None) -> bool:
     except Exception as exc:
         elapsed = perf_counter() - t0
         print(f"[ERROR] Falló al abrir o conectar ({elapsed:.2f}s): {exc}")
-        print("\nConsejo:")
-        print("  1. Verifique que el texto en SAP_AMBIENT sea exactamente idéntico al de SAP Logon.")
-        print("  2. Verifique que el Scripting esté habilitado en Opciones de SAP GUI.")
         print("==================================================")
         return False
 
 
 def action_login() -> bool:
     print("\n==================================================")
-    print("=== 3. PROBAR LOGIN / DETECTAR SSO EN SAP      ===")
+    print("=== 3. PROBAR LOGIN / AUTENTICACIÓN EN SAP     ===")
     print("==================================================")
-    print(f"Usuario configurado : {EnvConfig.SAP_USER}")
-    print(f"Mandante            : {EnvConfig.SAP_MANDANTE}")
+    print(f"Usuario objetivo : {EnvConfig.SAP_USER}")
+    print(f"Mandante         : {EnvConfig.SAP_MANDANTE}")
     print("--------------------------------------------------")
 
     mgr = SapSessionManager()
@@ -189,9 +186,7 @@ def action_login() -> bool:
         except Exception:
             pass
 
-        print(f"-> Analizando ventana actual: '{wnd_title}'...")
-
-        # Verificar si hay modal informativo o popup
+        # 1. Comprobar si hay modal emergente (multi-logon o avisos)
         if getattr(session.ActiveWindow, "Name", "") != "wnd[0]":
             print("-> Detectada ventana secundaria / popup...")
             if mgr.handle_multilogon_if_present():
@@ -203,12 +198,13 @@ def action_login() -> bool:
                 except Exception:
                     pass
 
-        # Deteccion de estado: Easy Access o pantalla de login clasica
-        if "Easy Access" in wnd_title or "Menú" in wnd_title or "SAP" in wnd_title:
-            print("[OK] ¡Single Sign-On (SSO) activo!")
-            print("     Ya estamos dentro del menú principal de SAP sin requerir contraseña.")
-        else:
-            print("-> Pantalla de login clásica detectada. Ingresando credenciales...")
+        # 2. Verificar si está en la pantalla de login tradicional
+        has_login_field = mgr.element_exists(SELECTORES_SAP.login.usuario)
+        usr_session = getattr(session.Info, "User", "").strip()
+        client_session = getattr(session.Info, "Client", "000")
+
+        if has_login_field:
+            print(f"-> Pantalla de login detectada. Ingresando credenciales (Usuario: {EnvConfig.SAP_USER}, Mandante: {EnvConfig.SAP_MANDANTE})...")
             execute_login(
                 mgr,
                 user=EnvConfig.SAP_USER,
@@ -216,16 +212,30 @@ def action_login() -> bool:
                 client=EnvConfig.SAP_MANDANTE,
                 lang=EnvConfig.SAP_IDIOMA,
             )
-            print("[OK] Login completado exitosamente.")
+            print("[OK] Formulario de autenticación enviado exitosamente.")
+        elif usr_session and client_session != "000":
+            print(f"[OK] ¡Sesión ya autenticada vía SSO! Usuario: {usr_session}, Mandante: {client_session}.")
+        else:
+            # Forzar intento de login
+            print("-> Verificando formulario de acceso...")
+            execute_login(
+                mgr,
+                user=EnvConfig.SAP_USER,
+                password=EnvConfig.SAP_PASSWORD,
+                client=EnvConfig.SAP_MANDANTE,
+                lang=EnvConfig.SAP_IDIOMA,
+            )
 
+        time.sleep(1.0)
         info = get_active_sap_session_info()
         elapsed = perf_counter() - t0
-        print(f"\n>>> SESIÓN ACTIVA Y LISTA ({elapsed:.2f}s) <<<")
+        print(f"\n>>> SESIÓN AUTENTICADA Y LISTA ({elapsed:.2f}s) <<<")
         if info and "error" not in info:
             print(f"     Usuario en sesión  : {info.get('user')}")
-            print(f"     Mandante           : {info.get('client')}")
+            print(f"     Mandante activo    : {info.get('client')}")
             print(f"     Sistema            : {info.get('system')}")
-            print(f"     Ventana            : {info.get('window_title')}")
+            print(f"     Transacción actual : {info.get('transaction')}")
+            print(f"     Ventana actual     : {info.get('window_title')}")
         print("==================================================")
         return True
     except Exception as exc:
@@ -234,50 +244,64 @@ def action_login() -> bool:
         return False
 
 
-def action_logout() -> bool:
+def action_logout(close_logon: bool = True) -> bool:
     print("\n==================================================")
-    print("=== 4. CERRAR SESIÓN EN SAP (/nex)             ===")
+    print("=== 4. CERRAR SESIÓN Y PROCESOS DE SAP         ===")
     print("==================================================")
     mgr = SapSessionManager()
     t0 = perf_counter()
     try:
         print("-> Enviando comando de cierre de sesión '/nex' a SAP...")
-        execute_logout(mgr)
+        try:
+            execute_logout(mgr)
+            print("[OK] Sesión de SAP cerrada (/nex).")
+        except Exception as exc:
+            logger.info("Nota al ejecutar logout: %s", exc)
+
+        if close_logon:
+            print("-> Cerrando proceso 'saplogon.exe' de Windows...")
+            killed = mgr.kill_sap_processes()
+            if killed:
+                print(f"[OK] Procesos finalizados: {', '.join(killed)}")
+            else:
+                print("[OK] Procesos finalizados limpiamente.")
+
         elapsed = perf_counter() - t0
-        print(f"[OK] Sesión de SAP cerrada limpiamente en {elapsed:.2f}s.")
+        print(f"[OK] Cierre completo finalizado en {elapsed:.2f}s.")
         print("==================================================")
         return True
     except Exception as exc:
         elapsed = perf_counter() - t0
-        print(f"[ERROR] Error al cerrar sesión ({elapsed:.2f}s): {exc}")
+        print(f"[ERROR] Error al cerrar SAP ({elapsed:.2f}s): {exc}")
         print("==================================================")
         return False
 
 
 def action_full_auth_cycle() -> bool:
     print("\n==================================================")
-    print("=== CICLO COMPLETO DE AUTENTICACIÓN (1 A 4)    ===")
+    print("=== CICLO COMPLETO AUTOMATIZADO (1 A 5)        ===")
     print("==================================================")
     print("Paso 1: Abrir SAP Logon y conectar ambiente...")
     if not action_launch_and_connect():
         return False
 
-    print("\nPaso 2: Validar Login / SSO...")
+    print("\nPaso 2: Realizar Login / Autenticación...")
     if not action_login():
         return False
 
-    print("\nPaso 3: Verificación de estado de sesión...")
+    print("\nPaso 3: Diagnóstico y validación de sesión activa...")
     action_diagnostic()
 
-    print("\n¿Desea cerrar la sesión ahora para verificar el Logout (/nex)?")
+    print("\nPaso 4 y 5: Desloguear (/nex) y cerrar proceso saplogon.exe...")
     try:
-        ans = input("Cerrar sesión ahora? (s/N): ").strip().lower()
-        if ans in ("s", "si", "y", "yes"):
-            action_logout()
+        ans = input("¿Proceder con Logout y Cierre completo del proceso? (S/n): ").strip().lower()
+        if ans in ("", "s", "si", "y", "yes"):
+            action_logout(close_logon=True)
+            print("\n>>> ¡CICLO COMPLETO PROBADO CON ÉXITO! <<<")
         else:
             print("Sesión mantenida abierta para realizar descargas.")
     except KeyboardInterrupt:
-        print("\nOperación finalizada.")
+        print("\nCancelado.")
     return True
 
 
@@ -312,11 +336,11 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
         print("Tareas disponibles: " + ", ".join([t.get("id", "") for t in tasks]))
         return 1
 
-    # Asegurar conexion activa antes de descargar
+    # Asegurar conexion y login antes de descargar
     print("\n-> Verificando sesión activa de SAP...")
     info = get_active_sap_session_info()
-    if not info or "error" in info:
-        print("-> No se detectó sesión abierta. Conectando automáticamente...")
+    if not info or "error" in info or not info.get("user") or info.get("client") == "000":
+        print("-> Sesión no autenticada en mandante objetivo. Conectando y logueando automáticamente...")
         mgr = SapSessionManager()
         try:
             mgr.ensure_connected_and_ready(auto_launch=True)
@@ -424,7 +448,6 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # 1. Enrutamiento directo por flags CLI
     if args.kill or args.action == "kill":
         action_kill_processes()
         if not args.launch and not args.task and not args.action:
@@ -439,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if ok else 1
 
     if args.action == "logout":
-        ok = action_logout()
+        ok = action_logout(close_logon=True)
         return 0 if ok else 1
 
     if args.action == "full-auth":
@@ -454,7 +477,7 @@ def main(argv: list[str] | None = None) -> int:
         task_id = args.task or "gd20"
         return test_download_task(task_id, out_dir=Path(args.out_dir) if args.out_dir else None)
 
-    # 2. Menú interactivo completo
+    # Menú interactivo
     while True:
         print("\n======================================================================")
         print("  ITACAMBA CEMENTO S.A. - BANCO DE PRUEBAS SAP GUI (RPA)")
@@ -465,12 +488,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Usuario configurado  : {EnvConfig.SAP_USER}")
         print("----------------------------------------------------------------------")
         print("Seleccione la prueba que desea ejecutar:")
-        print("  --- FASE 1: CONECTIVIDAD Y SESIÓN ---")
+        print("  --- FASE 1: CONECTIVIDAD, AUTENTICACIÓN Y CIERRE ---")
         print("  1. Diagnóstico rápido de conexión")
         print("  2. Abrir SAP Logon y Conectar Ambiente (Launch & Connect)")
-        print("  3. Probar Login / Detectar SSO")
-        print("  4. Cerrar sesión activa en SAP (/nex - Logout)")
-        print("  5. Ciclo Completo de Autenticación (Abrir -> Conectar -> Login -> Logout)")
+        print("  3. Probar Login (Ingreso mandante 300 y credenciales)")
+        print("  4. Cerrar sesión y proceso SAP (/nex + Cerrar saplogon.exe)")
+        print("  5. Ciclo Completo: Abrir -> Login -> Validar -> Logout -> Cerrar SAP")
         print("  6. Cerrar procesos de SAP por la fuerza (Kill / Reset)")
         print("  --- FASE 2: DESCARGAS DE REPORTES ---")
         print("  7. Probar descarga GD20 (Ventas contables)")
@@ -488,7 +511,7 @@ def main(argv: list[str] | None = None) -> int:
             elif choice == "3":
                 action_login()
             elif choice == "4":
-                action_logout()
+                action_logout(close_logon=True)
             elif choice == "5":
                 action_full_auth_cycle()
             elif choice == "6":

@@ -51,6 +51,30 @@ class SapSessionManager:
             logger.info("Procesos SAP cerrados: %s", ", ".join(killed))
         return killed
 
+    def close_sap(self, close_logon: bool = True) -> list[str]:
+        # Cierra la sesion activa via /nex y opcionalmente cierra el proceso de SAP Logon.
+        if self._session is not None:
+            try:
+                from itacamba_reportes.sap.actions.logout_action import execute_logout
+                execute_logout(self)
+                time.sleep(0.5)
+            except Exception:
+                pass
+            finally:
+                self._session = None
+                self._connection = None
+
+        if close_logon:
+            return self.kill_sap_processes()
+        return []
+
+    @classmethod
+    def close_all(cls, session_manager: SapSessionManager | None = None) -> list[str]:
+        # Cierra cualquier sesion activa y termina los procesos de SAP en Windows.
+        if session_manager is not None:
+            return session_manager.close_sap(close_logon=True)
+        return cls.kill_sap_processes()
+
     @staticmethod
     def is_saplogon_running() -> bool:
         # Comprueba si el ejecutable saplogon o sapgui esta activo en Windows.
@@ -121,6 +145,7 @@ class SapSessionManager:
         # Ciclo completo de inicializacion: mata si se pide, arranca, conecta, y maneja SSO o login clasico.
         from itacamba_reportes.core.settings import EnvConfig
         from itacamba_reportes.sap.actions.login_action import execute_login
+        from itacamba_reportes.sap.selectors import SELECTORES_SAP
 
         if kill_existing:
             self.kill_sap_processes()
@@ -133,14 +158,23 @@ class SapSessionManager:
         session = self.open_connection(target_ambient)
         self.maximize()
 
-        time.sleep(0.5)
+        time.sleep(1.0)
         wnd_title = ""
         try:
             wnd_title = session.ActiveWindow.Text or ""
         except Exception:
             pass
 
-        if "Easy Access" in wnd_title or "Menú" in wnd_title or "SAP" in wnd_title:
+        # Si existe el campo de usuario de login, es obligatorio ingresar credenciales
+        if self.element_exists(SELECTORES_SAP.login.usuario):
+            logger.info("Detectada pantalla de login en SAP (campo de usuario visible). Ejecutando autenticacion...")
+            execute_login(
+                self,
+                user=EnvConfig.SAP_USER,
+                password=EnvConfig.SAP_PASSWORD,
+                client=EnvConfig.SAP_MANDANTE,
+            )
+        elif "Easy Access" in wnd_title or "Menú" in wnd_title:
             logger.info("SSO activo detectado en SAP (%s). Sesion lista.", wnd_title)
         else:
             execute_login(
