@@ -44,6 +44,8 @@ class SelectoresGD20:
     layout_grid: str = "wnd[1]/usr/subSUB_CONFIGURATION:SAPLSALV_CUL_LAYOUT_CHOOSE:0500/cntlD500_CONTAINER/shellcont/shell"
     menu_export_excel: str = "wnd[0]/mbar/menu[0]/menu[3]/menu[1]"
     export_filename: str = "wnd[1]/usr/ssubSUB_CONFIGURATION:SAPLSALV_GUI_CUL_EXPORT_AS:0512/txtGS_EXPORT-FILE_NAME"
+    export_dir_path: str = "wnd[1]/usr/ctxtDY_PATH"
+    export_file_name_direct: str = "wnd[1]/usr/ctxtDY_FILENAME"
     export_btn_generate: str = "wnd[1]/tbar[0]/btn[20]"
     export_btn_replace: str = "wnd[1]/tbar[0]/btn[11]"
     exit_confirm_dialog: str = "wnd[1]/usr/btnSPOP-OPTION2"

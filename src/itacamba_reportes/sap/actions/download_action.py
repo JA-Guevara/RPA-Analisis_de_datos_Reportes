@@ -109,7 +109,14 @@ def execute_download_report(
 
                 chosen_row = target_row if target_row is not None else 16
                 logger.info("Seleccionando disposición ALV en fila %d...", chosen_row)
-                grid.setCurrentCell(chosen_row, "TEXT")
+                try:
+                    grid.setCurrentCell(chosen_row, "TEXT")
+                except Exception:
+                    pass
+                try:
+                    grid.currentCellRow = chosen_row
+                except Exception:
+                    pass
                 try:
                     grid.firstVisibleRow = max(0, chosen_row - 7)
                 except Exception:
@@ -140,7 +147,10 @@ def execute_download_report(
             time.sleep(1.5)
 
             filename_base = Path(config.export_filename).stem
-            if session_manager.element_exists(sel.gd20.export_filename, timeout=10.0):
+            target_name = Path(config.export_filename).name
+
+            # Diálogo inicial de formato o nombre
+            if session_manager.element_exists(sel.gd20.export_filename, timeout=3.0):
                 session_manager.set_text(sel.gd20.export_filename, filename_base)
                 logger.info("Nombre base de archivo configurado: %s", filename_base)
 
@@ -148,6 +158,15 @@ def execute_download_report(
                 session_manager.press_button(sel.gd20.export_btn_generate)
                 time.sleep(1.5)
 
+            # Diálogo de ruta y nombre directo (DY_PATH / DY_FILENAME) según Script4.vbs
+            if session_manager.element_exists(sel.gd20.export_dir_path, timeout=5.0):
+                dest_dir = str(Path(config.target_dir).resolve()) if config.target_dir else str(Path.cwd().resolve())
+                session_manager.set_text(sel.gd20.export_dir_path, dest_dir)
+                if session_manager.element_exists(sel.gd20.export_file_name_direct, timeout=2.0):
+                    session_manager.set_text(sel.gd20.export_file_name_direct, target_name)
+                logger.info("Ruta de exportación directa asignada en SAP: %s\\%s", dest_dir, target_name)
+
+            # Confirmar guardado / reemplazo (btn[11])
             if session_manager.element_exists(sel.gd20.export_btn_replace, timeout=5.0):
                 session_manager.press_button(sel.gd20.export_btn_replace)
                 time.sleep(1.0)
@@ -174,10 +193,12 @@ def execute_download_report(
     # Paso 11: Resolucion y ubicacion final del archivo descargado
     target_name = Path(config.export_filename).name
     candidate_paths = [
+        Path(config.target_dir or ".") / target_name,
         Path(config.export_filename),
         Path.cwd() / target_name,
         Path.home() / "Documents" / "SAP" / "SAP GUI" / target_name,
         Path.home() / "Documents" / target_name,
+        Path.home() / "Documents" / "Archivos" / target_name,
         Path.home() / "Downloads" / target_name,
     ]
     found_file = next((p for p in candidate_paths if p.exists() and p.is_file()), None)

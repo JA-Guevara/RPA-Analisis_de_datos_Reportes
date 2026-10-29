@@ -338,6 +338,9 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
             print(f"[ERROR] No se pudo asegurar la sesión SAP: {exc}")
             return 1
 
+    target_directory = out_dir or (ROOT / "storage" / "raw" / "test_sap")
+    target_directory.mkdir(parents=True, exist_ok=True)
+
     campos = {c.get("id"): c.get("valor") for c in task.get("campos", [])}
     tcode = task.get("tcode", "").lower()
 
