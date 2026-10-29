@@ -338,29 +338,25 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
             print(f"[ERROR] No se pudo asegurar la sesión SAP: {exc}")
             return 1
 
-    target_directory = out_dir or (ROOT / "storage" / "raw" / "test_sap")
-    target_directory.mkdir(parents=True, exist_ok=True)
-
-    print(f"\n--> Preparando descarga para: {task.get('titulo', task_key)}")
-    print(f"    Transacción : {task.get('tcode')}")
-    print(f"    Variante    : {task.get('variante')}")
-    print(f"    Layout      : {task.get('layout')}")
-    print(f"    Archivo     : {task.get('destino')}")
-    print(f"    Destino     : {target_directory}")
-
     campos = {c.get("id"): c.get("valor") for c in task.get("campos", [])}
     tcode = task.get("tcode", "").lower()
 
     if tcode == "gd20":
         periodo = campos.get("periodo", time.strftime("%m"))
-        cfg = SapDownloadConfig(
+        raw_layout_row = task.get("layout_row", campos.get("layout_row", 16))
+        try:
+            layout_row = int(raw_layout_row)
+        except Exception:
+            layout_row = 16
+
+        cfg = SapDownloadConfig.for_gd20(
             transaction=task.get("tcode", "GD20"),
             variant=task.get("variante", "Prueba_GD20"),
             ledger=task.get("ledger", "VC"),
-            period_low=periodo,
-            period_high=periodo,
+            period=periodo,
+            layout_row=layout_row,
             export_filename=task.get("destino", "GD20.xlsx"),
-            target_dir=str(target_directory),
+            target_dir=target_directory,
         )
     elif tcode == "zbcs":
         cfg = SapDownloadConfig(
@@ -378,6 +374,13 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
             export_filename=task.get("destino", "CARTERA.xlsx"),
             target_dir=str(target_directory),
         )
+
+    print(f"\n--> Preparando descarga para: {task.get('titulo', task_key)}")
+    print(f"    Transacción : {cfg.transaction}")
+    print(f"    Variante    : {cfg.variant}")
+    print(f"    Layout Fila : {cfg.layout_row}")
+    print(f"    Archivo     : {cfg.export_filename}")
+    print(f"    Destino     : {target_directory}")
 
     session_mgr = SapSessionManager()
     t0 = perf_counter()

@@ -7,6 +7,7 @@
     "destino": "GD20.xlsx",
     "variante": "Prueba_GD20",
     "layout": "/DEFAULT",
+    "layout_row": 16,
     "ledger": "VC",
     "periodoTipo": "mes_actual",
     "campos": [
@@ -32,6 +33,13 @@
         "etiqueta": "Layout de Columnas",
         "valor": "/DEFAULT",
         "nota": "Disposición de exportación"
+      },
+      {
+        "id": "layout_row",
+        "etiqueta": "Fila Layout ALV",
+        "valor": 16,
+        "tipo": "number",
+        "nota": "Fila 16 en tabla de selección de disposición"
       }
     ]
   },
