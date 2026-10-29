@@ -89,7 +89,7 @@ def action_diagnostic() -> bool:
     print("==================================================")
     print(f"Ambiente configurado : {EnvConfig.SAP_AMBIENT}")
     print(f"Ruta SAP Logon       : {EnvConfig.SAP_LOGON_PATH}")
-    print(f"Mandante / Sistema   : {EnvConfig.SAP_MANDANTE} / {EnvConfig.SAP_SISTEMA}")
+    print(f"Sistema configurado  : {EnvConfig.SAP_SISTEMA}")
     print(f"Usuario configurado  : {EnvConfig.SAP_USER}")
     print("--------------------------------------------------")
 
@@ -170,8 +170,6 @@ def action_login() -> bool:
     print("=== 3. PROBAR LOGIN / AUTENTICACIÓN EN SAP     ===")
     print("==================================================")
     print(f"Usuario objetivo : {EnvConfig.SAP_USER}")
-    print(f"Mandante         : {EnvConfig.SAP_MANDANTE}")
-    print(f"Idioma           : {EnvConfig.SAP_IDIOMA}")
     print("--------------------------------------------------")
 
     mgr = SapSessionManager()
@@ -199,16 +197,12 @@ def action_login() -> bool:
 
         if has_login_field:
             print("-> Pantalla de login detectada:")
-            print(f"   [1/4] Ingresando Mandante : {EnvConfig.SAP_MANDANTE}")
-            print(f"   [2/4] Ingresando Usuario  : {EnvConfig.SAP_USER}")
-            print(f"   [3/4] Ingresando Clave    : ******")
-            print(f"   [4/4] Ingresando Idioma   : {EnvConfig.SAP_IDIOMA}")
+            print(f"   [1/2] Ingresando Usuario  : {EnvConfig.SAP_USER}")
+            print(f"   [2/2] Ingresando Clave    : ******")
             execute_login(
                 mgr,
                 user=EnvConfig.SAP_USER,
                 password=EnvConfig.SAP_PASSWORD,
-                client=EnvConfig.SAP_MANDANTE,
-                lang=EnvConfig.SAP_IDIOMA,
             )
             print("[OK] Credenciales ingresadas y confirmadas con Enter.")
         else:
@@ -222,8 +216,6 @@ def action_login() -> bool:
                     mgr,
                     user=EnvConfig.SAP_USER,
                     password=EnvConfig.SAP_PASSWORD,
-                    client=EnvConfig.SAP_MANDANTE,
-                    lang=EnvConfig.SAP_IDIOMA,
                 )
 
         time.sleep(1.5)
@@ -289,7 +281,7 @@ def action_full_auth_cycle() -> bool:
     if not action_launch_and_connect():
         return False
 
-    print("\nPaso 2: Realizar Login (Ingresar mandante 300 y credenciales)...")
+    print("\nPaso 2: Realizar Login con credenciales...")
     if not action_login():
         return False
 
@@ -337,7 +329,7 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
     print("\n-> Verificando sesión activa de SAP...")
     info = get_active_sap_session_info()
     if not info or "error" in info or not info.get("user") or info.get("client") == "000":
-        print("-> Sesión no autenticada en mandante objetivo. Conectando y logueando automáticamente...")
+        print("-> Sesión no autenticada. Conectando y logueando automáticamente...")
         mgr = SapSessionManager()
         try:
             mgr.ensure_connected_and_ready(auto_launch=True)
@@ -481,14 +473,14 @@ def main(argv: list[str] | None = None) -> int:
         print("======================================================================")
         print(f"Ambiente configurado : {EnvConfig.SAP_AMBIENT}")
         print(f"Ruta SAP Logon       : {EnvConfig.SAP_LOGON_PATH}")
-        print(f"Mandante / Sistema   : {EnvConfig.SAP_MANDANTE} / {EnvConfig.SAP_SISTEMA}")
+        print(f"Sistema configurado  : {EnvConfig.SAP_SISTEMA}")
         print(f"Usuario configurado  : {EnvConfig.SAP_USER}")
         print("----------------------------------------------------------------------")
         print("Seleccione la prueba que desea ejecutar:")
         print("  --- FASE 1: CONECTIVIDAD, AUTENTICACIÓN Y CIERRE ---")
         print("  1. Diagnóstico rápido de conexión")
         print("  2. Abrir SAP Logon y Conectar Ambiente (Launch & Connect)")
-        print("  3. Probar Login (Ingreso mandante 300 y credenciales)")
+        print("  3. Probar Login (Ingreso de usuario y contraseña)")
         print("  4. Cerrar sesión y proceso SAP (/nex + Cerrar saplogon.exe)")
         print("  5. Ciclo Completo: Abrir -> Login -> Validar -> Logout -> Cerrar SAP")
         print("  6. Cerrar procesos de SAP por la fuerza (Kill / Reset)")

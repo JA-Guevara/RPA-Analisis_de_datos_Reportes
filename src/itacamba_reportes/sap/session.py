@@ -172,7 +172,6 @@ class SapSessionManager:
                 self,
                 user=EnvConfig.SAP_USER,
                 password=EnvConfig.SAP_PASSWORD,
-                client=EnvConfig.SAP_MANDANTE,
             )
         elif "Easy Access" in wnd_title or "Menú" in wnd_title:
             logger.info("SSO activo detectado en SAP (%s). Sesion lista.", wnd_title)
@@ -181,7 +180,6 @@ class SapSessionManager:
                 self,
                 user=EnvConfig.SAP_USER,
                 password=EnvConfig.SAP_PASSWORD,
-                client=EnvConfig.SAP_MANDANTE,
             )
 
         return session

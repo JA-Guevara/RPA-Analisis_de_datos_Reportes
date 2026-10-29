@@ -21,13 +21,14 @@ def execute_login(
     user: str | None = None,
     password: str | None = None,
     client: str | None = None,
-    lang: str = "ES",
+    lang: str | None = None,
     selectors: SelectoresLogin | None = None,
 ) -> None:
     sel = selectors or SELECTORES_SAP.login
     usr = user or os.getenv("SAP_USER") or os.getenv("SAP_USUARIO") or EnvConfig.SAP_USER
     pwd = password or os.getenv("SAP_PASSWORD") or EnvConfig.SAP_PASSWORD
-    mandante = client or os.getenv("SAP_MANDANTE") or EnvConfig.SAP_MANDANTE or "300"
+    mandante = client or os.getenv("SAP_MANDANTE")
+    idioma = lang or os.getenv("SAP_IDIOMA")
 
     if not usr or not pwd:
         raise SapLoginError("Credenciales de SAP no proporcionadas en argumentos ni en variables de entorno (SAP_USER, SAP_PASSWORD)")
@@ -36,16 +37,16 @@ def execute_login(
 
     # Paso 1: Verificacion de pantalla de autenticacion con espera
     if session_manager.element_exists(sel.usuario, timeout=5.0):
-        logger.info("Ingresando credenciales de usuario SAP: %s (Mandante: %s)", usr, mandante)
+        logger.info("Ingresando credenciales de usuario SAP: %s", usr)
 
-        if session_manager.element_exists(sel.mandante) and mandante:
+        if mandante and session_manager.element_exists(sel.mandante, timeout=0.5):
             session_manager.set_text(sel.mandante, str(mandante))
 
         session_manager.set_text(sel.usuario, str(usr))
         session_manager.set_text(sel.password, str(pwd))
 
-        if session_manager.element_exists(sel.lenguaje) and lang:
-            session_manager.set_text(sel.lenguaje, str(lang))
+        if idioma and session_manager.element_exists(sel.lenguaje, timeout=0.5):
+            session_manager.set_text(sel.lenguaje, str(idioma))
 
         # Paso 2: Envio de credenciales (Enter)
         session_manager.send_vkey(SELECTORES_SAP.barra.btn_enter_key, window_id=SELECTORES_SAP.ventana.main)
