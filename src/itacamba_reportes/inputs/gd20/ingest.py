@@ -106,6 +106,25 @@ def ingest_gd20() -> int:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
 
+    # Limpieza de columnas enteras que Excel exporta como float (.0)
+    int_str_cols = (
+        "ejercicio",
+        "sociedad",
+        "organizacion_ventas",
+        "canal_distribucion",
+        "periodo_contable",
+        "dias_1",
+    )
+    for col in int_str_cols:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(r"\.0$", "", regex=True)
+                .str.strip()
+                .replace({"nan": None, "None": None, "<NA>": None, "": None})
+            )
+
     model_cols = [c.name for c in Gd20StgModel.__table__.columns if c.name not in ("id", "created_at", "updated_at")]
     valid_cols = [c for c in model_cols if c in df.columns]
 
