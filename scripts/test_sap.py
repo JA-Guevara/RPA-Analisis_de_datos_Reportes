@@ -17,7 +17,12 @@ if str(SRC) not in sys.path:
 
 from itacamba_reportes.core.logging_config import setup_logging
 from itacamba_reportes.core.settings import EnvConfig
-from itacamba_reportes.sap.config import SapDownloadConfig
+from itacamba_reportes.sap.config import (
+    CONFIG_CARTERA,
+    CONFIG_GD20,
+    CONFIG_QUERY,
+    SapDownloadConfig,
+)
 from itacamba_reportes.sap.session import SapSessionManager
 from itacamba_reportes.sap.selectors import SELECTORES_SAP
 from itacamba_reportes.sap.actions.login_action import execute_login
@@ -318,14 +323,57 @@ def load_tasks() -> list[dict]:
 
 
 def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
-    tasks = load_tasks()
-    task = next((t for t in tasks if t.get("id", "").lower() == task_key.lower()), None)
-    if not task:
-        print(f"[ERROR] Tarea '{task_key}' no encontrada en storage/sap_tasks.json.")
-        print("Tareas disponibles: " + ", ".join([t.get("id", "") for t in tasks]))
+    key = task_key.lower().strip()
+    target_directory = out_dir or (ROOT / "storage" / "raw" / "test_sap")
+    target_directory.mkdir(parents=True, exist_ok=True)
+
+    # 1. Resolver configuración base tipada desde src/itacamba_reportes/sap/config.py
+    if key == "gd20":
+        cfg = CONFIG_GD20.to_download_config(target_dir=target_directory)
+        titulo = "Ventas Contables (GD20)"
+    elif key in ("zbcs", "query"):
+        cfg = CONFIG_QUERY.to_download_config(target_dir=target_directory)
+        titulo = "Despachos / Query (ZBCS)"
+    elif key == "cartera":
+        cfg = CONFIG_CARTERA.to_download_config(target_dir=target_directory)
+        titulo = "Cartera de Clientes (ZSDI)"
+    else:
+        print(f"[ERROR] Tarea '{task_key}' no reconocida. Opciones válidas: gd20, zbcs, cartera")
         return 1
 
-    # Asegurar conexion y login antes de descargar
+    # 2. Si existe storage/sap_tasks.json con valores personalizados no vacíos, aplicarlos
+    tasks = load_tasks()
+    task = next((t for t in tasks if t.get("id", "").lower() == key), None)
+    if task:
+        campos = {c.get("id"): c.get("valor") for c in task.get("campos", [])}
+        def _get_val(field_id: str, default: Any = None) -> Any:
+            v = campos.get(field_id)
+            if v is None or (isinstance(v, str) and not v.strip()):
+                v = task.get(field_id, default)
+            return default if (isinstance(v, str) and not v.strip()) else v
+
+        if v := _get_val("variante"):
+            cfg.variant = v
+        if v := _get_val("ledger"):
+            cfg.ledger = v
+        if v := _get_val("periodo"):
+            cfg.period_low = v
+            cfg.period_high = v
+        if v := _get_val("layout"):
+            cfg.layout_name = v
+        if v := _get_val("layout_row"):
+            try:
+                cfg.layout_row = int(v)
+            except Exception:
+                pass
+        if v := _get_val("desde"):
+            cfg.date_from = v
+        if v := _get_val("hasta"):
+            cfg.date_to = v
+        if v := task.get("destino"):
+            cfg.export_filename = v
+
+    # 3. Asegurar conexión y login antes de descargar
     print("\n-> Verificando sesión activa de SAP...")
     info = get_active_sap_session_info()
     if not info or "error" in info or not info.get("user") or info.get("client") == "000":
@@ -338,79 +386,13 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
             print(f"[ERROR] No se pudo asegurar la sesión SAP: {exc}")
             return 1
 
-    target_directory = out_dir or (ROOT / "storage" / "raw" / "test_sap")
-    target_directory.mkdir(parents=True, exist_ok=True)
-
-    campos = {c.get("id"): c.get("valor") for c in task.get("campos", [])}
-    tcode = task.get("tcode", "").lower()
-
-    def _val(field_id: str, default: Any = None) -> Any:
-        v = campos.get(field_id)
-        if v is None or (isinstance(v, str) and not v.strip()):
-            v = task.get(field_id, default)
-        if isinstance(v, str) and not v.strip():
-            return default
-        return v
-
-    periodo = _val("periodo")
-    ledger = _val("ledger")
-    variante = _val("variante")
-    layout = _val("layout")
-    raw_layout_row = _val("layout_row")
-    layout_row = None
-    if raw_layout_row is not None:
-        try:
-            layout_row = int(raw_layout_row)
-        except Exception:
-            layout_row = None
-
-    date_from = _val("desde")
-    date_to = _val("hasta")
-    destino = task.get("destino") or f"{tcode.upper()}.xlsx"
-
-    if tcode == "gd20":
-        cfg = SapDownloadConfig.for_gd20(
-            transaction=task.get("tcode", "GD20"),
-            variant=variante or "Prueba_GD20",
-            ledger=ledger or "VC",
-            period=periodo or time.strftime("%m"),
-            layout_row=layout_row if layout_row is not None else 16,
-            export_filename=destino,
-            target_dir=target_directory,
-        )
-    elif tcode == "zbcs":
-        cfg = SapDownloadConfig(
-            transaction=task.get("tcode", "ZBCS"),
-            variant=variante,
-            ledger=ledger,
-            period_low=periodo,
-            period_high=periodo,
-            date_from=date_from,
-            date_to=date_to,
-            layout_name=layout,
-            layout_row=layout_row,
-            export_filename=destino,
-            target_dir=str(target_directory),
-        )
-    else:
-        cfg = SapDownloadConfig(
-            transaction=task.get("tcode", "ZSDI"),
-            variant=variante or "CAD_CLIENTE",
-            ledger=ledger,
-            period_low=periodo,
-            period_high=periodo,
-            date_from=date_from,
-            date_to=date_to,
-            layout_name=layout,
-            layout_row=layout_row,
-            export_filename=destino,
-            target_dir=str(target_directory),
-        )
-
-    print(f"\n--> Preparando descarga para: {task.get('titulo', task_key)}")
+    print(f"\n--> Preparando descarga para: {titulo}")
     print(f"    Transacción : {cfg.transaction}")
-    print(f"    Variante    : {cfg.variant}")
-    print(f"    Layout Fila : {cfg.layout_row}")
+    print(f"    Ledger      : {cfg.ledger or '(N/A)'}")
+    print(f"    Variante    : {cfg.variant or '(N/A)'}")
+    print(f"    Período     : {cfg.period_low or '(N/A)'}")
+    print(f"    Rango Fechas: {cfg.date_from or '(N/A)'} a {cfg.date_to or '(N/A)'}")
+    print(f"    Layout Fila : {cfg.layout_row or '(N/A)'}")
     print(f"    Archivo     : {cfg.export_filename}")
     print(f"    Destino     : {target_directory}")
 

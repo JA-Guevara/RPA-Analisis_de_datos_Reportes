@@ -1,3 +1,10 @@
+"""Selectores de SAP GUI Scripting (puro dato).
+
+Mapeo estático y tipado de ventanas, barras de herramientas, pantallas de login,
+transacciones operativas (GD20, ZBCS/Query, ZSDI/Cartera) y menús de exportación.
+Todos los IDs técnicos han sido validados contra las grabaciones VBScript reales (Script1, Script2, Script4).
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -5,6 +12,8 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True, slots=True)
 class SelectoresVentana:
+    """Ventanas activas y modales de SAP GUI."""
+
     main: str = "wnd[0]"
     modal_1: str = "wnd[1]"
     modal_2: str = "wnd[2]"
@@ -12,6 +21,8 @@ class SelectoresVentana:
 
 @dataclass(frozen=True, slots=True)
 class SelectoresBarra:
+    """Barra de comandos superior, botones estándar y teclas de función."""
+
     okcode: str = "wnd[0]/tbar[0]/okcd"
     status_bar: str = "wnd[0]/sbar"
     btn_enter_key: int = 0
@@ -23,6 +34,8 @@ class SelectoresBarra:
 
 @dataclass(frozen=True, slots=True)
 class SelectoresLogin:
+    """Pantalla inicial de autenticación en SAP GUI."""
+
     usuario: str = "wnd[0]/usr/txtRSYST-BNAME"
     password: str = "wnd[0]/usr/pwdRSYST-BCODE"
     mandante: str = "wnd[0]/usr/txtRSYST-MANDT"
@@ -33,15 +46,25 @@ class SelectoresLogin:
 
 @dataclass(frozen=True, slots=True)
 class SelectoresGD20:
+    """Transacción GD20 - Ventas Contables (BASE PANEL)."""
+
+    # Pantalla principal GD20
     ledger: str = "wnd[0]/usr/ctxtRGUD0-LEDGER"
     btn_get_variant: str = "wnd[0]/tbar[1]/btn[17]"
-    popup_variant_name: str = "wnd[1]/usr/txtV-LOW"
-    popup_btn_find_variant: str = "wnd[1]/tbar[0]/btn[8]"
     period_low: str = "wnd[0]/usr/ctxtF9008025-LOW"
     period_high: str = "wnd[0]/usr/ctxtF9008025-HIGH"
+
+    # Diálogo de búsqueda y selección de variante
+    popup_variant_name: str = "wnd[1]/usr/txtV-LOW"
+    popup_btn_push_values: str = "wnd[1]/usr/btn%_V_%_APP_%-VALU_PUSH"
+    popup_btn_find_variant: str = "wnd[1]/tbar[0]/btn[8]"
+
+    # Grilla de layout / disposición ALV
     btn_choose_layout: str = "wnd[0]/tbar[1]/btn[33]"
     layout_combo: str = "wnd[1]/usr/subSUB_CONFIGURATION:SAPLSALV_CUL_LAYOUT_CHOOSE:0500/cmbG51_SCREEN-USPEC_LBOX"
     layout_grid: str = "wnd[1]/usr/subSUB_CONFIGURATION:SAPLSALV_CUL_LAYOUT_CHOOSE:0500/cntlD500_CONTAINER/shellcont/shell"
+
+    # Exportación a Excel (delegada a SelectoresExportacion, alias de compatibilidad)
     menu_export_excel: str = "wnd[0]/mbar/menu[0]/menu[3]/menu[1]"
     export_filename: str = "wnd[1]/usr/ssubSUB_CONFIGURATION:SAPLSALV_GUI_CUL_EXPORT_AS:0512/txtGS_EXPORT-FILE_NAME"
     export_dir_path: str = "wnd[1]/usr/ctxtDY_PATH"
@@ -53,18 +76,41 @@ class SelectoresGD20:
 
 @dataclass(frozen=True, slots=True)
 class SelectoresZBCS:
+    """Transacción ZBCS - Consulta de Despachos (Query)."""
+
     okcode: str = "zbcs"
     fecha_desde: str = "wnd[0]/usr/ctxtS_ERDAT-LOW"
     fecha_hasta: str = "wnd[0]/usr/ctxtS_ERDAT-HIGH"
+    btn_get_variant: str = "wnd[0]/tbar[1]/btn[17]"
+    popup_variant_name: str = "wnd[1]/usr/txtV-LOW"
+    popup_btn_find_variant: str = "wnd[1]/tbar[0]/btn[8]"
+    btn_choose_layout: str = "wnd[0]/tbar[1]/btn[33]"
+    layout_grid: str = "wnd[1]/usr/subSUB_CONFIGURATION:SAPLSALV_CUL_LAYOUT_CHOOSE:0500/cntlD500_CONTAINER/shellcont/shell"
+
+
+@dataclass(frozen=True, slots=True)
+class SelectoresExportacion:
+    """Menús, diálogos y controles para exportación a Excel / Hoja de Cálculo."""
+
+    menu_export_excel: str = "wnd[0]/mbar/menu[0]/menu[3]/menu[1]"
+    btn_generate: str = "wnd[1]/tbar[0]/btn[20]"
+    btn_replace: str = "wnd[1]/tbar[0]/btn[11]"
+    dir_path: str = "wnd[1]/usr/ctxtDY_PATH"
+    file_name_direct: str = "wnd[1]/usr/ctxtDY_FILENAME"
+    export_filename_legacy: str = "wnd[1]/usr/ssubSUB_CONFIGURATION:SAPLSALV_GUI_CUL_EXPORT_AS:0512/txtGS_EXPORT-FILE_NAME"
+    exit_confirm_dialog: str = "wnd[1]/usr/btnSPOP-OPTION2"
 
 
 @dataclass(frozen=True, slots=True)
 class SelectoresSAP:
+    """Mapa maestro de selectores de SAP GUI."""
+
     ventana: SelectoresVentana = field(default_factory=SelectoresVentana)
     barra: SelectoresBarra = field(default_factory=SelectoresBarra)
     login: SelectoresLogin = field(default_factory=SelectoresLogin)
     gd20: SelectoresGD20 = field(default_factory=SelectoresGD20)
     zbcs: SelectoresZBCS = field(default_factory=SelectoresZBCS)
+    exportacion: SelectoresExportacion = field(default_factory=SelectoresExportacion)
 
 
 SELECTORES_SAP = SelectoresSAP()
@@ -97,6 +143,8 @@ GD20_LAYOUT_COMBO = SELECTORES_SAP.gd20.layout_combo
 GD20_LAYOUT_GRID = SELECTORES_SAP.gd20.layout_grid
 GD20_MENU_EXPORT_EXCEL = SELECTORES_SAP.gd20.menu_export_excel
 GD20_EXPORT_FILENAME = SELECTORES_SAP.gd20.export_filename
+GD20_EXPORT_DIR_PATH = SELECTORES_SAP.gd20.export_dir_path
+GD20_EXPORT_FILE_NAME_DIRECT = SELECTORES_SAP.gd20.export_file_name_direct
 GD20_EXPORT_BTN_GENERATE = SELECTORES_SAP.gd20.export_btn_generate
 GD20_EXPORT_BTN_REPLACE = SELECTORES_SAP.gd20.export_btn_replace
 GD20_EXIT_CONFIRM_DIALOG = SELECTORES_SAP.gd20.exit_confirm_dialog
