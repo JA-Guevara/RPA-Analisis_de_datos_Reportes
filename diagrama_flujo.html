@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Diagrama de Flujo - Bot de Reportes Itacamba</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .header h1 {
+      font-size: 26px;
+      color: #0f172a;
+      margin: 0 0 8px 0;
+    }
+    .header p {
+      color: #64748b;
+      margin: 0;
+      font-size: 15px;
+    }
+    .actions {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .btn {
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      text-decoration: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: #0284c7;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+    .btn-secondary {
+      background: #ffffff;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #f1f5f9;
+    }
+    .card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+      max-width: 950px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    .card img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Diagrama de Flujo del Proceso Completo</h1>
+    <p>Bot de Reportes Itacamba - Extracción SAP GUI, Pipelines de Datos y Power BI</p>
+  </div>
+
+  <div class="actions">
+    <a href="diagrama_flujo_bot.png" download="diagrama_flujo_bot.png" class="btn btn-primary">
+      ⬇ Descargar Imagen PNG
+    </a>
+    <a href="diagrama_flujo_bot.svg" download="diagrama_flujo_bot.svg" class="btn btn-secondary">
+      ⬇ Descargar Vector SVG
+    </a>
+  </div>
+
+  <div class="card">
+    <img src="diagrama_flujo_bot.png" alt="Diagrama de Flujo Bot Itacamba">
+  </div>
+</body>
+</html>
