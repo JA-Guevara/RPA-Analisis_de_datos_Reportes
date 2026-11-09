@@ -55,29 +55,17 @@ def execute_download_report(
     if config.period_high is not None and session_manager.element_exists(sel.gd20.period_high, timeout=2.0):
         session_manager.set_text(sel.gd20.period_high, str(config.period_high))
 
-    # Paso 5: Parametrizacion dinamica de rangos de fecha
-    if config.date_from and session_manager.element_exists(sel.zbcs.fecha_desde, timeout=5.0):
-        session_manager.set_text(sel.zbcs.fecha_desde, str(config.date_from))
-    if config.date_to and session_manager.element_exists(sel.zbcs.fecha_hasta, timeout=2.0):
-        session_manager.set_text(sel.zbcs.fecha_hasta, str(config.date_to))
-
-    # Paso 6: Entradas de formulario personalizadas adicionales
-    if config.custom_inputs:
-        for selector, val in config.custom_inputs.items():
-            if session_manager.element_exists(selector, timeout=2.0):
-                session_manager.set_text(selector, str(val))
-
-    # Paso 7: Ejecutar reporte F8
+    # Paso 5: Ejecutar reporte F8
     logger.info("Ejecutando reporte en SAP con F8...")
     session_manager.press_button(sel.barra.btn_execute_f8)
     time.sleep(1.5)
 
-    # Paso 8: Seleccion de layout ALV (para GD20 o si se especifica fila/nombre)
+    # Paso 6: Seleccion de layout ALV (si se especifica fila de layout)
     target_row = config.layout_row
     if target_row is None and is_gd20:
-        target_row = 16  # Fila 16 identificada en grabaciones VBScript para GD20
+        target_row = 16
 
-    if target_row is not None or config.layout_name:
+    if target_row is not None:
         logger.info("Esperando visualización del reporte ALV en SAP (botón btn[33])...")
         if session_manager.element_exists(sel.gd20.btn_choose_layout, timeout=45.0):
             try:
@@ -92,20 +80,6 @@ def execute_download_report(
                         session_manager.session.findById(sel.gd20.layout_combo).setFocus()
                     except Exception:
                         pass
-
-                # Búsqueda dinámica por nombre si fue provisto
-                if config.layout_name:
-                    try:
-                        row_count = int(getattr(grid, "RowCount", 0))
-                        for r in range(row_count):
-                            val_var = str(grid.GetCellValue(r, "VARIANT") or "").strip()
-                            val_txt = str(grid.GetCellValue(r, "TEXT") or "").strip()
-                            if config.layout_name.lower() in val_var.lower() or config.layout_name.lower() in val_txt.lower():
-                                target_row = r
-                                logger.info("Layout '%s' encontrado en fila %d (%s)", config.layout_name, r, val_txt)
-                                break
-                    except Exception as exc:
-                        logger.debug("Búsqueda por nombre de layout no concluyente: %s", exc)
 
                 chosen_row = target_row if target_row is not None else 16
                 logger.info("Seleccionando disposición ALV en fila %d...", chosen_row)

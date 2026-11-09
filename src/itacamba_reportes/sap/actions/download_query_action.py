@@ -14,10 +14,12 @@ logger = logging.getLogger(__name__)
 def execute_download_query(
     session_manager: SapSessionManager,
     transaction: str = "zbcs",
-    date_from: str | None = None,
-    date_to: str | None = None,
     variant: str | None = None,
-    export_filename: str = "QUERY",
+    ledger: str | None = None,
+    period_low: str | int | None = None,
+    period_high: str | int | None = None,
+    layout_row: int | None = None,
+    export_filename: str = "QUERY.xlsx",
     target_dir: Path | str | None = None,
     config: SapDownloadConfig | None = None,
     selectors: SelectoresSAP | None = None,
@@ -26,8 +28,10 @@ def execute_download_query(
         config = SapDownloadConfig(
             transaction=transaction,
             variant=variant,
-            date_from=date_from,
-            date_to=date_to,
+            ledger=ledger,
+            period_low=period_low,
+            period_high=period_high,
+            layout_row=layout_row,
             export_filename=export_filename,
             target_dir=target_dir,
         )
