@@ -344,37 +344,66 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
     campos = {c.get("id"): c.get("valor") for c in task.get("campos", [])}
     tcode = task.get("tcode", "").lower()
 
-    if tcode == "gd20":
-        periodo = campos.get("periodo", time.strftime("%m"))
-        raw_layout_row = task.get("layout_row", campos.get("layout_row", 16))
+    def _val(field_id: str, default: Any = None) -> Any:
+        v = campos.get(field_id)
+        if v is None or (isinstance(v, str) and not v.strip()):
+            v = task.get(field_id, default)
+        if isinstance(v, str) and not v.strip():
+            return default
+        return v
+
+    periodo = _val("periodo")
+    ledger = _val("ledger")
+    variante = _val("variante")
+    layout = _val("layout")
+    raw_layout_row = _val("layout_row")
+    layout_row = None
+    if raw_layout_row is not None:
         try:
             layout_row = int(raw_layout_row)
         except Exception:
-            layout_row = 16
+            layout_row = None
 
+    date_from = _val("desde")
+    date_to = _val("hasta")
+    destino = task.get("destino") or f"{tcode.upper()}.xlsx"
+
+    if tcode == "gd20":
         cfg = SapDownloadConfig.for_gd20(
             transaction=task.get("tcode", "GD20"),
-            variant=task.get("variante", "Prueba_GD20"),
-            ledger=task.get("ledger", "VC"),
-            period=periodo,
-            layout_row=layout_row,
-            export_filename=task.get("destino", "GD20.xlsx"),
+            variant=variante or "Prueba_GD20",
+            ledger=ledger or "VC",
+            period=periodo or time.strftime("%m"),
+            layout_row=layout_row if layout_row is not None else 16,
+            export_filename=destino,
             target_dir=target_directory,
         )
     elif tcode == "zbcs":
         cfg = SapDownloadConfig(
             transaction=task.get("tcode", "ZBCS"),
-            variant=task.get("variante", "IM"),
-            date_from=campos.get("desde", "2026-10-01"),
-            date_to=campos.get("hasta", time.strftime("%Y-%m-%d")),
-            export_filename=task.get("destino", "QUERY.xlsx"),
+            variant=variante,
+            ledger=ledger,
+            period_low=periodo,
+            period_high=periodo,
+            date_from=date_from,
+            date_to=date_to,
+            layout_name=layout,
+            layout_row=layout_row,
+            export_filename=destino,
             target_dir=str(target_directory),
         )
     else:
         cfg = SapDownloadConfig(
             transaction=task.get("tcode", "ZSDI"),
-            variant=task.get("variante", "CAD_CLIENTE"),
-            export_filename=task.get("destino", "CARTERA.xlsx"),
+            variant=variante or "CAD_CLIENTE",
+            ledger=ledger,
+            period_low=periodo,
+            period_high=periodo,
+            date_from=date_from,
+            date_to=date_to,
+            layout_name=layout,
+            layout_row=layout_row,
+            export_filename=destino,
             target_dir=str(target_directory),
         )
 

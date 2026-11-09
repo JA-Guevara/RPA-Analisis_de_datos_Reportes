@@ -5,41 +5,62 @@
     "titulo": "Ventas Contables (GD20)",
     "ayuda": "Alimenta la tabla BASE PANEL y VENTAS BI en SQL Server.",
     "destino": "GD20.xlsx",
+    "ledger": "VC",
     "variante": "Prueba_GD20",
+    "periodo": "10",
     "layout": "/DEFAULT",
     "layout_row": 16,
-    "ledger": "VC",
-    "periodoTipo": "mes_actual",
+    "desde": "",
+    "hasta": "",
     "campos": [
       {
         "id": "ledger",
-        "etiqueta": "Ledger",
-        "valor": "VC"
+        "etiqueta": "Ledger Contable",
+        "valor": "VC",
+        "tipo": "text",
+        "nota": "Libro contable en SAP (ej: VC)"
       },
       {
         "id": "variante",
         "etiqueta": "Variante SAP",
-        "valor": "Prueba_GD20"
+        "valor": "Prueba_GD20",
+        "tipo": "text",
+        "nota": "Nombre de la variante guardada en SAP"
       },
       {
         "id": "periodo",
         "etiqueta": "Período / Mes Contable",
         "valor": "10",
         "tipo": "number",
-        "nota": "Mes contable en SAP"
+        "nota": "Mes contable (ej: 1 al 12)"
       },
       {
         "id": "layout",
         "etiqueta": "Layout de Columnas",
         "valor": "/DEFAULT",
-        "nota": "Disposición de exportación"
+        "tipo": "text",
+        "nota": "Nombre de la disposición ALV"
       },
       {
         "id": "layout_row",
         "etiqueta": "Fila Layout ALV",
         "valor": 16,
         "tipo": "number",
-        "nota": "Fila 16 en tabla de selección de disposición"
+        "nota": "Número de fila en grilla ALV (btn[33])"
+      },
+      {
+        "id": "desde",
+        "etiqueta": "Fecha Desde",
+        "valor": "",
+        "tipo": "date",
+        "nota": "Fecha inicio (YYYY-MM-DD si aplica)"
+      },
+      {
+        "id": "hasta",
+        "etiqueta": "Fecha Hasta",
+        "valor": "",
+        "tipo": "date",
+        "nota": "Fecha fin (YYYY-MM-DD si aplica)"
       }
     ]
   },
@@ -49,28 +70,62 @@
     "titulo": "Despachos ZBCS (Query)",
     "ayuda": "Alimenta las tablas QUERY, DESPACHO BI y DESPACHO MES.",
     "destino": "QUERY.xlsx",
-    "variante": "IM",
-    "layout": "/DESPACHOS",
-    "ledger": "N/A",
-    "periodoTipo": "rango",
+    "ledger": "",
+    "variante": "",
+    "periodo": "",
+    "layout": "",
+    "layout_row": "",
+    "desde": "",
+    "hasta": "",
     "campos": [
+      {
+        "id": "ledger",
+        "etiqueta": "Ledger Contable",
+        "valor": "",
+        "tipo": "text",
+        "nota": "Libro contable en SAP (ingresar valor)"
+      },
+      {
+        "id": "variante",
+        "etiqueta": "Variante SAP",
+        "valor": "",
+        "tipo": "text",
+        "nota": "Nombre de la variante guardada en SAP (ingresar valor)"
+      },
+      {
+        "id": "periodo",
+        "etiqueta": "Período / Mes Contable",
+        "valor": "",
+        "tipo": "number",
+        "nota": "Mes contable (ingresar valor si aplica)"
+      },
+      {
+        "id": "layout",
+        "etiqueta": "Layout de Columnas",
+        "valor": "",
+        "tipo": "text",
+        "nota": "Nombre de la disposición ALV (ingresar valor)"
+      },
+      {
+        "id": "layout_row",
+        "etiqueta": "Fila Layout ALV",
+        "valor": "",
+        "tipo": "number",
+        "nota": "Número de fila en grilla ALV (ingresar valor si aplica)"
+      },
       {
         "id": "desde",
         "etiqueta": "Fecha Desde",
-        "valor": "2026-07-28",
-        "tipo": "date"
+        "valor": "",
+        "tipo": "date",
+        "nota": "Fecha inicio (YYYY-MM-DD si aplica)"
       },
       {
         "id": "hasta",
         "etiqueta": "Fecha Hasta",
-        "valor": "2026-10-25",
-        "tipo": "date"
-      },
-      {
-        "id": "variante",
-        "etiqueta": "Variante / Layout",
-        "valor": "IM",
-        "nota": "Variante de selección ZBCS"
+        "valor": "",
+        "tipo": "date",
+        "nota": "Fecha fin (YYYY-MM-DD si aplica)"
       }
     ]
   },
@@ -80,21 +135,62 @@
     "titulo": "Cartera de Clientes & Cadena",
     "ayuda": "Maestro de clientes, líneas de crédito y sucursales.",
     "destino": "CARTERA.xlsx",
+    "ledger": "",
     "variante": "CAD_CLIENTE",
+    "periodo": "",
     "layout": "/CARTERA",
-    "ledger": "N/A",
-    "periodoTipo": "mes_actual",
+    "layout_row": "",
+    "desde": "",
+    "hasta": "",
     "campos": [
+      {
+        "id": "ledger",
+        "etiqueta": "Ledger Contable",
+        "valor": "",
+        "tipo": "text",
+        "nota": "Libro contable en SAP (ingresar valor si aplica)"
+      },
       {
         "id": "variante",
         "etiqueta": "Variante SAP",
-        "valor": "CAD_CLIENTE"
+        "valor": "CAD_CLIENTE",
+        "tipo": "text",
+        "nota": "Nombre de la variante guardada en SAP"
+      },
+      {
+        "id": "periodo",
+        "etiqueta": "Período / Mes Contable",
+        "valor": "",
+        "tipo": "number",
+        "nota": "Mes contable (ingresar valor si aplica)"
       },
       {
         "id": "layout",
-        "etiqueta": "Layout",
+        "etiqueta": "Layout de Columnas",
         "valor": "/CARTERA",
-        "nota": "Estructura de columnas exportadas"
+        "tipo": "text",
+        "nota": "Nombre de la disposición ALV"
+      },
+      {
+        "id": "layout_row",
+        "etiqueta": "Fila Layout ALV",
+        "valor": "",
+        "tipo": "number",
+        "nota": "Número de fila en grilla ALV (ingresar valor si aplica)"
+      },
+      {
+        "id": "desde",
+        "etiqueta": "Fecha Desde",
+        "valor": "",
+        "tipo": "date",
+        "nota": "Fecha inicio (YYYY-MM-DD si aplica)"
+      },
+      {
+        "id": "hasta",
+        "etiqueta": "Fecha Hasta",
+        "valor": "",
+        "tipo": "date",
+        "nota": "Fecha fin (YYYY-MM-DD si aplica)"
       }
     ]
   }
