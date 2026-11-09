@@ -9,9 +9,10 @@ from pathlib import Path
 class ConfigDescargaGD20:
     transaction: str = "gd20"
     ledger: str = "VC"
-    variant: str = "Prueba_GD20"
+    variant: str = "BOT_GD20"
     period: str | int | None = None
-    layout_row: int = 16
+    layout_name: str | None = "//AVRILGD20"
+    layout_row: int | None = None
     export_filename: str = "GD20.xlsx"
 
     def to_download_config(
@@ -31,6 +32,7 @@ class ConfigDescargaGD20:
             variant=self.variant,
             period_low=p,
             period_high=p,
+            layout_name=self.layout_name,
             layout_row=self.layout_row,
             export_filename=self.export_filename,
             target_dir=target_dir,
@@ -43,6 +45,7 @@ class ConfigDescargaQuery:
     ledger: str = ""
     variant: str = ""
     period: str | int | None = None
+    layout_name: str | None = ""
     layout_row: int | None = None
     export_filename: str = "QUERY.xlsx"
 
@@ -60,6 +63,7 @@ class ConfigDescargaQuery:
             variant=self.variant.strip() if self.variant else None,
             period_low=p_val,
             period_high=p_val,
+            layout_name=self.layout_name.strip() if self.layout_name else None,
             layout_row=self.layout_row,
             export_filename=self.export_filename,
             target_dir=target_dir,
@@ -78,6 +82,7 @@ class SapDownloadConfig:
     variant: str | None = None
     period_low: str | int | None = None
     period_high: str | int | None = None
+    layout_name: str | None = None
     layout_row: int | None = None
     export_filename: str = "EXPORT.xlsx"
     target_dir: Path | str | None = None

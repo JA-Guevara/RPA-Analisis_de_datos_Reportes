@@ -60,12 +60,10 @@ def execute_download_report(
     session_manager.press_button(sel.barra.btn_execute_f8)
     time.sleep(1.5)
 
-    # Paso 6: Seleccion de layout ALV (si se especifica fila de layout)
-    target_row = config.layout_row
-    if target_row is None and is_gd20:
-        target_row = 16
+    # Paso 6: Seleccion de layout ALV (por nombre o por fila)
+    needs_layout = bool(config.layout_name or config.layout_row is not None)
 
-    if target_row is not None:
+    if needs_layout:
         logger.info("Esperando visualización del reporte ALV en SAP (botón btn[33])...")
         if session_manager.element_exists(sel.gd20.btn_choose_layout, timeout=45.0):
             try:
@@ -81,7 +79,26 @@ def execute_download_report(
                     except Exception:
                         pass
 
-                chosen_row = target_row if target_row is not None else 16
+                chosen_row = config.layout_row
+
+                # Busqueda dinamica por nombre si fue provisto
+                target_name = (config.layout_name or "").strip().lower()
+                if target_name:
+                    try:
+                        row_count = int(getattr(grid, "RowCount", 0))
+                        for r in range(row_count):
+                            val_var = str(grid.GetCellValue(r, "VARIANT") or "").strip().lower()
+                            val_txt = str(grid.GetCellValue(r, "TEXT") or "").strip().lower()
+                            if target_name in val_var or target_name in val_txt or val_var in target_name:
+                                chosen_row = r
+                                logger.info("Layout '%s' encontrado dinámicamente en fila %d (%s)", config.layout_name, r, val_txt)
+                                break
+                    except Exception as exc:
+                        logger.debug("Búsqueda por nombre de layout: %s", exc)
+
+                if chosen_row is None:
+                    chosen_row = 0
+
                 logger.info("Seleccionando disposición ALV en fila %d...", chosen_row)
                 try:
                     grid.setCurrentCell(chosen_row, "TEXT")
