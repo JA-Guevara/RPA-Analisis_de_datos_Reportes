@@ -359,17 +359,11 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
         if v := _get_val("periodo"):
             cfg.period_low = v
             cfg.period_high = v
-        if v := _get_val("layout"):
-            cfg.layout_name = v
         if v := _get_val("layout_row"):
             try:
                 cfg.layout_row = int(v)
             except Exception:
                 pass
-        if v := _get_val("desde"):
-            cfg.date_from = v
-        if v := _get_val("hasta"):
-            cfg.date_to = v
         if v := task.get("destino"):
             cfg.export_filename = v
 
@@ -391,7 +385,6 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
     print(f"    Ledger      : {cfg.ledger or '(N/A)'}")
     print(f"    Variante    : {cfg.variant or '(N/A)'}")
     print(f"    Período     : {cfg.period_low or '(N/A)'}")
-    print(f"    Rango Fechas: {cfg.date_from or '(N/A)'} a {cfg.date_to or '(N/A)'}")
     print(f"    Layout Fila : {cfg.layout_row or '(N/A)'}")
     print(f"    Archivo     : {cfg.export_filename}")
     print(f"    Destino     : {target_directory}")
