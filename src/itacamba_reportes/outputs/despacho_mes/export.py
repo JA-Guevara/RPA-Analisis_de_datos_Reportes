@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import calendar
+from datetime import datetime
 import logging
 from pathlib import Path
 import pandas as pd
@@ -18,7 +20,6 @@ def export_despacho_mes() -> Path:
     SELECT 
         gerencia, equipo, departamento, localidad, centro_distribucion,
         producto, incoterms,
-        DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), dia) AS fecha,
         MONTH(GETDATE()) AS mes,
         dia, codigo_cliente,
         rf, despacho_t, rf_ajustado_im, proyeccion,
@@ -28,6 +29,18 @@ def export_despacho_mes() -> Path:
     """
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
+
+    now = datetime.now()
+    _, max_day = calendar.monthrange(now.year, now.month)
+
+    def _safe_date(d_val):
+        try:
+            d = int(d_val) if pd.notna(d_val) else 1
+            return datetime(now.year, now.month, max(1, min(d, max_day))).date()
+        except Exception:
+            return now.date()
+
+    df["fecha"] = df["dia"].apply(_safe_date)
 
     # Renombrar y ordenar columnas usando el mapeo oficial de negocio (20 columnas)
     df = map_export_columns(df, DESPACHO_MES_MAPPING)
