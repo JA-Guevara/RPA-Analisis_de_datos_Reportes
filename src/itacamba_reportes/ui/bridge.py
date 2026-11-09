@@ -259,7 +259,6 @@ class BotBridge:
         }
 
     def download_sap(self, task_id: str, params_json: str = "{}") -> dict[str, Any]:
-        # Solicita la descarga de insumos SAP (GD20 o ZBCS) mediante SAP GUI Scripting.
         try:
             params = json.loads(params_json) if isinstance(params_json, str) else params_json
         except Exception:
@@ -273,9 +272,54 @@ class BotBridge:
                 "message": f"SAP GUI no está disponible: {test.get('message')}",
             }
 
+        def _worker():
+            try:
+                from itacamba_reportes.sap.config import CONFIG_CARTERA, CONFIG_GD20, CONFIG_QUERY, SapDownloadConfig
+                from itacamba_reportes.sap.session import SapSessionManager
+                from itacamba_reportes.sap.actions.download_action import execute_download_report
+
+                mgr = SapSessionManager()
+                mgr.ensure_connected_and_ready(auto_launch=True)
+
+                key = task_id.lower().strip()
+                target_dir = getattr(EnvConfig, "DATA_PATH", PROJECT_ROOT / "storage" / "raw") / "dinamicos"
+                target_dir.mkdir(parents=True, exist_ok=True)
+
+                if key == "gd20":
+                    cfg = CONFIG_GD20.to_download_config(target_dir=target_dir)
+                elif key in ("zbcs", "query"):
+                    cfg = CONFIG_QUERY.to_download_config(target_dir=target_dir)
+                elif key == "cartera":
+                    cfg = CONFIG_CARTERA.to_download_config(target_dir=target_dir)
+                else:
+                    cfg = SapDownloadConfig(transaction=params.get("tcode", task_id), target_dir=target_dir)
+
+                if p := params.get("periodo"):
+                    cfg.period_low = str(p).strip()
+                    cfg.period_high = str(p).strip()
+                if v := params.get("variante"):
+                    cfg.variant = str(v).strip()
+                if l := params.get("ledger"):
+                    cfg.ledger = str(l).strip()
+                if lr := params.get("layout_row"):
+                    try:
+                        cfg.layout_row = int(lr)
+                    except Exception:
+                        pass
+                if dest := params.get("destino"):
+                    cfg.export_filename = str(dest).strip()
+
+                out_file = execute_download_report(mgr, cfg)
+                logger.info("Descarga web de '%s' finalizada exitosamente: %s", task_id, out_file)
+            except Exception as exc:
+                logger.error("Error en descarga SAP desde interfaz web para '%s': %s", task_id, exc)
+
+        threading.Thread(target=_worker, daemon=True, name=f"SapDownload-{task_id}").start()
+
+        periodo_usado = params.get("periodo") or "actual"
         return {
             "status": "ok",
-            "message": f"Descarga SAP de '{task_id.upper()}' solicitada correctamente. Guardando en insumos dinámicos.",
+            "message": f"Descarga SAP de '{task_id.upper()}' iniciada en segundo plano (Período: {periodo_usado}).",
         }
 
     def get_execution_updates(self) -> dict[str, Any]:
