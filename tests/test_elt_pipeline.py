@@ -410,13 +410,17 @@ class TestEltPipeline(unittest.TestCase):
         )
         self.assertEqual(len(VENTAS_BI_MAPPING), 77)
         self.assertEqual(len(DESPACHO_MES_MAPPING), 20)
-        self.assertEqual(len(DESPACHO_BI_MAPPING), 56)
+        self.assertEqual(len(DESPACHO_BI_MAPPING), 79)
         self.assertIn("Fecha", DESPACHO_MES_MAPPING.values())
         self.assertIn("Mes", DESPACHO_MES_MAPPING.values())
         self.assertIn("x", DESPACHO_BI_MAPPING.values())
         self.assertEqual(DESPACHO_BI_MAPPING["dia"], "x")
         self.assertEqual(list(DESPACHO_BI_MAPPING.values())[0], "Centro Proveedor")
-        self.assertEqual(list(DESPACHO_BI_MAPPING.values())[-1], "x")
+        self.assertEqual(list(DESPACHO_BI_MAPPING.values())[55], "x")
+        self.assertEqual(list(DESPACHO_BI_MAPPING.values())[56], "XX")
+        self.assertEqual(list(DESPACHO_BI_MAPPING.values())[68], "Columna12")
+        self.assertEqual(list(DESPACHO_BI_MAPPING.values())[69], "Cod. Pagador mcía.")
+        self.assertEqual(list(DESPACHO_BI_MAPPING.values())[-1], "RT")
 
         df_dummy = pd.DataFrame({
             "gerencia": ["SCZ"],
@@ -436,10 +440,10 @@ class TestEltPipeline(unittest.TestCase):
         self.assertEqual(list(mapped_bi.columns), ["Centro Proveedor", "x"])
         self.assertEqual(mapped_bi["x"].iloc[0], 20)
 
-        # Validar que un DataFrame completo produce exactamente las 56 columnas oficiales en orden
+        # Validar que un DataFrame completo produce exactamente las 79 columnas oficiales en orden
         full_dummy = pd.DataFrame({k: [None] for k in DESPACHO_BI_MAPPING.keys()})
         mapped_full = map_export_columns(full_dummy, DESPACHO_BI_MAPPING)
-        self.assertEqual(len(mapped_full.columns), 56)
+        self.assertEqual(len(mapped_full.columns), 79)
         self.assertEqual(list(mapped_full.columns), list(DESPACHO_BI_MAPPING.values()))
 
     def test_migration_matches_all_models_exactly(self):
@@ -493,7 +497,88 @@ class TestEltPipeline(unittest.TestCase):
             ensure_all_tables_exist()
             insp2 = inspect(mem_eng)
             self.assertTrue(insp2.has_table("int_despacho_bi"))
-            self.assertEqual(len(insp2.get_columns("int_despacho_bi")), 63)
+            self.assertEqual(len(insp2.get_columns("int_despacho_bi")), 71)
+        finally:
+            conn_mod.set_engine(orig_engine)
+
+    def test_despacho_bi_dataframe_exports_79_columns(self):
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.pool import StaticPool
+        import itacamba_reportes.core.db.connection as conn_mod
+        from itacamba_reportes.core.db.base import Base
+        from itacamba_reportes.core.io.column_mappings import DESPACHO_BI_MAPPING
+        import itacamba_reportes.outputs.despacho_bi.export as export_mod
+
+        mem_eng = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(mem_eng)
+        orig_engine = conn_mod._engine
+        orig_export_engine = export_mod.engine
+        conn_mod.set_engine(mem_eng)
+        export_mod.engine = mem_eng
+
+        try:
+            with mem_eng.begin() as conn:
+                conn.execute(text("""
+                    INSERT INTO int_despacho_bi (
+                        centro_origen, nro_pedido, cod_ruta, dia,
+                        cod_pagador, pagador, precio_pedido, unidad_entrega,
+                        fecha_facturacion, nro_factura, tipo_pos_pedido,
+                        documento_referencia, codigo_ferretero, rt
+                    ) VALUES (
+                        '4B05', 2053424533, '4B0501', 15,
+                        5123456, 'PAGADOR TEST', 120.5, 'T',
+                        '2026-10-15 00:00:00', 987654, 'TAN',
+                        'REF-01', 'FERR-99', '4B0501'
+                    )
+                """))
+
+            df = export_mod.get_despacho_bi_dataframe()
+            self.assertEqual(len(df), 1)
+            self.assertEqual(len(df.columns), 79)
+            self.assertEqual(list(df.columns), list(DESPACHO_BI_MAPPING.values()))
+            self.assertIsNone(df["XX"].iloc[0])
+            self.assertIsNone(df["Columna12"].iloc[0])
+            self.assertEqual(df["Cod. Pagador mcía."].iloc[0], 5123456)
+            self.assertEqual(df["Pagador mcía."].iloc[0], "PAGADOR TEST")
+            self.assertEqual(float(df["Precio pedido"].iloc[0]), 120.5)
+            self.assertEqual(df["Unid. Venta"].iloc[0], "T")
+            self.assertEqual(df["Nro de factura"].iloc[0], 987654)
+            self.assertEqual(df["Tipo pos. ped."].iloc[0], "TAN")
+            self.assertEqual(df["Documento Referencia"].iloc[0], "REF-01")
+            self.assertEqual(df["Código Ferretero"].iloc[0], "FERR-99")
+            self.assertEqual(df["RT"].iloc[0], "4B0501")
+        finally:
+            conn_mod.set_engine(orig_engine)
+            export_mod.engine = orig_export_engine
+
+    def test_sync_table_columns_adds_new_columns(self):
+        from sqlalchemy import create_engine, inspect, text
+        import itacamba_reportes.core.db.connection as conn_mod
+        from itacamba_reportes.core.db.schema import sync_table_columns
+
+        mem_eng = create_engine("sqlite:///:memory:")
+        with mem_eng.begin() as conn:
+            conn.execute(text("CREATE TABLE int_query (id INTEGER PRIMARY KEY, dia INTEGER)"))
+            conn.execute(text("CREATE TABLE int_despacho_bi (id INTEGER PRIMARY KEY, dia INTEGER)"))
+
+        orig_engine = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+        try:
+            sync_table_columns()
+            insp = inspect(mem_eng)
+            q_cols = {c["name"] for c in insp.get_columns("int_query")}
+            d_cols = {c["name"] for c in insp.get_columns("int_despacho_bi")}
+            expected_new = {
+                "precio_pedido", "unidad_entrega", "fecha_facturacion",
+                "nro_factura", "tipo_pos_pedido", "documento_referencia",
+                "codigo_ferretero",
+            }
+            self.assertTrue(expected_new.issubset(q_cols))
+            self.assertTrue((expected_new | {"rt"}).issubset(d_cols))
         finally:
             conn_mod.set_engine(orig_engine)
 

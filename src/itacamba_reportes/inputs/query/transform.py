@@ -13,6 +13,12 @@ SQL_PATH = Path(__file__).parent / "transform.sql"
 
 def transform_query(target_month: tuple[int, int] | None = None) -> int:
     logger.info("Transformando stg_query -> int_query en BD...")
+    from itacamba_reportes.core.db.schema import sync_table_columns
+    try:
+        sync_table_columns()
+    except Exception as exc:
+        logger.warning("No se pudo verificar o sincronizar columnas de int_query: %s", exc)
+
     sql_script = SQL_PATH.read_text(encoding="utf-8")
 
     if target_month:

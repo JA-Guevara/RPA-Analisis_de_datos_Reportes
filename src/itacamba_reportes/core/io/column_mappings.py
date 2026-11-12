@@ -107,7 +107,7 @@ DESPACHO_MES_MAPPING = {
     "semana2": "SEMANA2",
 }
 
-# Mapeo oficial para DESPACHO BI (56 columnas exactas alineadas 1-a-1 a HISTORIAL VENTAS y BasePanel)
+# Mapeo oficial para DESPACHO BI (79 columnas exactas alineadas 1-a-1 a BasePanel DESPACHOS BI)
 DESPACHO_BI_MAPPING = {
     "centro_origen": "Centro Proveedor",
     "ds_centro_origen": "Ds Centro Proveedor",
@@ -165,6 +165,29 @@ DESPACHO_BI_MAPPING = {
     "gerencia": "GERENCIA",
     "semana": "Semana",
     "dia": "x",
+    "xx": "XX",
+    "columna1": "Columna1",
+    "columna2": "Columna2",
+    "columna3": "Columna3",
+    "columna4": "Columna4",
+    "columna5": "Columna5",
+    "columna6": "Columna6",
+    "columna7": "Columna7",
+    "columna8": "Columna8",
+    "columna9": "Columna9",
+    "columna10": "Columna10",
+    "columna11": "Columna11",
+    "columna12": "Columna12",
+    "cod_pagador": "Cod. Pagador mcía.",
+    "pagador": "Pagador mcía.",
+    "precio_pedido": "Precio pedido",
+    "unidad_entrega": "Unid. Venta",
+    "fecha_facturacion": "Fecha facturación",
+    "nro_factura": "Nro de factura",
+    "tipo_pos_pedido": "Tipo pos. ped.",
+    "documento_referencia": "Documento Referencia",
+    "codigo_ferretero": "Código Ferretero",
+    "rt": "RT",
 }
 
 

@@ -28,7 +28,14 @@ def get_despacho_bi_dataframe() -> pd.DataFrame:
         provincia, semana_anio, traslados, zona_descarga, cd,
         localidad, tipo_venta, vendedor, desarrollador,
         codigo_cliente, equipo, localidad_im, incoterms_im,
-        gerencia, semana, dia
+        gerencia, semana, dia,
+        NULL AS xx,
+        NULL AS columna1, NULL AS columna2, NULL AS columna3, NULL AS columna4,
+        NULL AS columna5, NULL AS columna6, NULL AS columna7, NULL AS columna8,
+        NULL AS columna9, NULL AS columna10, NULL AS columna11, NULL AS columna12,
+        cod_pagador, pagador, precio_pedido, unidad_entrega,
+        fecha_facturacion, nro_factura, tipo_pos_pedido,
+        documento_referencia, codigo_ferretero, rt
     FROM int_despacho_bi
     ORDER BY dia DESC, nro_pedido;
     """
@@ -41,7 +48,7 @@ def get_despacho_bi_dataframe() -> pd.DataFrame:
 
 
 def export_despacho_bi(return_df: bool = False) -> Path | tuple[Path, pd.DataFrame]:
-    logger.info("Exportando DESPACHO BI a Excel (56 columnas oficiales)...")
+    logger.info("Exportando DESPACHO BI a Excel (79 columnas oficiales)...")
     df = get_despacho_bi_dataframe()
     exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
     path = exporter.export(df, "DESPACHO_BI")

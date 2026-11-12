@@ -83,7 +83,15 @@ class DispatchBiIntModel(Base, TimestampsMixin):
     semana = Column(String(50))
     dia = Column(Integer)
 
-    # Columnas auxiliares internas
+    # Columnas auxiliares internas y extendidas de BasePanel (cols 70-79)
     canal = Column(String(100))
     cod_pagador = Column(BigInteger)
     pagador = Column(String(200))
+    precio_pedido = Column(Numeric(18, 4), nullable=True)
+    unidad_entrega = Column(String(20), nullable=True)
+    fecha_facturacion = Column(DateTime, nullable=True)
+    nro_factura = Column(BigInteger, nullable=True)
+    tipo_pos_pedido = Column(String(50), nullable=True)
+    documento_referencia = Column(String(50), nullable=True)
+    codigo_ferretero = Column(String(50), nullable=True)
+    rt = Column(String(50), nullable=True)

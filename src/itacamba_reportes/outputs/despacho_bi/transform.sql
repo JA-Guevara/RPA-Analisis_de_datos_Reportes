@@ -71,7 +71,9 @@ INSERT INTO [int_despacho_bi] (
     provincia, semana_anio, traslados, zona_descarga, cd,
     localidad, tipo_venta, vendedor, desarrollador,
     codigo_cliente, nombre_cliente, equipo, localidad_im, incoterms_im,
-    gerencia, semana, dia, canal, cod_pagador, pagador
+    gerencia, semana, dia, canal, cod_pagador, pagador,
+    precio_pedido, unidad_entrega, fecha_facturacion, nro_factura,
+    tipo_pos_pedido, documento_referencia, codigo_ferretero, rt
 )
 SELECT 
     q.centro_origen,
@@ -174,10 +176,18 @@ SELECT
     -- x (día del mes 1..31)
     q.dia,
 
-    -- Columnas auxiliares internas
+    -- Columnas auxiliares internas y extendidas de BasePanel (cols 70-79)
     COALESCE(alm_can.canal, 'OTROS') AS canal,
     q.cod_pagador,
-    q.pagador
+    q.pagador,
+    q.precio_pedido,
+    q.unidad_entrega,
+    q.fecha_facturacion,
+    q.nro_factura,
+    q.tipo_pos_pedido,
+    q.documento_referencia,
+    q.codigo_ferretero,
+    q.cod_ruta AS rt
 
 FROM [int_query] q
 LEFT JOIN ref_cen cen_orig ON cen_orig.centro = UPPER(LTRIM(RTRIM(q.centro_origen))) AND cen_orig.rn = 1
