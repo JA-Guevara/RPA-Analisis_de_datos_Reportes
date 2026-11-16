@@ -27,7 +27,7 @@ from itacamba_reportes.sap.session import SapSessionManager
 from itacamba_reportes.sap.selectors import SELECTORES_SAP
 from itacamba_reportes.sap.actions.login_action import execute_login
 from itacamba_reportes.sap.actions.logout_action import execute_logout
-from itacamba_reportes.sap.actions.download_action import execute_download_report
+from itacamba_reportes.sap.actions.download_action import execute_download_report, execute_download_all_sap
 
 logger = setup_logging()
 
@@ -407,6 +407,36 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
         return 1
 
 
+def test_download_all_batch(out_dir: Path | None = None) -> int:
+    target_directory = out_dir or (ROOT / "storage" / "raw" / "test_sap")
+    target_directory.mkdir(parents=True, exist_ok=True)
+
+    print("\n======================================================================")
+    print("=== DESCARGA CONJUNTA SAP: GD20 (Mes) + QUERY (3 Meses)            ===")
+    print("======================================================================")
+    print("Este flujo realiza un único inicio de sesión, ejecuta ambas transacciones")
+    print("volviendo limpiamente al menú principal entre ellas, y cierra todo al final.")
+    print("----------------------------------------------------------------------")
+
+    t0 = perf_counter()
+    try:
+        results = execute_download_all_sap(
+            target_dir=target_directory,
+            close_at_end=True,
+        )
+        elapsed = perf_counter() - t0
+        print(f"\n>>> ¡DESCARGA CONJUNTA COMPLETADA EXITOSAMENTE EN {elapsed:.2f}s! <<<")
+        for k, p in results.items():
+            sz = p.stat().st_size / 1024 if p.exists() else 0
+            print(f"  [{k.upper()}] {p.name} ({sz:.1f} KB) -> {p}")
+        return 0
+    except Exception as exc:
+        elapsed = perf_counter() - t0
+        print(f"\n[ERROR] Falló la descarga conjunta ({elapsed:.2f}s): {exc}")
+        logger.exception("Error en descarga conjunta SAP: %s", exc)
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="test_sap",
@@ -414,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--action",
-        choices=["diagnostic", "launch", "login", "logout", "full-auth", "kill", "download"],
+        choices=["diagnostic", "launch", "login", "logout", "full-auth", "kill", "download", "batch"],
         default=None,
         help="Acción específica a ejecutar.",
     )
@@ -435,7 +465,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--task",
-        choices=["gd20", "zbcs", "cartera"],
+        choices=["gd20", "zbcs", "query", "cartera", "all", "batch"],
         default=None,
         help="Tarea a descargar cuando action es download o se invoca directamente.",
     )
@@ -472,6 +502,9 @@ def main(argv: list[str] | None = None) -> int:
         ok = action_diagnostic()
         return 0 if ok else 1
 
+    if args.action == "batch" or (args.task and args.task.lower() in ("all", "batch")):
+        return test_download_all_batch(out_dir=Path(args.out_dir) if args.out_dir else None)
+
     if args.task or args.action == "download":
         task_id = args.task or "gd20"
         return test_download_task(task_id, out_dir=Path(args.out_dir) if args.out_dir else None)
@@ -495,14 +528,15 @@ def main(argv: list[str] | None = None) -> int:
         print("  5. Ciclo Completo: Abrir -> Login -> Validar -> Logout -> Cerrar SAP")
         print("  6. Cerrar procesos de SAP por la fuerza (Kill / Reset)")
         print("  --- FASE 2: DESCARGAS DE REPORTES ---")
-        print("  7. Probar descarga GD20 (Ventas contables)")
-        print("  8. Probar descarga ZBCS (Despachos / Query)")
+        print("  7. Probar descarga GD20 (Ventas contables - Mes)")
+        print("  8. Probar descarga Query (ZVCSD381 - 3 Meses atrás)")
         print("  9. Probar descarga Cartera (ZSDI)")
+        print("  10. Probar descarga conjunta GD20 + Query (1 solo Login y Cierre)")
         print("  0. Salir")
         print("======================================================================")
 
         try:
-            choice = input("\nIngrese una opción (0-9): ").strip()
+            choice = input("\nIngrese una opción (0-10): ").strip()
             if choice == "1":
                 action_diagnostic()
             elif choice == "2":
@@ -518,9 +552,11 @@ def main(argv: list[str] | None = None) -> int:
             elif choice == "7":
                 test_download_task("gd20")
             elif choice == "8":
-                test_download_task("zbcs")
+                test_download_task("query")
             elif choice == "9":
                 test_download_task("cartera")
+            elif choice == "10":
+                test_download_all_batch()
             elif choice == "0":
                 print("Finalizado.")
                 return 0

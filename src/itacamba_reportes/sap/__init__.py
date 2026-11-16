@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from itacamba_reportes.sap.config import SapDownloadConfig
+from itacamba_reportes.sap.config import (
+    CONFIG_GD20,
+    CONFIG_QUERY,
+    SapDownloadConfig,
+)
 from itacamba_reportes.sap.exceptions import (
     SapAutomationError,
     SapConnectionError,
@@ -13,6 +17,7 @@ from itacamba_reportes.sap.selectors import (
     SelectoresBarra,
     SelectoresGD20,
     SelectoresLogin,
+    SelectoresQuery,
     SelectoresSAP,
     SelectoresVentana,
     SelectoresZBCS,
@@ -22,6 +27,8 @@ from itacamba_reportes.sap.session import SapSessionManager
 __all__ = [
     "SapSessionManager",
     "SapDownloadConfig",
+    "CONFIG_GD20",
+    "CONFIG_QUERY",
     "SELECTORES_SAP",
     "SelectoresSAP",
     "SelectoresVentana",
@@ -29,6 +36,7 @@ __all__ = [
     "SelectoresLogin",
     "SelectoresGD20",
     "SelectoresZBCS",
+    "SelectoresQuery",
     "SapAutomationError",
     "SapConnectionError",
     "SapElementNotFoundError",

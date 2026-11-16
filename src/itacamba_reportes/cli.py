@@ -176,20 +176,60 @@ def main(argv: list[str] | None = None) -> int:
             return launch_gui()
 
         if args.command == "download-sap":
-            from itacamba_reportes.sap import SapDownloadConfig, SapSessionManager
-            from itacamba_reportes.sap.actions import execute_download_report
+            from itacamba_reportes.sap import SapDownloadConfig, SapSessionManager, CONFIG_GD20, CONFIG_QUERY
+            from itacamba_reportes.sap.actions import execute_download_report, execute_download_all_sap
 
-            cfg = SapDownloadConfig(
-                transaction=args.transaction,
-                variant=args.variant,
-                ledger=args.ledger,
-                period_low=args.period_low,
-                period_high=args.period_high,
-                layout_row=args.layout_row,
-                export_filename=args.filename,
-                target_dir=args.target_dir,
-            )
             session_mgr = SapSessionManager()
+            tx = (args.transaction or "").strip().lower()
+
+            if tx in ("all", "batch", "todos"):
+                execute_download_all_sap(
+                    session_manager=session_mgr,
+                    target_dir=args.target_dir,
+                    period_gd20=args.period_low,
+                    date_from_query=args.date_from,
+                    date_to_query=args.date_to,
+                    close_at_end=True,
+                )
+                return 0
+
+            if tx in ("zvcsd381", "zbcs", "query"):
+                cfg = CONFIG_QUERY.to_download_config(
+                    target_dir=args.target_dir,
+                    date_from_override=args.date_from,
+                    date_to_override=args.date_to,
+                    period_override=args.period_low,
+                )
+                if args.variant:
+                    cfg.variant = args.variant
+                if args.filename and args.filename != "EXPORT":
+                    cfg.export_filename = args.filename
+            elif tx == "gd20":
+                cfg = CONFIG_GD20.to_download_config(
+                    target_dir=args.target_dir,
+                    period_override=args.period_low,
+                )
+                if args.variant:
+                    cfg.variant = args.variant
+                if args.ledger:
+                    cfg.ledger = args.ledger
+                if args.filename and args.filename != "EXPORT":
+                    cfg.export_filename = args.filename
+            else:
+                cfg = SapDownloadConfig(
+                    transaction=args.transaction,
+                    variant=args.variant,
+                    ledger=args.ledger,
+                    period_low=args.period_low,
+                    period_high=args.period_high,
+                    date_from=args.date_from,
+                    date_to=args.date_to,
+                    layout_row=args.layout_row,
+                    export_filename=args.filename,
+                    target_dir=args.target_dir,
+                )
+
+            session_mgr.ensure_connected_and_ready(auto_launch=True)
             execute_download_report(session_mgr, cfg)
             return 0
 

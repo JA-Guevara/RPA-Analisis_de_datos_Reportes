@@ -732,6 +732,26 @@ class TestEltPipeline(unittest.TestCase):
             self.assertEqual(res3, 0)
             mock_run_all.assert_called_once()
 
+    def test_sap_query_3_months_and_flow(self):
+        from itacamba_reportes.sap.config import CONFIG_QUERY, CONFIG_GD20
+        from itacamba_reportes.sap.session import SapSessionManager
+        from itacamba_reportes.sap.actions import execute_download_all_sap
+
+        cfg_q = CONFIG_QUERY.to_download_config(date_to_override="08.11.2026")
+        self.assertEqual(cfg_q.transaction, "ZVCSD381")
+        self.assertEqual(cfg_q.sociedad, "4253")
+        self.assertEqual(cfg_q.variant, "/IM")
+        self.assertEqual(cfg_q.date_to, "08.11.2026")
+        self.assertEqual(cfg_q.date_from, "08.08.2026")
+
+        cfg_gd20 = CONFIG_GD20.to_download_config()
+        self.assertEqual(cfg_gd20.layout_name, "//AVRILGD20")
+        self.assertEqual(cfg_gd20.variant, "BOT_GD20")
+        self.assertEqual(cfg_gd20.ledger, "VC")
+
+        self.assertTrue(hasattr(SapSessionManager, "return_to_main_menu"))
+        self.assertTrue(callable(execute_download_all_sap))
+
 
 if __name__ == "__main__":
     unittest.main()

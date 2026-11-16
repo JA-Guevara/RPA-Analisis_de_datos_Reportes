@@ -282,3 +282,46 @@ class SapSessionManager:
             self.send_vkey(SELECTORES_SAP.barra.btn_enter_key, window_id=SELECTORES_SAP.ventana.modal_1)
             return True
         return False
+
+    def return_to_main_menu(self) -> None:
+        from itacamba_reportes.sap.selectors import SELECTORES_SAP
+
+        logger.info("Retornando al menu principal de SAP (Easy Access)...")
+        # 1. Resolver popups o ventanas modales residuales (wnd[1], wnd[2])
+        for _ in range(3):
+            try:
+                active_wnd = getattr(self.session.ActiveWindow, "Name", "")
+                if active_wnd and active_wnd != "wnd[0]":
+                    if self.element_exists("wnd[1]/usr/btnSPOP-OPTION1", timeout=0.5):
+                        self.press_button("wnd[1]/usr/btnSPOP-OPTION1")
+                        time.sleep(0.5)
+                        continue
+                    if self.element_exists(f"{active_wnd}/tbar[0]/btn[12]", timeout=0.5):
+                        self.press_button(f"{active_wnd}/tbar[0]/btn[12]")
+                        time.sleep(0.5)
+                        continue
+            except Exception:
+                pass
+
+        # 2. Pulsar boton atras (btn[15]) varias veces
+        for _ in range(4):
+            try:
+                if self.element_exists("wnd[1]/usr/btnSPOP-OPTION1", timeout=0.5):
+                    self.press_button("wnd[1]/usr/btnSPOP-OPTION1")
+                    time.sleep(0.5)
+                self.press_button(SELECTORES_SAP.barra.btn_back)
+                time.sleep(0.3)
+            except Exception:
+                pass
+
+        # 3. Enviar '/n' en okcode para asegurar pantalla base limpia de Easy Access
+        try:
+            if self.element_exists(SELECTORES_SAP.barra.okcode, timeout=2.0):
+                self.set_text(SELECTORES_SAP.barra.okcode, "/n")
+                self.send_vkey(SELECTORES_SAP.barra.btn_enter_key, window_id=SELECTORES_SAP.ventana.main)
+                time.sleep(0.5)
+        except Exception:
+            pass
+
+        self.maximize()
+        logger.info("SAP en menu principal listo para la siguiente transaccion")

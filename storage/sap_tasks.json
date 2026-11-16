@@ -34,34 +34,29 @@
   },
   {
     "id": "zbcs",
-    "tcode": "ZBCS",
-    "titulo": "Despachos ZBCS (Query)",
-    "ayuda": "Alimenta las tablas QUERY, DESPACHO BI y DESPACHO MES.",
+    "tcode": "ZVCSD381",
+    "titulo": "Despachos Query (ZVCSD381)",
+    "ayuda": "Alimenta las tablas QUERY, DESPACHO BI y DESPACHO MES (Rango automático de 3 meses atrás).",
     "destino": "QUERY.xlsx",
     "ledger": "",
-    "variante": "",
-    "periodo": "",
+    "variante": "/IM",
+    "periodo": "3 meses",
     "layout_row": "",
     "campos": [
       {
-        "id": "ledger",
-        "etiqueta": "Ledger Contable",
-        "valor": ""
+        "id": "sociedad",
+        "etiqueta": "Sociedad",
+        "valor": "4253"
       },
       {
         "id": "variante",
-        "etiqueta": "Variante SAP",
-        "valor": ""
+        "etiqueta": "Disposición / Variante",
+        "valor": "/IM"
       },
       {
         "id": "periodo",
-        "etiqueta": "Período / Mes",
-        "valor": ""
-      },
-      {
-        "id": "layout_row",
-        "etiqueta": "Fila Layout ALV",
-        "valor": ""
+        "etiqueta": "Ventana Histórica",
+        "valor": "3 meses atrás"
       }
     ]
   },

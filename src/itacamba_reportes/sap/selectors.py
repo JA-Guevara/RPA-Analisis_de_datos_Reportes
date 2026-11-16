@@ -50,6 +50,31 @@ class SelectoresGD20:
     export_btn_generate: str = "wnd[1]/tbar[0]/btn[20]"
     export_btn_replace: str = "wnd[1]/tbar[0]/btn[11]"
     exit_confirm_dialog: str = "wnd[1]/usr/btnSPOP-OPTION2"
+    exit_confirm_option1: str = "wnd[1]/usr/btnSPOP-OPTION1"
+    exit_confirm_option2: str = "wnd[1]/usr/btnSPOP-OPTION2"
+
+
+@dataclass(frozen=True, slots=True)
+class SelectoresQuery:
+    okcode: str = "ZVCSD381"
+    okcode_legacy: str = "zbcs"
+    sociedad: str = "wnd[0]/usr/ctxtP_BUKRS"
+    fecha_desde: str = "wnd[0]/usr/ctxtS_BUDAT-LOW"
+    fecha_hasta: str = "wnd[0]/usr/ctxtS_BUDAT-HIGH"
+    fecha_desde_legacy: str = "wnd[0]/usr/ctxtS_ERDAT-LOW"
+    fecha_hasta_legacy: str = "wnd[0]/usr/ctxtS_ERDAT-HIGH"
+    disposicion: str = "wnd[0]/usr/txtP_VARI"
+    btn_execute: str = "wnd[0]/tbar[1]/btn[8]"
+    btn_get_variant: str = "wnd[0]/tbar[1]/btn[17]"
+    popup_variant_name: str = "wnd[1]/usr/txtV-LOW"
+    popup_btn_find_variant: str = "wnd[1]/tbar[0]/btn[8]"
+    btn_choose_layout: str = "wnd[0]/tbar[1]/btn[33]"
+    layout_grid: str = "wnd[1]/usr/subSUB_CONFIGURATION:SAPLSALV_CUL_LAYOUT_CHOOSE:0500/cntlD500_CONTAINER/shellcont/shell"
+    export_filename: str = "wnd[1]/usr/ssubSUB_CONFIGURATION:SAPLSALV_GUI_CUL_EXPORT_AS:0512/txtGS_EXPORT-FILE_NAME"
+    export_btn_generate: str = "wnd[1]/tbar[0]/btn[20]"
+    export_btn_replace: str = "wnd[1]/tbar[0]/btn[11]"
+    exit_confirm_option1: str = "wnd[1]/usr/btnSPOP-OPTION1"
+    exit_confirm_option2: str = "wnd[1]/usr/btnSPOP-OPTION2"
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +98,8 @@ class SelectoresExportacion:
     file_name_direct: str = "wnd[1]/usr/ctxtDY_FILENAME"
     export_filename_legacy: str = "wnd[1]/usr/ssubSUB_CONFIGURATION:SAPLSALV_GUI_CUL_EXPORT_AS:0512/txtGS_EXPORT-FILE_NAME"
     exit_confirm_dialog: str = "wnd[1]/usr/btnSPOP-OPTION2"
+    exit_confirm_option1: str = "wnd[1]/usr/btnSPOP-OPTION1"
+    exit_confirm_option2: str = "wnd[1]/usr/btnSPOP-OPTION2"
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +109,7 @@ class SelectoresSAP:
     login: SelectoresLogin = field(default_factory=SelectoresLogin)
     gd20: SelectoresGD20 = field(default_factory=SelectoresGD20)
     zbcs: SelectoresZBCS = field(default_factory=SelectoresZBCS)
+    query: SelectoresQuery = field(default_factory=SelectoresQuery)
     exportacion: SelectoresExportacion = field(default_factory=SelectoresExportacion)
 
 
