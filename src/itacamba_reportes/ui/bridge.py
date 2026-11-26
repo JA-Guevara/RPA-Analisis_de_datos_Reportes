@@ -95,27 +95,47 @@ class BotBridge:
     # -------------------------------------------------------------------------
     # 1. ESTADO INICIAL (100% REAL)
     # -------------------------------------------------------------------------
+    def _resolve_storage_paths(self) -> dict[str, str]:
+        from itacamba_reportes.core.settings import EnvConfig
+
+        EnvConfig.reload(ENV_FILE_PATH if ENV_FILE_PATH.exists() else None)
+        data_env = (os.getenv("DATA_PATH") or "").strip()
+        fijos_env = (os.getenv("PATH_INSUMOS_FIJOS") or "").strip()
+        din_env = (os.getenv("PATH_INSUMOS_DINAMICOS") or "").strip()
+        exp_env = (os.getenv("EXPORT_PATH") or "").strip()
+        rep_env = (os.getenv("PATH_REPORTES_SALIDA") or "").strip()
+        logs_env = (os.getenv("PATH_LOGS_STORAGE") or "").strip()
+
+        if data_env:
+            base_data = Path(data_env)
+        elif din_env:
+            base_data = Path(din_env).parent
+        elif fijos_env:
+            base_data = Path(fijos_env).parent
+        else:
+            base_data = EnvConfig.DATA_PATH
+
+        return {
+            "PATH_INSUMOS_FIJOS": fijos_env or str(base_data / "fijos"),
+            "PATH_INSUMOS_DINAMICOS": din_env or str(base_data / "dinamicos"),
+            "PATH_REPORTES_SALIDA": rep_env or exp_env or str(EnvConfig.EXPORT_PATH),
+            "PATH_LOGS_STORAGE": logs_env or str(EnvConfig.LOG_PATH),
+        }
+
     def get_initial_state(self) -> dict[str, Any]:
         # Obtiene la configuración real de .env, escanea los archivos existentes en disco
         # y extrae los esquemas de mapeo reales del bot.
         load_dotenv(ENV_FILE_PATH, override=True)
         env_vars = self._read_env_file()
-
-        # Rutas físicas reales
-        fijos_path = os.getenv("PATH_INSUMOS_FIJOS", r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos ITACAMBA\Archivos\fijos")
-        dinamicos_path = os.getenv("PATH_INSUMOS_DINAMICOS", r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos ITACAMBA\Archivos\dinamicos")
-        reportes_path = os.getenv("PATH_REPORTES_SALIDA", r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos ITACAMBA\Archivos\reports")
-        logs_path = os.getenv("PATH_LOGS_STORAGE", str(PROJECT_ROOT / "storage" / "logs"))
+        paths = self._resolve_storage_paths()
+        fijos_path = paths["PATH_INSUMOS_FIJOS"]
+        dinamicos_path = paths["PATH_INSUMOS_DINAMICOS"]
+        reportes_path = paths["PATH_REPORTES_SALIDA"]
 
         return {
             "status": "ok",
             "env_vars": env_vars,
-            "paths": {
-                "PATH_INSUMOS_FIJOS": fijos_path,
-                "PATH_INSUMOS_DINAMICOS": dinamicos_path,
-                "PATH_REPORTES_SALIDA": reportes_path,
-                "PATH_LOGS_STORAGE": logs_path,
-            },
+            "paths": paths,
             "archivos_fijos": self._scan_directory_files(fijos_path),
             "archivos_dinamicos": self._scan_directory_files(dinamicos_path),
             "archivos_reportes": self._scan_directory_files(reportes_path),
@@ -327,7 +347,10 @@ class BotBridge:
                 p_high,
                 date_to_query,
             )
+            dinamicos_dir = Path(self._resolve_storage_paths()["PATH_INSUMOS_DINAMICOS"])
+            dinamicos_dir.mkdir(parents=True, exist_ok=True)
             execute_download_all_sap(
+                target_dir=dinamicos_dir,
                 period_gd20=p_low,
                 period_high_gd20=p_high,
                 year_gd20=y_low,
@@ -879,7 +902,7 @@ class BotBridge:
             mgr = SapSessionManager()
             connected = False
             try:
-                target_dir = getattr(EnvConfig, "DATA_PATH", PROJECT_ROOT / "storage" / "raw") / "dinamicos"
+                target_dir = Path(self._resolve_storage_paths()["PATH_INSUMOS_DINAMICOS"])
                 target_dir.mkdir(parents=True, exist_ok=True)
 
                 mgr.ensure_connected_and_ready(auto_launch=True)
@@ -1202,10 +1225,11 @@ class BotBridge:
             "detail": str(sql_res.get("message") or ""),
         })
 
-        # 4. Carpetas e insumos físicos esperados
-        fijos_str = os.getenv("PATH_INSUMOS_FIJOS", "").strip()
-        din_str = os.getenv("PATH_INSUMOS_DINAMICOS", "").strip()
-        rep_str = os.getenv("PATH_REPORTES_SALIDA", "").strip()
+        # 4. Carpetas e insumos físicos esperados (acepta PATH_INSUMOS_* o DATA_PATH / EXPORT_PATH)
+        resolved_paths = self._resolve_storage_paths()
+        fijos_str = resolved_paths["PATH_INSUMOS_FIJOS"]
+        din_str = resolved_paths["PATH_INSUMOS_DINAMICOS"]
+        rep_str = resolved_paths["PATH_REPORTES_SALIDA"]
         for key_lbl, folder_val, required_patterns in (
             ("Insumos Fijos (fijos/)", fijos_str, ("REFERENCIAS", "PROYECCION")),
             ("Insumos Dinámicos (dinamicos/)", din_str, ("CARTERA", "GD20", "QUERY")),
@@ -1226,14 +1250,14 @@ class BotBridge:
                     "id": f"path_{key_lbl}",
                     "label": key_lbl,
                     "status": status_lvl,
-                    "detail": f"Carpeta OK ({len(xlsx_names)} .xlsx). Faltan: {', '.join(missing_files)} (se actualizarán al descargar).",
+                    "detail": f"{p_dir} ({len(xlsx_names)} .xlsx). Faltan: {', '.join(missing_files)} (se actualizarán al descargar).",
                 })
             else:
                 checks.append({
                     "id": f"path_{key_lbl}",
                     "label": key_lbl,
                     "status": "ok",
-                    "detail": f"Carpeta OK con {len(xlsx_names)} archivo(s) .xlsx listos.",
+                    "detail": f"{p_dir} ({len(xlsx_names)} .xlsx listos).",
                 })
 
         # 5. Coherencia del perfil activo y parámetros resueltos para GD20 y Query
@@ -1253,12 +1277,20 @@ class BotBridge:
 
         fecha_desde = prof_obj.get("fechaDesde")
         fecha_hasta = prof_obj.get("fechaHasta")
+        current_month_start = datetime.now().replace(day=1).strftime("%Y-%m-%d")
         if fecha_desde and fecha_hasta and str(fecha_desde) > str(fecha_hasta):
             checks.append({
                 "id": "profile",
                 "label": "Perfil activo",
                 "status": "error",
                 "detail": f"{prof_obj.get('nombre', 'Perfil')}: fechaDesde ({fecha_desde}) es posterior a fechaHasta ({fecha_hasta}).",
+            })
+        elif fecha_hasta and str(fecha_hasta) < current_month_start and prof_obj.get("modo") != "rango":
+            checks.append({
+                "id": "profile",
+                "label": "Perfil activo",
+                "status": "warn",
+                "detail": f"{prof_obj.get('nombre', 'Predeterminado')} apunta a mes anterior ({fecha_desde} -> {fecha_hasta}). Ajusta 'Mes de ejecución' en Programador si buscas el mes actual.",
             })
         else:
             checks.append({
@@ -1598,7 +1630,8 @@ class BotBridge:
             return {"status": "error", "message": f"Error guardando mapeo: {exc}"}
 
     def open_folder(self, path_key: str) -> dict[str, Any]:
-        folder = os.getenv(path_key)
+        paths = self._resolve_storage_paths()
+        folder = (os.getenv(path_key) or paths.get(path_key) or "").strip()
         if not folder or not Path(folder).exists():
             folder = str(PROJECT_ROOT)
         try:
@@ -1608,7 +1641,7 @@ class BotBridge:
             return {"status": "error", "message": str(exc)}
 
     def open_file_excel(self, file_name: str) -> dict[str, Any]:
-        reportes_path = Path(os.getenv("PATH_REPORTES_SALIDA", r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos ITACAMBA\Archivos\reports"))
+        reportes_path = Path(self._resolve_storage_paths()["PATH_REPORTES_SALIDA"])
         target = reportes_path / file_name
 
         if not target.exists():

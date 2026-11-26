@@ -17,8 +17,9 @@
       "J",
       "V"
     ],
-    "fechaDesde": "2026-09-27",
-    "fechaHasta": "2026-10-27",
+    "mesEjecucion": "2026-11",
+    "fechaDesde": "2026-11-01",
+    "fechaHasta": "2026-11-26",
     "activa": true
   },
   {
@@ -41,8 +42,9 @@
       "S",
       "D"
     ],
-    "fechaDesde": "2026-09-26",
-    "fechaHasta": "2026-10-27",
+    "mesEjecucion": "2026-11",
+    "fechaDesde": "2026-11-01",
+    "fechaHasta": "2026-11-26",
     "activa": false
   },
   {
@@ -63,8 +65,9 @@
       "J",
       "V"
     ],
-    "fechaDesde": "2026-10-12",
-    "fechaHasta": "2026-10-27",
+    "mesEjecucion": "2026-11",
+    "fechaDesde": "2026-11-01",
+    "fechaHasta": "2026-11-26",
     "activa": false
   },
   {
@@ -85,8 +88,9 @@
       "J",
       "V"
     ],
-    "fechaDesde": "2026-08-28",
-    "fechaHasta": "2026-10-27",
+    "mesEjecucion": "2026-11",
+    "fechaDesde": "2026-11-01",
+    "fechaHasta": "2026-11-26",
     "activa": false
   }
 ]

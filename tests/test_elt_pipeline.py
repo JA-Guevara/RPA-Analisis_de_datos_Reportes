@@ -1406,6 +1406,33 @@ class TestEltPipeline(unittest.TestCase):
             self.assertFalse(res_bad["ok"])
             self.assertGreaterEqual(res_bad["errors"], 2)
 
+            # Tambien resuelve correctamente cuando .env solo define DATA_PATH + EXPORT_PATH
+            env_alt = root / ".env.alt"
+            env_alt.write_text(
+                "\n".join([
+                    f"SAP_LOGON_PATH={sap_exe}",
+                    "SAP_AMBIENT=PRD",
+                    "SAP_USER=bot_user",
+                    "SAP_PASSWORD=test_pass",
+                    "DATABASE_URL=mssql+pyodbc://sa:x@localhost/db",
+                    f"DATA_PATH={root}",
+                    f"EXPORT_PATH={rep}",
+                ]),
+                encoding="utf-8",
+            )
+            env_clean = {
+                k: v for k, v in os.environ.items()
+                if k not in ("PATH_INSUMOS_FIJOS", "PATH_INSUMOS_DINAMICOS", "PATH_REPORTES_SALIDA", "PATH_LOGS_STORAGE")
+            }
+            with patch.dict(os.environ, env_clean, clear=True), \
+                 patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_alt), \
+                 patch.object(bridge, "test_sql_connection", return_value={"ok": True, "message": "SQL OK"}), \
+                 patch.object(bridge, "test_sap_logon", return_value={"ok": True, "message": "SAP OK"}):
+                res_alt = bridge.validate_web_configuration(profile_id="diaria")
+            self.assertTrue(res_alt["ok"], res_alt["checks"])
+            self.assertEqual(res_alt["sap_resolved"]["gd20_year"], "2026")
+            self.assertEqual(res_alt["sap_resolved"]["gd20_period"], "11")
+
     def test_win_dialogs_security_popup_and_excel_closer(self):
         from itacamba_reportes.sap.win_dialogs import (
             SapSecurityWatchdog,
