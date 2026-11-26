@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from itacamba_reportes.sap.config import (
+    CONFIG_CARTERA,
     CONFIG_GD20,
     CONFIG_QUERY,
     SapDownloadConfig,
@@ -27,6 +28,7 @@ from itacamba_reportes.sap.session import SapSessionManager
 __all__ = [
     "SapSessionManager",
     "SapDownloadConfig",
+    "CONFIG_CARTERA",
     "CONFIG_GD20",
     "CONFIG_QUERY",
     "SELECTORES_SAP",

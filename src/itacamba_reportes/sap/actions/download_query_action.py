@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from itacamba_reportes.sap.actions.download_action import execute_download_report
+from itacamba_reportes.sap.actions.download_action import execute_download_report, finalize_sap_session
 from itacamba_reportes.sap.config import ConfigDescargaQuery, SapDownloadConfig
 from itacamba_reportes.sap.selectors import SelectoresSAP
 from itacamba_reportes.sap.session import SapSessionManager
@@ -27,6 +27,8 @@ def execute_download_query(
     target_dir: Path | str | None = None,
     config: SapDownloadConfig | None = None,
     selectors: SelectoresSAP | None = None,
+    ensure_ready: bool = False,
+    close_at_end: bool = False,
 ) -> Path:
     if config is None:
         cfg_builder = ConfigDescargaQuery(
@@ -49,4 +51,11 @@ def execute_download_query(
         if layout_row is not None:
             config.layout_row = layout_row
 
-    return execute_download_report(session_manager, config, selectors=selectors)
+    if ensure_ready:
+        session_manager.ensure_connected_and_ready(auto_launch=True)
+
+    try:
+        return execute_download_report(session_manager, config, selectors=selectors)
+    finally:
+        if close_at_end:
+            finalize_sap_session(session_manager, close_at_end=True)

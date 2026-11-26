@@ -54,6 +54,9 @@ class BotBridge:
     def __init__(self) -> None:
         self._log_queue: queue.Queue[dict[str, Any]] = queue.Queue()
         self._is_running = False
+        self._sap_download_running = False
+        self._sap_download_seq = 0
+        self._sap_download_result: dict[str, Any] | None = None
         self._stop_requested = False
         self._scheduler_active = False
         self._execution_thread: threading.Thread | None = None
@@ -836,6 +839,12 @@ class BotBridge:
                 "message": "CARTERA.xlsx no cuenta con script SAP GUI automatizado; llega por correo automático a dinamicos/.",
             }
 
+        if self._sap_download_running:
+            return {
+                "status": "busy",
+                "message": "Ya hay una descarga SAP en ejecución. Espera a que finalice.",
+            }
+
         test = self.test_sap_logon()
         if not test.get("ok"):
             return {
@@ -843,58 +852,76 @@ class BotBridge:
                 "message": f"SAP GUI no está disponible: {test.get('message')}",
             }
 
-        def _worker():
-            try:
-                from itacamba_reportes.sap.config import CONFIG_CARTERA, CONFIG_GD20, CONFIG_QUERY, SapDownloadConfig
-                from itacamba_reportes.sap.session import SapSessionManager
-                from itacamba_reportes.sap.actions.download_action import execute_download_report
+        key = task_id.lower().strip()
+        p_low_cfg, p_high_cfg, y_low_cfg, y_high_cfg, date_to_cfg = self._resolve_sap_config_dates(
+            fecha_desde=params.get("fechaDesdeConfig") or params.get("fechaDesde") or None,
+            corte_fecha=params.get("fechaHastaConfig") or params.get("fechaHasta") or None,
+            profile_id=params.get("profileId") or None,
+        )
+        manual_period = (params.get("periodo") or "").strip() or None
+        manual_year = (params.get("ejercicio") or "").strip() or None
+        manual_desde = (params.get("desde") or "").strip() or None
+        manual_hasta = (params.get("hasta") or "").strip() or None
+        close_at_end = bool(params.get("cerrarAlFinal", True))
 
-                key = task_id.lower().strip()
+        p_eff_low = manual_period or p_low_cfg
+        p_eff_high = p_eff_low if manual_period else p_high_cfg
+        y_eff_low = manual_year or y_low_cfg
+        q_to_preview = manual_hasta or date_to_cfg
+
+        self._sap_download_running = True
+
+        def _worker():
+            from itacamba_reportes.sap.config import CONFIG_CARTERA, CONFIG_GD20, CONFIG_QUERY, SapDownloadConfig
+            from itacamba_reportes.sap.session import SapSessionManager
+            from itacamba_reportes.sap.actions import execute_download_all_sap, execute_download_report, finalize_sap_session
+
+            mgr = SapSessionManager()
+            connected = False
+            try:
                 target_dir = getattr(EnvConfig, "DATA_PATH", PROJECT_ROOT / "storage" / "raw") / "dinamicos"
                 target_dir.mkdir(parents=True, exist_ok=True)
 
-                p_low_cfg, p_high_cfg, y_low_cfg, y_high_cfg, date_to_cfg = self._resolve_sap_config_dates(
-                    fecha_desde=params.get("fechaDesdeConfig") or params.get("fechaDesde") or None,
-                    corte_fecha=params.get("fechaHastaConfig") or params.get("fechaHasta") or None,
-                    profile_id=params.get("profileId") or None,
-                )
-                manual_period = (params.get("periodo") or "").strip() or None
-                manual_year = (params.get("ejercicio") or "").strip() or None
-                manual_desde = (params.get("desde") or "").strip() or None
-                manual_hasta = (params.get("hasta") or "").strip() or None
-
-                mgr = SapSessionManager()
                 mgr.ensure_connected_and_ready(auto_launch=True)
+                connected = True
 
                 if key in ("all", "batch", "lote", "todos"):
-                    from itacamba_reportes.sap.actions import execute_download_all_sap
                     out_files = execute_download_all_sap(
                         session_manager=mgr,
                         target_dir=target_dir,
-                        period_gd20=manual_period or p_low_cfg,
+                        period_gd20=p_eff_low,
                         period_high_gd20=None if manual_period else p_high_cfg,
-                        year_gd20=manual_year or y_low_cfg,
+                        year_gd20=y_eff_low,
                         year_high_gd20=None if manual_year else y_high_cfg,
                         date_from_query=manual_desde,
-                        date_to_query=manual_hasta or date_to_cfg,
-                        close_at_end=True,
+                        date_to_query=q_to_preview,
+                        close_at_end=close_at_end,
                     )
+                    connected = False
                     logger.info("Descarga en lote SAP finalizada exitosamente: %s", out_files)
+                    names = ", ".join(p.name for p in out_files.values())
+                    self._sap_download_seq += 1
+                    self._sap_download_result = {
+                        "id": self._sap_download_seq,
+                        "task_id": task_id,
+                        "status": "ok",
+                        "message": f"Descarga conjunta SAP completada: {names}",
+                    }
                     return
 
                 if key == "gd20":
                     cfg = CONFIG_GD20.to_download_config(
                         target_dir=target_dir,
-                        period_override=manual_period or p_low_cfg,
+                        period_override=p_eff_low,
                         period_high_override=None if manual_period else p_high_cfg,
-                        year_override=manual_year or y_low_cfg,
+                        year_override=y_eff_low,
                         year_high_override=None if manual_year else y_high_cfg,
                     )
                 elif key in ("zbcs", "query"):
                     cfg = CONFIG_QUERY.to_download_config(
                         target_dir=target_dir,
                         date_from_override=manual_desde,
-                        date_to_override=manual_hasta or date_to_cfg,
+                        date_to_override=q_to_preview,
                     )
                 elif key == "cartera":
                     cfg = CONFIG_CARTERA.to_download_config(target_dir=target_dir)
@@ -926,23 +953,54 @@ class BotBridge:
                     except Exception:
                         pass
                 if ln := (params.get("layout_name") or params.get("layout")):
-                    if str(ln).strip():
-                        cfg.layout_name = str(ln).strip()
+                    ln_clean = str(ln).strip()
+                    if ln_clean and not (key in ("zbcs", "query") and ln_clean == (cfg.variant or "")):
+                        cfg.layout_name = ln_clean
                 if dest := params.get("destino"):
                     if str(dest).strip():
                         cfg.export_filename = str(dest).strip()
 
                 out_file = execute_download_report(mgr, cfg)
                 logger.info("Descarga web de '%s' finalizada exitosamente: %s", task_id, out_file)
+                self._sap_download_seq += 1
+                self._sap_download_result = {
+                    "id": self._sap_download_seq,
+                    "task_id": task_id,
+                    "status": "ok",
+                    "message": f"Descarga SAP de '{task_id.upper()}' completada: {out_file.name}",
+                }
             except Exception as exc:
                 logger.error("Error en descarga SAP desde interfaz web para '%s': %s", task_id, exc)
+                self._sap_download_seq += 1
+                self._sap_download_result = {
+                    "id": self._sap_download_seq,
+                    "task_id": task_id,
+                    "status": "error",
+                    "message": f"Error en descarga SAP '{task_id.upper()}': {exc}",
+                }
+            finally:
+                if connected:
+                    try:
+                        finalize_sap_session(mgr, close_at_end=close_at_end)
+                    except Exception as exc_close:
+                        logger.warning("Aviso al cerrar sesión SAP tras descarga web: %s", exc_close)
+                self._sap_download_running = False
 
         threading.Thread(target=_worker, daemon=True, name=f"SapDownload-{task_id}").start()
 
-        periodo_usado = params.get("periodo") or "actual"
+        p_label = p_eff_low if p_eff_low == p_eff_high else f"{p_eff_low}..{p_eff_high}"
+        if key == "gd20":
+            detail = f"Ejercicio {y_eff_low}, Período {p_label}"
+        elif key in ("zbcs", "query"):
+            detail = f"3 meses hasta {q_to_preview}"
+        elif key in ("all", "batch", "lote", "todos"):
+            detail = f"GD20 {y_eff_low}/{p_label} + Query hasta {q_to_preview}"
+        else:
+            detail = f"Período {p_label}"
+
         return {
             "status": "ok",
-            "message": f"Descarga SAP de '{task_id.upper()}' iniciada en segundo plano (Período: {periodo_usado}).",
+            "message": f"Descarga SAP de '{task_id.upper()}' iniciada ({detail}).",
         }
 
     def get_execution_updates(self) -> dict[str, Any]:
@@ -958,6 +1016,8 @@ class BotBridge:
             "is_running": self._is_running,
             "state": self._execution_state,
             "logs": logs,
+            "sap_download_running": self._sap_download_running,
+            "sap_download_result": self._sap_download_result,
         }
 
     # -------------------------------------------------------------------------
@@ -1045,11 +1105,13 @@ class BotBridge:
     # 4. PRUEBAS DE CONECTIVIDAD REALES
     # -------------------------------------------------------------------------
     def test_sap_logon(self) -> dict[str, Any]:
-        # Prueba de SAP Logon verificando el ejecutable y el proceso en memoria.
+        # Prueba de SAP Logon verificando el ejecutable, credenciales configuradas y sesión COM.
         sap_path = os.getenv("SAP_LOGON_PATH", r"C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe")
-        ambient = os.getenv("SAP_AMBIENT", "PRD")
-        mandante = os.getenv("SAP_MANDANTE", "300")
-        system_id = os.getenv("SAP_SYSTEM", os.getenv("SAP_SISTEMA", "E05"))
+        ambient = os.getenv("SAP_AMBIENT", "").strip()
+        mandante = os.getenv("SAP_MANDANTE", "300").strip()
+        system_id = os.getenv("SAP_SYSTEM", os.getenv("SAP_SISTEMA", "E05")).strip()
+        sap_user = (os.getenv("SAP_USER") or os.getenv("SAP_USUARIO") or "").strip()
+        sap_password = (os.getenv("SAP_PASSWORD") or "").strip()
 
         if not Path(sap_path).exists():
             return {
@@ -1063,15 +1125,183 @@ class BotBridge:
             app = sap_gui_auto.GetScriptingEngine
             conn = app.Children(0)
             session = conn.Children(0)
+            info = getattr(session, "Info", None)
+            sys_live = getattr(info, "SystemName", "") or system_id
+            usr_live = getattr(info, "User", "") or sap_user or "sin login"
             return {
                 "ok": True,
-                "message": f"SAP GUI Scripting CONECTADO (Sesión activa en {ambient}, Mandante {mandante}, Sistema {system_id}).",
+                "message": f"SAP GUI Scripting CONECTADO (Sistema {sys_live}, Mandante {mandante}, Usuario {usr_live}).",
             }
-        except Exception as exc:
+        except Exception:
+            missing_cfg = [
+                k for k, v in (("SAP_AMBIENT", ambient), ("SAP_USER", sap_user), ("SAP_PASSWORD", sap_password)) if not v
+            ]
+            if missing_cfg:
+                return {
+                    "ok": False,
+                    "message": f"Falta configurar {', '.join(missing_cfg)} en .env para login automático en SAP.",
+                }
             return {
                 "ok": True,
-                "message": f"saplogon.exe OK en disco. Abre SAP Logon y selecciona {ambient} para scripting.",
+                "message": f"saplogon.exe y credenciales OK en .env. Ambiente objetivo: {ambient}.",
             }
+
+    def validate_web_configuration(
+        self,
+        profile_id: str | None = None,
+        profile_json: str | None = None,
+    ) -> dict[str, Any]:
+        load_dotenv(ENV_FILE_PATH, override=True)
+        from itacamba_reportes.sap.config import CONFIG_GD20, CONFIG_QUERY
+
+        checks: list[dict[str, str]] = []
+
+        # 1. Archivo .env
+        if ENV_FILE_PATH.exists():
+            checks.append({"id": "env", "label": "Archivo .env", "status": "ok", "detail": str(ENV_FILE_PATH.name)})
+        else:
+            checks.append({"id": "env", "label": "Archivo .env", "status": "error", "detail": "No existe .env en la raíz del proyecto."})
+
+        # 2. Credenciales y rutas críticas de SAP en .env + estado SAP GUI
+        sap_missing = [
+            key for key in ("SAP_LOGON_PATH", "SAP_AMBIENT", "SAP_USER", "SAP_PASSWORD")
+            if not (os.getenv(key) or (key == "SAP_USER" and os.getenv("SAP_USUARIO")) or "").strip()
+        ]
+        sap_res = self.test_sap_logon()
+        if sap_missing and not sap_res.get("ok"):
+            checks.append({"id": "sap_cfg", "label": "Configuración SAP (.env)", "status": "error", "detail": f"Faltan variables: {', '.join(sap_missing)}."})
+        elif sap_missing:
+            checks.append({"id": "sap_cfg", "label": "Configuración SAP (.env)", "status": "warn", "detail": f"Faltan variables: {', '.join(sap_missing)} (solo afectará auto-login)."})
+        else:
+            checks.append({"id": "sap_cfg", "label": "Configuración SAP (.env)", "status": "ok", "detail": f"Ambiente '{os.getenv('SAP_AMBIENT')}', Usuario '{os.getenv('SAP_USER') or os.getenv('SAP_USUARIO')}'."})
+
+        checks.append({
+            "id": "sap_gui",
+            "label": "SAP GUI Scripting",
+            "status": "ok" if sap_res.get("ok") else "error",
+            "detail": str(sap_res.get("message") or ""),
+        })
+
+        # 3. Configuración y conectividad real a SQL Server
+        db_url = (os.getenv("DATABASE_URL") or "").strip()
+        db_missing = [] if db_url else [
+            key for key in ("DB_SERVER", "DB_NAME", "DB_USER", "DB_PASSWORD")
+            if not (os.getenv(key) or "").strip()
+        ]
+        if db_missing:
+            checks.append({"id": "sql_cfg", "label": "Configuración SQL (.env)", "status": "error", "detail": f"Faltan variables: {', '.join(db_missing)}."})
+        else:
+            target_db_desc = "DATABASE_URL configurada" if db_url else f"{os.getenv('DB_SERVER')} / {os.getenv('DB_NAME')}"
+            checks.append({"id": "sql_cfg", "label": "Configuración SQL (.env)", "status": "ok", "detail": target_db_desc})
+
+        sql_res = self.test_sql_connection()
+        checks.append({
+            "id": "sql_conn",
+            "label": "Conexión SQL Server",
+            "status": "ok" if sql_res.get("ok") else "error",
+            "detail": str(sql_res.get("message") or ""),
+        })
+
+        # 4. Carpetas e insumos físicos esperados
+        fijos_str = os.getenv("PATH_INSUMOS_FIJOS", "").strip()
+        din_str = os.getenv("PATH_INSUMOS_DINAMICOS", "").strip()
+        rep_str = os.getenv("PATH_REPORTES_SALIDA", "").strip()
+        for key_lbl, folder_val, required_patterns in (
+            ("Insumos Fijos (fijos/)", fijos_str, ("REFERENCIAS", "PROYECCION")),
+            ("Insumos Dinámicos (dinamicos/)", din_str, ("CARTERA", "GD20", "QUERY")),
+            ("Reportes Salida (reports/)", rep_str, ()),
+        ):
+            if not folder_val:
+                checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": "error", "detail": "Ruta no definida en .env."})
+                continue
+            p_dir = Path(folder_val)
+            if not p_dir.exists():
+                checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": "error", "detail": f"La carpeta no existe: {p_dir}"})
+                continue
+            xlsx_names = [f.name.upper() for f in p_dir.glob("*.xlsx") if not f.name.startswith("~$")]
+            missing_files = [pat for pat in required_patterns if not any(n.startswith(pat) for n in xlsx_names)]
+            if missing_files:
+                status_lvl = "warn" if key_lbl.startswith("Insumos Dinámicos") else "error"
+                checks.append({
+                    "id": f"path_{key_lbl}",
+                    "label": key_lbl,
+                    "status": status_lvl,
+                    "detail": f"Carpeta OK ({len(xlsx_names)} .xlsx). Faltan: {', '.join(missing_files)} (se actualizarán al descargar).",
+                })
+            else:
+                checks.append({
+                    "id": f"path_{key_lbl}",
+                    "label": key_lbl,
+                    "status": "ok",
+                    "detail": f"Carpeta OK con {len(xlsx_names)} archivo(s) .xlsx listos.",
+                })
+
+        # 5. Coherencia del perfil activo y parámetros resueltos para GD20 y Query
+        prof_obj: dict[str, Any] = {}
+        if profile_json:
+            try:
+                parsed = json.loads(profile_json) if isinstance(profile_json, str) else profile_json
+                if isinstance(parsed, dict):
+                    prof_obj = parsed
+            except Exception:
+                pass
+        if not prof_obj:
+            profiles = self.get_execution_profiles()
+            p_key = str(profile_id).split(":")[0] if profile_id else None
+            prof_obj = next((p for p in profiles if p_key and str(p.get("id")) == p_key), None) or \
+                next((p for p in profiles if p.get("activa")), profiles[0] if profiles else {})
+
+        fecha_desde = prof_obj.get("fechaDesde")
+        fecha_hasta = prof_obj.get("fechaHasta")
+        if fecha_desde and fecha_hasta and str(fecha_desde) > str(fecha_hasta):
+            checks.append({
+                "id": "profile",
+                "label": "Perfil activo",
+                "status": "error",
+                "detail": f"{prof_obj.get('nombre', 'Perfil')}: fechaDesde ({fecha_desde}) es posterior a fechaHasta ({fecha_hasta}).",
+            })
+        else:
+            checks.append({
+                "id": "profile",
+                "label": "Perfil activo",
+                "status": "ok",
+                "detail": f"{prof_obj.get('nombre', 'Predeterminado')} · {fecha_desde or 'auto'} -> {fecha_hasta or 'auto'}",
+            })
+
+        p_low, p_high, y_low, y_high, date_to_sap = self._resolve_sap_config_dates(
+            fecha_desde=fecha_desde,
+            corte_fecha=fecha_hasta,
+            profile_id=prof_obj.get("id") or profile_id,
+        )
+        cfg_gd20 = CONFIG_GD20.to_download_config(
+            period_override=p_low,
+            period_high_override=p_high,
+            year_override=y_low,
+            year_high_override=y_high,
+        )
+        cfg_query = CONFIG_QUERY.to_download_config(date_to_override=date_to_sap)
+
+        err_count = sum(1 for c in checks if c["status"] == "error")
+        warn_count = sum(1 for c in checks if c["status"] == "warn")
+        return {
+            "ok": err_count == 0,
+            "errors": err_count,
+            "warnings": warn_count,
+            "checks": checks,
+            "sap_resolved": {
+                "profile_name": prof_obj.get("nombre") or "Perfil activo",
+                "mes_ejecucion": prof_obj.get("mesEjecucion") or "",
+                "gd20_year": f"{cfg_gd20.year_low}" + (f"..{cfg_gd20.year_high}" if cfg_gd20.year_high else ""),
+                "gd20_period": f"{cfg_gd20.period_low}" if cfg_gd20.period_low == cfg_gd20.period_high else f"{cfg_gd20.period_low}..{cfg_gd20.period_high}",
+                "gd20_layout": cfg_gd20.layout_name or "//AVRILGD20",
+                "gd20_variant": cfg_gd20.variant or "BOT_GD20",
+                "query_sociedad": cfg_query.sociedad or "4253",
+                "query_variant": cfg_query.variant or "/IM",
+                "query_date_from": cfg_query.date_from,
+                "query_date_to": cfg_query.date_to,
+            },
+            "summary": "Configuración lista para probar GD20 y Query." if err_count == 0 else f"Se detectaron {err_count} error(es) y {warn_count} aviso(s).",
+        }
 
     def test_sql_connection(self) -> dict[str, Any]:
         # Prueba real de conexión a SQL Server.
@@ -1332,7 +1562,7 @@ class BotBridge:
                 "ayuda": "Alimenta QUERY, DESPACHO BI y DESPACHO MES (3 meses móviles hacia atrás si fechas quedan vacías).",
                 "destino": "QUERY.xlsx",
                 "variante": "/IM",
-                "layout": "/IM",
+                "layout": "",
                 "ledger": "N/A",
                 "periodoTipo": "rango",
                 "campos": [

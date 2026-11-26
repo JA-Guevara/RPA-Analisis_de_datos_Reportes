@@ -27,7 +27,11 @@ from itacamba_reportes.sap.session import SapSessionManager
 from itacamba_reportes.sap.selectors import SELECTORES_SAP
 from itacamba_reportes.sap.actions.login_action import execute_login
 from itacamba_reportes.sap.actions.logout_action import execute_logout
-from itacamba_reportes.sap.actions.download_action import execute_download_report, execute_download_all_sap
+from itacamba_reportes.sap.actions.download_action import (
+    execute_download_all_sap,
+    execute_download_report,
+    finalize_sap_session,
+)
 
 logger = setup_logging()
 
@@ -322,82 +326,109 @@ def load_tasks() -> list[dict]:
     return []
 
 
-def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
+def test_download_task(
+    task_key: str,
+    out_dir: Path | None = None,
+    period_low: str | None = None,
+    period_high: str | None = None,
+    year: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    close_at_end: bool = True,
+) -> int:
     key = task_key.lower().strip()
+    if key == "cartera":
+        print(f"[AVISO] {CONFIG_CARTERA.source_note}")
+        print("        Llega por correo via Power Automate; no requiere script SAP GUI.")
+        return 1
+
     target_directory = out_dir or (ROOT / "storage" / "raw" / "test_sap")
     target_directory.mkdir(parents=True, exist_ok=True)
 
-    # 1. Resolver configuración base tipada desde src/itacamba_reportes/sap/config.py
-    if key == "gd20":
-        cfg = CONFIG_GD20.to_download_config(target_dir=target_directory)
-        titulo = "Ventas Contables (GD20)"
-    elif key in ("zbcs", "query"):
-        cfg = CONFIG_QUERY.to_download_config(target_dir=target_directory)
-        titulo = "Despachos / Query (ZBCS)"
-    elif key == "cartera":
-        print(f"[AVISO] {CONFIG_CARTERA.source_note}")
-        print("        No hay un script .vbs de SAP GUI para Cartera.")
-        return 1
-    else:
-        print(f"[ERROR] Tarea '{task_key}' no reconocida. Opciones válidas: gd20, zbcs, cartera")
-        return 1
-
-    # 2. Si existe storage/sap_tasks.json con valores personalizados no vacíos, aplicarlos
     tasks = load_tasks()
-    task = next((t for t in tasks if t.get("id", "").lower() == key), None)
+    task_lookup = "zbcs" if key in ("zbcs", "query") else key
+    task = next((t for t in tasks if t.get("id", "").lower() == task_lookup), None)
+    task_vals: dict[str, object] = {}
     if task:
         campos = {c.get("id"): c.get("valor") for c in task.get("campos", [])}
-        def _get_val(field_id: str, default: Any = None) -> Any:
-            v = campos.get(field_id)
-            if v is None or (isinstance(v, str) and not v.strip()):
-                v = task.get(field_id, default)
-            return default if (isinstance(v, str) and not v.strip()) else v
+        for field_id in ("variante", "ledger", "sociedad", "periodo", "ejercicio", "desde", "hasta", "layout", "layout_row"):
+            val = campos.get(field_id)
+            if val is None or (isinstance(val, str) and not val.strip()):
+                val = task.get(field_id)
+            if isinstance(val, str):
+                val = val.strip()
+            if val not in (None, ""):
+                task_vals[field_id] = val
+        if dest := task.get("destino"):
+            if str(dest).strip():
+                task_vals["destino"] = str(dest).strip()
 
-        if v := _get_val("variante"):
-            cfg.variant = v
-        if v := _get_val("ledger"):
-            cfg.ledger = v
-        if v := _get_val("periodo"):
-            cfg.period_low = v
-            cfg.period_high = v
-        if v := _get_val("ejercicio"):
-            cfg.year_low = v
-            cfg.year_high = None
-        if v := _get_val("layout_row"):
+    # 1. Resolver configuracion base tipada desde src/itacamba_reportes/sap/config.py
+    if key == "gd20":
+        p_low_eff = period_low or (str(task_vals["periodo"]) if "periodo" in task_vals else None)
+        p_high_eff = period_high or p_low_eff
+        y_eff = year or (str(task_vals["ejercicio"]) if "ejercicio" in task_vals else None)
+        cfg = CONFIG_GD20.to_download_config(
+            target_dir=target_directory,
+            period_override=p_low_eff,
+            period_high_override=p_high_eff,
+            year_override=y_eff,
+        )
+        if "variante" in task_vals:
+            cfg.variant = str(task_vals["variante"])
+        if "ledger" in task_vals and str(task_vals["ledger"]).upper() != "N/A":
+            cfg.ledger = str(task_vals["ledger"])
+        if "layout" in task_vals:
+            cfg.layout_name = str(task_vals["layout"])
+        if "layout_row" in task_vals:
             try:
-                cfg.layout_row = int(v)
+                cfg.layout_row = int(str(task_vals["layout_row"]))
             except Exception:
                 pass
-        if v := task.get("destino"):
-            cfg.export_filename = v
+        titulo = "Ventas Contables (GD20)"
+    elif key in ("zbcs", "query"):
+        d_from_eff = date_from or (str(task_vals["desde"]) if "desde" in task_vals else None)
+        d_to_eff = date_to or (str(task_vals["hasta"]) if "hasta" in task_vals else None)
+        cfg = CONFIG_QUERY.to_download_config(
+            target_dir=target_directory,
+            date_from_override=d_from_eff,
+            date_to_override=d_to_eff,
+        )
+        if "variante" in task_vals:
+            cfg.variant = str(task_vals["variante"])
+        if "sociedad" in task_vals:
+            cfg.sociedad = str(task_vals["sociedad"])
+        titulo = "Despachos Query (ZVCSD381 · 3 meses atrás)"
+    else:
+        print(f"[ERROR] Tarea '{task_key}' no reconocida. Opciones válidas: gd20, zbcs, query, all, cartera")
+        return 1
 
-    # 3. Asegurar conexión y login antes de descargar
-    print("\n-> Verificando sesión activa de SAP...")
-    info = get_active_sap_session_info()
-    if not info or "error" in info or not info.get("user") or info.get("client") == "000":
-        print("-> Sesión no autenticada. Conectando y logueando automáticamente...")
-        mgr = SapSessionManager()
-        try:
-            mgr.ensure_connected_and_ready(auto_launch=True)
-            print("[OK] Sesión abierta y autenticada.")
-        except Exception as exc:
-            print(f"[ERROR] No se pudo asegurar la sesión SAP: {exc}")
-            return 1
+    if "destino" in task_vals:
+        cfg.export_filename = str(task_vals["destino"])
 
-    print(f"\n--> Preparando descarga para: {titulo}")
-    print(f"    Transacción : {cfg.transaction}")
-    print(f"    Ledger      : {cfg.ledger or '(N/A)'}")
-    print(f"    Variante    : {cfg.variant or '(N/A)'}")
-    print(f"    Ejercicio   : {cfg.year_low or '(Variante)'}")
-    print(f"    Período     : {cfg.period_low or '(N/A)'}")
-    print(f"    Layout Fila : {cfg.layout_row or '(N/A)'}")
-    print(f"    Archivo     : {cfg.export_filename}")
-    print(f"    Destino     : {target_directory}")
+    # 2. Asegurar conexion y login una sola vez en la misma sesion
+    print(f"\n--> Preparando flujo completo separado para: {titulo}")
+    print(f"    Transacción   : {cfg.transaction}")
+    if key == "gd20":
+        print(f"    Ledger        : {cfg.ledger or '(N/A)'}")
+        print(f"    Variante      : {cfg.variant or '(N/A)'}")
+        print(f"    Ejercicio     : {cfg.year_low or '(Variante)'}")
+        print(f"    Período       : {cfg.period_low} .. {cfg.period_high}")
+        print(f"    Layout ALV    : {cfg.layout_name or cfg.layout_row or '(Default)'}")
+    else:
+        print(f"    Sociedad      : {cfg.sociedad or '4253'}")
+        print(f"    Disposición   : {cfg.variant or '/IM'}")
+        print(f"    Rango Fechas  : {cfg.date_from} -> {cfg.date_to}")
+    print(f"    Archivo       : {cfg.export_filename}")
+    print(f"    Destino       : {target_directory}")
+    print(f"    Cierre final  : {'Sí (/nex + kill SAP)' if close_at_end else 'No (queda en Easy Access)'}")
 
     session_mgr = SapSessionManager()
     t0 = perf_counter()
     try:
-        print("\nEjecutando automatización de exportación en SAP GUI...")
+        print("\n-> [1/3] Verificando conexión y autenticación SAP...")
+        session_mgr.ensure_connected_and_ready(auto_launch=True)
+        print("-> [2/3] Ejecutando descarga automatizada en SAP GUI...")
         res_file = execute_download_report(session_mgr, cfg)
         elapsed = perf_counter() - t0
         print(f"\n>>> ¡DESCARGA COMPLETADA EXITOSAMENTE EN {elapsed:.2f}s! <<<")
@@ -410,24 +441,61 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
         print(f"\n[ERROR] Falló la descarga de SAP ({elapsed:.2f}s): {exc}")
         logger.exception("Error en prueba de descarga SAP: %s", exc)
         return 1
+    finally:
+        print(f"-> [3/3] Finalizando sesión SAP (close_at_end={close_at_end})...")
+        finalize_sap_session(session_mgr, close_at_end=close_at_end)
 
 
-def test_download_all_batch(out_dir: Path | None = None) -> int:
+def action_validate_config() -> int:
+    from itacamba_reportes.ui.bridge import BotBridge
+
+    print("\n======================================================================")
+    print("=== VALIDACIÓN INTEGRAL DE CONFIGURACIÓN (.env, BD, SAP, PERFIL)   ===")
+    print("======================================================================")
+    report = BotBridge().validate_web_configuration()
+    for item in report.get("checks", []):
+        st = {"ok": "[OK]", "warn": "[AVISO]", "error": "[ERROR]"}.get(item.get("status"), "[INFO]")
+        print(f"  {st:<8} {item.get('label')}: {item.get('detail')}")
+    print("----------------------------------------------------------------------")
+    sap_res = report.get("sap_resolved", {})
+    if sap_res:
+        print(f"  Perfil activo : {sap_res.get('profile_name')} ({sap_res.get('mes_ejecucion') or 'rango'})")
+        print(f"  GD20 resuelto : Ejercicio {sap_res.get('gd20_year')} | Período {sap_res.get('gd20_period')} | Layout {sap_res.get('gd20_layout')}")
+        print(f"  Query resuelto: ZVCSD381 {sap_res.get('query_date_from')} -> {sap_res.get('query_date_to')} (3 meses atrás)")
+    print("======================================================================")
+    print(f"Resumen: {report.get('summary')}")
+    return 0 if report.get("ok") else 1
+
+
+def test_download_all_batch(
+    out_dir: Path | None = None,
+    period_low: str | None = None,
+    period_high: str | None = None,
+    year: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    close_at_end: bool = True,
+) -> int:
     target_directory = out_dir or (ROOT / "storage" / "raw" / "test_sap")
     target_directory.mkdir(parents=True, exist_ok=True)
 
     print("\n======================================================================")
-    print("=== DESCARGA CONJUNTA SAP: GD20 (Mes) + QUERY (3 Meses)            ===")
+    print("=== DESCARGA CONJUNTA SAP: GD20 (Mes/Año) + QUERY (3 Meses)        ===")
     print("======================================================================")
     print("Este flujo realiza un único inicio de sesión, ejecuta ambas transacciones")
-    print("volviendo limpiamente al menú principal entre ellas, y cierra todo al final.")
+    print("volviendo limpiamente al menú principal entre ellas, y cierra al final.")
     print("----------------------------------------------------------------------")
 
     t0 = perf_counter()
     try:
         results = execute_download_all_sap(
             target_dir=target_directory,
-            close_at_end=True,
+            period_gd20=period_low,
+            period_high_gd20=period_high,
+            year_gd20=year,
+            date_from_query=date_from,
+            date_to_query=date_to,
+            close_at_end=close_at_end,
         )
         elapsed = perf_counter() - t0
         print(f"\n>>> ¡DESCARGA CONJUNTA COMPLETADA EXITOSAMENTE EN {elapsed:.2f}s! <<<")
@@ -449,43 +517,38 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--action",
-        choices=["diagnostic", "launch", "login", "logout", "full-auth", "kill", "download", "batch"],
+        choices=["diagnostic", "launch", "login", "logout", "full-auth", "kill", "download", "batch", "validate-config"],
         default=None,
         help="Acción específica a ejecutar.",
     )
-    parser.add_argument(
-        "--check-only",
-        action="store_true",
-        help="Alias de --action diagnostic.",
-    )
-    parser.add_argument(
-        "--kill",
-        action="store_true",
-        help="Alias de --action kill.",
-    )
-    parser.add_argument(
-        "--launch",
-        action="store_true",
-        help="Alias de --action launch.",
-    )
+    parser.add_argument("--check-only", action="store_true", help="Alias de --action diagnostic.")
+    parser.add_argument("--kill", action="store_true", help="Alias de --action kill.")
+    parser.add_argument("--launch", action="store_true", help="Alias de --action launch.")
     parser.add_argument(
         "--task",
         choices=["gd20", "zbcs", "query", "cartera", "all", "batch"],
         default=None,
         help="Tarea a descargar cuando action es download o se invoca directamente.",
     )
-    parser.add_argument(
-        "--out-dir",
-        default=None,
-        help="Carpeta destino de descarga.",
-    )
+    parser.add_argument("--out-dir", default=None, help="Carpeta destino de descarga.")
+    parser.add_argument("--period-low", "-p", default=None, help="Período inicial GD20 (1..12).")
+    parser.add_argument("--period-high", default=None, help="Período final GD20 (1..12).")
+    parser.add_argument("--year", "-y", default=None, help="Ejercicio / Año GD20 (ej: 2026).")
+    parser.add_argument("--date-from", default=None, help="Fecha desde Query (DD.MM.YYYY o YYYY-MM-DD).")
+    parser.add_argument("--date-to", default=None, help="Fecha hasta Query (DD.MM.YYYY o YYYY-MM-DD).")
+    parser.add_argument("--keep-open", action="store_true", help="No cerrar SAP al terminar la prueba.")
 
     args = parser.parse_args(argv)
+    close_at_end = not bool(args.keep_open)
+    out_path = Path(args.out_dir) if args.out_dir else None
 
     if args.kill or args.action == "kill":
         action_kill_processes()
         if not args.launch and not args.task and not args.action:
             return 0
+
+    if args.action == "validate-config":
+        return action_validate_config()
 
     if args.launch or args.action == "launch":
         ok = action_launch_and_connect()
@@ -496,7 +559,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if ok else 1
 
     if args.action == "logout":
-        ok = action_logout(close_logon=True)
+        ok = action_logout(close_at_end)
         return 0 if ok else 1
 
     if args.action == "full-auth":
@@ -508,11 +571,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if ok else 1
 
     if args.action == "batch" or (args.task and args.task.lower() in ("all", "batch")):
-        return test_download_all_batch(out_dir=Path(args.out_dir) if args.out_dir else None)
+        return test_download_all_batch(
+            out_dir=out_path,
+            period_low=args.period_low,
+            period_high=args.period_high,
+            year=args.year,
+            date_from=args.date_from,
+            date_to=args.date_to,
+            close_at_end=close_at_end,
+        )
 
     if args.task or args.action == "download":
         task_id = args.task or "gd20"
-        return test_download_task(task_id, out_dir=Path(args.out_dir) if args.out_dir else None)
+        return test_download_task(
+            task_id,
+            out_dir=out_path,
+            period_low=args.period_low,
+            period_high=args.period_high,
+            year=args.year,
+            date_from=args.date_from,
+            date_to=args.date_to,
+            close_at_end=close_at_end,
+        )
 
     # Menú interactivo
     while True:
@@ -532,16 +612,17 @@ def main(argv: list[str] | None = None) -> int:
         print("  4. Cerrar sesión y proceso SAP (/nex + Cerrar saplogon.exe)")
         print("  5. Ciclo Completo: Abrir -> Login -> Validar -> Logout -> Cerrar SAP")
         print("  6. Cerrar procesos de SAP por la fuerza (Kill / Reset)")
-        print("  --- FASE 2: DESCARGAS DE REPORTES ---")
-        print("  7. Probar descarga GD20 (Ventas contables - Mes)")
-        print("  8. Probar descarga Query (ZVCSD381 - 3 Meses atrás)")
-        print("  9. Probar descarga Cartera (ZSDI)")
-        print("  10. Probar descarga conjunta GD20 + Query (1 solo Login y Cierre)")
+        print("  --- FASE 2: FLUJOS COMPLETOS SEPARADOS Y EN LOTE ---")
+        print("  7. Flujo completo separado GD20 (Login -> GD20 -> Menú -> Cierre)")
+        print("  8. Flujo completo separado Query ZVCSD381 (Login -> 3 meses -> Menú -> Cierre)")
+        print("  9. Flujo conjunto GD20 + Query (1 solo Login -> Menú -> Cierre)")
+        print("  10. Validar configuración completa (.env, BD, SAP, Rutas, Perfil)")
+        print("  11. Estado de Cartera (correo vía Power Automate)")
         print("  0. Salir")
         print("======================================================================")
 
         try:
-            choice = input("\nIngrese una opción (0-10): ").strip()
+            choice = input("\nIngrese una opción (0-11): ").strip()
             if choice == "1":
                 action_diagnostic()
             elif choice == "2":
@@ -555,13 +636,15 @@ def main(argv: list[str] | None = None) -> int:
             elif choice == "6":
                 action_kill_processes()
             elif choice == "7":
-                test_download_task("gd20")
+                test_download_task("gd20", close_at_end=True)
             elif choice == "8":
-                test_download_task("query")
+                test_download_task("zbcs", close_at_end=True)
             elif choice == "9":
-                test_download_task("cartera")
+                test_download_all_batch(close_at_end=True)
             elif choice == "10":
-                test_download_all_batch()
+                action_validate_config()
+            elif choice == "11":
+                test_download_task("cartera")
             elif choice == "0":
                 print("Finalizado.")
                 return 0

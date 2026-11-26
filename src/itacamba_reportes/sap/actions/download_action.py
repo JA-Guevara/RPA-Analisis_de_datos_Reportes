@@ -12,8 +12,52 @@ from itacamba_reportes.sap.selectors import (
     SelectoresSAP,
 )
 from itacamba_reportes.sap.session import SapSessionManager
+from itacamba_reportes.sap.win_dialogs import SapSecurityWatchdog, close_excel_workbook_by_name
 
 logger = logging.getLogger(__name__)
+
+
+def _wait_for_alv_after_f8(
+    session_manager: SapSessionManager,
+    sel: SelectoresSAP,
+    transaction: str,
+    timeout: float = 240.0,
+) -> None:
+    logger.info("Esperando respuesta de %s en SAP tras F8...", transaction)
+    elapsed = 0.0
+    step = 0.5
+    while elapsed < timeout:
+        msg = session_manager.get_status_message()
+        if isinstance(msg, tuple) and len(msg) == 2:
+            msg_type, msg_text = msg
+            if msg_type in ("E", "A") and msg_text:
+                raise SapExportError(f"SAP rechazó la ejecución de {transaction}: {msg_text}")
+            if msg_type == "S" and "no se han seleccionado datos" in msg_text.lower():
+                raise SapExportError(f"SAP no devolvió datos en {transaction}: {msg_text}")
+
+        if session_manager.element_exists(sel.gd20.btn_choose_layout, timeout=0.0) or \
+           session_manager.element_exists(sel.gd20.menu_export_excel, timeout=0.0):
+            return
+
+        time.sleep(step)
+        elapsed += step
+
+
+def finalize_sap_session(
+    session_manager: SapSessionManager,
+    close_at_end: bool = True,
+) -> None:
+    if close_at_end:
+        logger.info("Finalizando sesión SAP en 2 niveles (/nex + cierre de proceso)...")
+        try:
+            from itacamba_reportes.sap.actions.logout_action import execute_logout
+            execute_logout(session_manager)
+        except Exception as exc:
+            logger.warning("Aviso durante logout (/nex): %s", exc)
+        time.sleep(1.0)
+        session_manager.kill_sap_processes()
+    else:
+        session_manager.return_to_main_menu()
 
 
 def execute_download_report(
@@ -109,17 +153,17 @@ def execute_download_report(
         if config.period_high is not None and session_manager.element_exists(sel.gd20.period_high, timeout=2.0):
             session_manager.set_text(sel.gd20.period_high, str(config.period_high))
 
-    # Paso 5: Ejecutar reporte F8
+    # Paso 5: Ejecutar reporte F8 y esperar carga real del ALV
     logger.info("Ejecutando reporte en SAP con F8...")
     session_manager.press_button(sel.barra.btn_execute_f8)
-    time.sleep(2.0)
+    _wait_for_alv_after_f8(session_manager, sel, config.transaction, timeout=240.0)
 
     # Paso 6: Seleccion de layout ALV (por nombre o por fila, tipico en GD20)
     needs_layout = bool(config.layout_name or config.layout_row is not None)
 
     if needs_layout:
         logger.info("Esperando visualización del reporte ALV en SAP (botón btn[33])...")
-        if session_manager.element_exists(sel.gd20.btn_choose_layout, timeout=45.0):
+        if session_manager.element_exists(sel.gd20.btn_choose_layout, timeout=240.0):
             try:
                 logger.info("Abriendo selector de disposición ALV (btn[33])...")
                 session_manager.press_button(sel.gd20.btn_choose_layout)
@@ -197,54 +241,6 @@ def execute_download_report(
 
     # Paso 7: Exportacion a archivo Excel / Hoja de Calculo
     export_started_at = time.time()
-    try:
-        logger.info("Iniciando exportación a Excel en SAP (sendVKey 43 / Menú)...")
-        filename_base = Path(config.export_filename).stem
-        target_name = Path(config.export_filename).name
-
-        exported_dialog_opened = False
-        try:
-            # Probar atajo rapido sendVKey 43 de ALV segun Script5.vbs y Script6 qyery.vbs
-            session_manager.send_vkey(43, window_id=sel.ventana.main)
-            time.sleep(1.5)
-            if session_manager.element_exists(sel.gd20.export_filename, timeout=3.0) or \
-               session_manager.element_exists(sel.gd20.export_btn_generate, timeout=3.0):
-                exported_dialog_opened = True
-        except Exception:
-            pass
-
-        if not exported_dialog_opened and session_manager.element_exists(sel.gd20.menu_export_excel, timeout=5.0):
-            session_manager.session.findById(sel.gd20.menu_export_excel).select()
-            time.sleep(1.5)
-            exported_dialog_opened = True
-
-        # Diálogo de exportación
-        if session_manager.element_exists(sel.gd20.export_filename, timeout=3.0):
-            session_manager.set_text(sel.gd20.export_filename, filename_base)
-            logger.info("Nombre base de archivo configurado: %s", filename_base)
-
-        if session_manager.element_exists(sel.gd20.export_btn_generate, timeout=5.0):
-            session_manager.press_button(sel.gd20.export_btn_generate)
-            time.sleep(1.5)
-
-        # Diálogo de ruta y nombre directo si aparece (DY_PATH / DY_FILENAME)
-        if session_manager.element_exists(sel.gd20.export_dir_path, timeout=3.0):
-            dest_dir = str(Path(config.target_dir).resolve()) if config.target_dir else str(Path.cwd().resolve())
-            session_manager.set_text(sel.gd20.export_dir_path, dest_dir)
-            if session_manager.element_exists(sel.gd20.export_file_name_direct, timeout=2.0):
-                session_manager.set_text(sel.gd20.export_file_name_direct, target_name)
-            logger.info("Ruta de exportación directa asignada en SAP: %s\\%s", dest_dir, target_name)
-
-        if session_manager.element_exists(sel.gd20.export_btn_replace, timeout=5.0):
-            session_manager.press_button(sel.gd20.export_btn_replace)
-            time.sleep(1.5)
-    except Exception as exc:
-        raise SapExportError(f"Fallo durante la exportacion en transaccion {config.transaction}: {exc}") from exc
-
-    # Paso 8: Retorno limpio al menu principal de SAP (SIN desloguear ni matar procesos)
-    session_manager.return_to_main_menu()
-
-    # Paso 11: Resolucion del archivo recien exportado (sin confundirlo con uno viejo de ayer)
     target_name = Path(config.export_filename).name
     name_variants = list(dict.fromkeys([
         target_name,
@@ -259,34 +255,94 @@ def execute_download_report(
         Path.cwd(),
     ]
     candidate_paths = [d / name for d in search_dirs for name in name_variants] + [Path(config.export_filename)]
-
     found_file: Path | None = None
-    deadline = time.time() + 10.0
-    while time.time() <= deadline:
-        fresh_matches = [
-            p for p in candidate_paths
-            if p.exists() and p.is_file() and p.stat().st_mtime >= (export_started_at - 2.0)
-        ]
-        if fresh_matches:
-            found_file = max(fresh_matches, key=lambda p: p.stat().st_mtime)
-            break
-        time.sleep(0.5)
+
+    with SapSecurityWatchdog(remember_decision=True):
+        try:
+            logger.info("Iniciando exportación a Excel en SAP (sendVKey 43 / Menú)...")
+            filename_base = Path(config.export_filename).stem
+
+            exported_dialog_opened = False
+            try:
+                # Probar atajo rapido sendVKey 43 de ALV segun Script5.vbs y Script6 qyery.vbs
+                session_manager.send_vkey(43, window_id=sel.ventana.main)
+                time.sleep(1.5)
+                if session_manager.element_exists(sel.gd20.export_filename, timeout=3.0) or \
+                   session_manager.element_exists(sel.gd20.export_btn_generate, timeout=3.0):
+                    exported_dialog_opened = True
+            except Exception:
+                pass
+
+            if not exported_dialog_opened and session_manager.element_exists(sel.gd20.menu_export_excel, timeout=5.0):
+                session_manager.session.findById(sel.gd20.menu_export_excel).select()
+                time.sleep(1.5)
+                exported_dialog_opened = True
+
+            # Diálogo de exportación
+            if session_manager.element_exists(sel.gd20.export_filename, timeout=3.0):
+                session_manager.set_text(sel.gd20.export_filename, filename_base)
+                logger.info("Nombre base de archivo configurado: %s", filename_base)
+
+            if session_manager.element_exists(sel.gd20.export_btn_generate, timeout=5.0):
+                session_manager.press_button(sel.gd20.export_btn_generate)
+                time.sleep(1.5)
+
+            # Diálogo de ruta y nombre directo si aparece (DY_PATH / DY_FILENAME)
+            if session_manager.element_exists(sel.gd20.export_dir_path, timeout=3.0):
+                dest_dir = str(Path(config.target_dir).resolve()) if config.target_dir else str(Path.cwd().resolve())
+                session_manager.set_text(sel.gd20.export_dir_path, dest_dir)
+                if session_manager.element_exists(sel.gd20.export_file_name_direct, timeout=2.0):
+                    session_manager.set_text(sel.gd20.export_file_name_direct, target_name)
+                logger.info("Ruta de exportación directa asignada en SAP: %s\\%s", dest_dir, target_name)
+
+            if session_manager.element_exists(sel.gd20.export_btn_replace, timeout=5.0):
+                session_manager.press_button(sel.gd20.export_btn_replace)
+                time.sleep(1.5)
+        except Exception as exc:
+            raise SapExportError(f"Fallo durante la exportacion en transaccion {config.transaction}: {exc}") from exc
+
+        # Paso 8: Retorno limpio al menu principal de SAP (SIN desloguear ni matar procesos)
+        session_manager.return_to_main_menu()
+
+        # Paso 11: Resolucion del archivo recien exportado (sin confundirlo con uno viejo de ayer)
+        deadline = time.time() + 30.0
+        while time.time() <= deadline:
+            fresh_matches = [
+                p for p in candidate_paths
+                if p.exists() and p.is_file() and p.stat().st_mtime >= (export_started_at - 2.0)
+            ]
+            if fresh_matches:
+                found_file = max(fresh_matches, key=lambda p: p.stat().st_mtime)
+                break
+            time.sleep(0.5)
 
     if found_file is None:
         raise SapExportError(
             f"No se detectó un archivo recién exportado para '{target_name}' tras la exportación en {config.transaction}."
         )
 
+    # Cerrar automaticamente el libro Excel que SAP pudo haber abierto para liberar bloqueos
+    close_excel_workbook_by_name([found_file.name, target_name, *name_variants], wait_timeout=3.0)
+
     if config.target_dir:
         target_dir = Path(config.target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
         dest = target_dir / target_name
         if found_file.resolve() != dest.resolve():
-            shutil.move(str(found_file), str(dest))
+            for attempt in range(3):
+                try:
+                    shutil.move(str(found_file), str(dest))
+                    break
+                except PermissionError:
+                    if attempt == 2:
+                        raise
+                    close_excel_workbook_by_name([found_file.name, target_name, *name_variants], wait_timeout=1.5)
+                    time.sleep(0.5)
         out_path = dest
     else:
         out_path = found_file
 
+    close_excel_workbook_by_name([out_path.name, target_name], wait_timeout=0.0)
     logger.info("Descarga parametrizada de %s finalizada: %s", config.transaction, out_path)
     return out_path
 
@@ -348,17 +404,7 @@ def execute_download_all_sap(
         logger.info("[OK] Query ZVCSD381 descargado exitosamente: %s", path_query)
 
     finally:
-        # 4. Cierre en 2 niveles si se solicita
-        if close_at_end:
-            logger.info("Finalizadas todas las descargas. Procediendo al cierre en 2 niveles (logout /nex y kill)...")
-            try:
-                from itacamba_reportes.sap.actions.logout_action import execute_logout
-                execute_logout(mgr)
-            except Exception as exc:
-                logger.warning("Aviso durante logout (/nex): %s", exc)
-            time.sleep(1.0)
-            mgr.kill_sap_processes()
-        else:
-            mgr.return_to_main_menu()
+        # 4. Cierre en 2 niveles si se solicita (o retorno limpio a Easy Access)
+        finalize_sap_session(mgr, close_at_end=close_at_end)
 
     return results

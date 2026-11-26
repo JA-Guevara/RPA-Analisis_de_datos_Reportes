@@ -127,10 +127,21 @@ def main(argv: list[str] | None = None) -> int:
 
     subparsers.add_parser("test-db", help="Verifica la conexión a SQL Server y muestra diagnóstico detallado.")
     p_test_sap = subparsers.add_parser("test-sap", help="Verifica la conexión a SAP GUI y realiza diagnóstico o prueba de descarga.")
-    p_test_sap.add_argument("--action", choices=["diagnostic", "launch", "login", "logout", "full-auth", "kill", "download"], default=None, help="Acción específica a ejecutar.")
+    p_test_sap.add_argument(
+        "--action",
+        choices=["diagnostic", "launch", "login", "logout", "full-auth", "kill", "download", "batch", "validate-config"],
+        default=None,
+        help="Acción específica a ejecutar.",
+    )
     p_test_sap.add_argument("--check-only", action="store_true", help="Solo verifica la conexión sin descargar.")
-    p_test_sap.add_argument("--task", choices=["gd20", "zbcs", "cartera"], default=None, help="Tarea a descargar (gd20, zbcs, cartera).")
+    p_test_sap.add_argument("--task", choices=["gd20", "zbcs", "query", "all", "batch", "cartera"], default=None, help="Tarea a descargar (gd20, zbcs, query, all, cartera).")
     p_test_sap.add_argument("--out-dir", default=None, help="Carpeta de destino para el archivo descargado.")
+    p_test_sap.add_argument("--period-low", "-p", default=None, help="Periodo/mes inicio para GD20.")
+    p_test_sap.add_argument("--period-high", default=None, help="Periodo/mes fin para GD20.")
+    p_test_sap.add_argument("--year", "-y", default=None, help="Ejercicio / Año contable para GD20.")
+    p_test_sap.add_argument("--date-from", default=None, help="Fecha inicio para Query (DD.MM.YYYY o YYYY-MM-DD).")
+    p_test_sap.add_argument("--date-to", default=None, help="Fecha fin para Query (DD.MM.YYYY o YYYY-MM-DD).")
+    p_test_sap.add_argument("--keep-open", action="store_true", help="Deja la sesión SAP abierta en Easy Access al finalizar.")
     p_test_sap.add_argument("--kill", action="store_true", help="Cierra procesos de SAPGUI/SAP Logon activos.")
     p_test_sap.add_argument("--launch", action="store_true", help="Inicia SAP Logon y conecta al ambiente automáticamente.")
     p_clean = subparsers.add_parser("clean-db", help="Limpia/vacia todas las tablas de la base de datos y resetea firmas de estado.")
@@ -173,9 +184,11 @@ def main(argv: list[str] | None = None) -> int:
     p_sap.add_argument("--year", "-y", default=None, help="Año de ejercicio contable (ej: 2026).")
     p_sap.add_argument("--date-from", default=None, help="Fecha inicio para transacciones tipo query/despachos.")
     p_sap.add_argument("--date-to", default=None, help="Fecha fin para transacciones tipo query/despachos.")
+    p_sap.add_argument("--layout", default=None, help="Nombre de layout ALV (ej: //AVRILGD20).")
     p_sap.add_argument("--layout-row", type=int, default=None, help="Fila de layout ALV a seleccionar.")
     p_sap.add_argument("--filename", "-f", default="EXPORT", help="Nombre base del archivo a exportar.")
     p_sap.add_argument("--target-dir", "-d", default=None, help="Directorio destino donde ubicar el archivo.")
+    p_sap.add_argument("--keep-open", action="store_true", help="Mantiene abierta la sesión SAP en Easy Access sin ejecutar /nex ni cerrar saplogon.exe.")
 
     subparsers.add_parser("ui", help="Inicia la interfaz gráfica de usuario en ventana de escritorio.")
 
@@ -187,20 +200,31 @@ def main(argv: list[str] | None = None) -> int:
             return launch_gui()
 
         if args.command == "download-sap":
-            from itacamba_reportes.sap import SapDownloadConfig, SapSessionManager, CONFIG_GD20, CONFIG_QUERY
-            from itacamba_reportes.sap.actions import execute_download_report, execute_download_all_sap
+            from itacamba_reportes.sap import SapDownloadConfig, SapSessionManager, CONFIG_CARTERA, CONFIG_GD20, CONFIG_QUERY
+            from itacamba_reportes.sap.actions import (
+                execute_download_all_sap,
+                execute_download_report,
+                finalize_sap_session,
+            )
 
             session_mgr = SapSessionManager()
             tx = (args.transaction or "").strip().lower()
+            close_at_end = not bool(args.keep_open)
+
+            if tx == "cartera":
+                CONFIG_CARTERA.to_download_config(target_dir=args.target_dir)
+                return 1
 
             if tx in ("all", "batch", "todos"):
                 execute_download_all_sap(
                     session_manager=session_mgr,
                     target_dir=args.target_dir,
                     period_gd20=args.period_low,
+                    period_high_gd20=args.period_high,
+                    year_gd20=args.year,
                     date_from_query=args.date_from,
                     date_to_query=args.date_to,
-                    close_at_end=True,
+                    close_at_end=close_at_end,
                 )
                 return 0
 
@@ -213,17 +237,25 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 if args.variant:
                     cfg.variant = args.variant
+                if args.layout_row is not None:
+                    cfg.layout_row = args.layout_row
                 if args.filename and args.filename != "EXPORT":
                     cfg.export_filename = args.filename
             elif tx == "gd20":
                 cfg = CONFIG_GD20.to_download_config(
                     target_dir=args.target_dir,
                     period_override=args.period_low,
+                    period_high_override=args.period_high,
+                    year_override=args.year,
                 )
                 if args.variant:
                     cfg.variant = args.variant
                 if args.ledger:
                     cfg.ledger = args.ledger
+                if args.layout:
+                    cfg.layout_name = args.layout
+                if args.layout_row is not None:
+                    cfg.layout_row = args.layout_row
                 if args.filename and args.filename != "EXPORT":
                     cfg.export_filename = args.filename
             else:
@@ -233,15 +265,20 @@ def main(argv: list[str] | None = None) -> int:
                     ledger=args.ledger,
                     period_low=args.period_low,
                     period_high=args.period_high,
+                    year_low=args.year,
                     date_from=args.date_from,
                     date_to=args.date_to,
+                    layout_name=args.layout,
                     layout_row=args.layout_row,
                     export_filename=args.filename,
                     target_dir=args.target_dir,
                 )
 
             session_mgr.ensure_connected_and_ready(auto_launch=True)
-            execute_download_report(session_mgr, cfg)
+            try:
+                execute_download_report(session_mgr, cfg)
+            finally:
+                finalize_sap_session(session_mgr, close_at_end=close_at_end)
             return 0
 
         if args.command == "test-db":
@@ -276,6 +313,18 @@ def main(argv: list[str] | None = None) -> int:
                 test_args.extend(["--task", args.task])
             if getattr(args, "out_dir", None):
                 test_args.extend(["--out-dir", args.out_dir])
+            if getattr(args, "period_low", None):
+                test_args.extend(["--period-low", args.period_low])
+            if getattr(args, "period_high", None):
+                test_args.extend(["--period-high", args.period_high])
+            if getattr(args, "year", None):
+                test_args.extend(["--year", args.year])
+            if getattr(args, "date_from", None):
+                test_args.extend(["--date-from", args.date_from])
+            if getattr(args, "date_to", None):
+                test_args.extend(["--date-to", args.date_to])
+            if getattr(args, "keep_open", False):
+                test_args.append("--keep-open")
             if getattr(args, "kill", False):
                 test_args.append("--kill")
             if getattr(args, "launch", False):

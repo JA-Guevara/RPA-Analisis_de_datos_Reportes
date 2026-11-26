@@ -3,6 +3,7 @@ from __future__ import annotations
 from itacamba_reportes.sap.actions.download_action import (
     execute_download_all_sap,
     execute_download_report,
+    finalize_sap_session,
 )
 from itacamba_reportes.sap.actions.download_gd20_action import execute_download_gd20
 from itacamba_reportes.sap.actions.download_query_action import execute_download_query
@@ -16,4 +17,5 @@ __all__ = [
     "execute_download_query",
     "execute_login",
     "execute_logout",
+    "finalize_sap_session",
 ]

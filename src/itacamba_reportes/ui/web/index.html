@@ -1110,7 +1110,10 @@
               </div>
             </div>
             <div class="row" style="gap:8px">
-              <button type="button" class="btn btn-sm btn-ghost" @click="restaurarTareasSapPredeterminadas()" title="Restablecer tareas predeterminadas de SAP (GD20, ZBCS, CARTERA)">
+              <button type="button" class="btn btn-sm" @click="validarConfiguracion()" :disabled="validandoConfig" title="Validar .env, SQL Server, SAP GUI y parámetros del perfil activo">
+                <span x-html="icono('check')"></span> <span x-text="validandoConfig ? 'Validando…' : 'Validar configuración'"></span>
+              </button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="restaurarTareasSapPredeterminadas()" title="Restablecer tareas predeterminadas de SAP (GD20, ZVCSD381, LOTE)">
                 <span x-html="icono('refresh')"></span> Restaurar Estándar
               </button>
               <button type="button" class="btn btn-sm btn-primary" @click="abrirModalSapTarea(null)">
@@ -1263,6 +1266,9 @@
         <div class="row between">
           <input class="input" style="max-width:320px" type="search" x-ref="buscarEnv" placeholder="Buscar variable…  ( / )" x-model="busquedaEnv" aria-label="Buscar variable">
           <div class="row">
+            <button type="button" class="btn btn-sm btn-primary" @click="validarConfiguracion()" :disabled="validandoConfig">
+              <span x-html="icono('check')"></span> <span x-text="validandoConfig ? 'Validando…' : 'Validar configuración'"></span>
+            </button>
             <button type="button" class="btn btn-sm" @click="dialogo = 'vista'"><span x-html="icono('eye')"></span> Vista previa .env</button>
             <button type="button" class="btn btn-sm" @click="nuevaVariable()"><span x-html="icono('plus')"></span> Nueva variable</button>
           </div>
@@ -1799,6 +1805,74 @@
     </div>
   </div>
 
+  <!-- MODAL: VALIDACIÓN INTEGRAL DE CONFIGURACIÓN WEB -->
+  <div class="overlay" x-show="dialogo === 'validacion'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+    <div class="dialog" role="dialog" aria-modal="true" style="width:min(760px,100%)" aria-labelledby="dval-t">
+      <div class="dialog-h">
+        <div>
+          <h3 id="dval-t">Validación de Configuración y Parámetros SAP</h3>
+          <p class="hint" style="margin:2px 0 0" x-text="validacionConfig?.summary || ''"></p>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+      </div>
+      <div class="dialog-b stack" style="gap:12px" x-show="validacionConfig">
+        <div class="banner" :class="validacionConfig?.ok ? 'ok' : 'err'">
+          <span x-html="icono(validacionConfig?.ok ? 'check' : 'alert')"></span>
+          <div>
+            <b x-text="validacionConfig?.ok ? 'Configuración validada correctamente' : 'Se requieren ajustes antes de ejecutar'"></b>
+            <div class="hint" x-text="(validacionConfig?.errors || 0) + ' error(es) · ' + (validacionConfig?.warnings || 0) + ' aviso(s)'"></div>
+          </div>
+        </div>
+
+        <div class="list" style="border:1px solid var(--line-soft); border-radius:10px; overflow:hidden">
+          <template x-for="chk in (validacionConfig?.checks || [])" :key="chk.id">
+            <div class="item">
+              <div style="min-width:0; flex:1">
+                <div class="name" x-text="chk.label"></div>
+                <div class="meta" style="word-break:break-word" x-text="chk.detail"></div>
+              </div>
+              <span class="badge" :class="chk.status === 'ok' ? 'b-ok' : (chk.status === 'warn' ? 'b-warn' : 'b-err')"
+                    x-text="chk.status === 'ok' ? 'OK' : (chk.status === 'warn' ? 'Aviso' : 'Error')"></span>
+            </div>
+          </template>
+        </div>
+
+        <template x-if="validacionConfig?.sap_resolved">
+          <div class="card" style="box-shadow:none">
+            <div class="card-h">
+              <div>
+                <h2 style="font-size:13px">Parámetros que usará SAP según tu perfil activo</h2>
+                <p x-text="validacionConfig.sap_resolved.profile_name"></p>
+              </div>
+            </div>
+            <div class="card-b sap-spec-grid">
+              <div class="sap-spec-item">
+                <span class="sap-spec-lbl">GD20 · Ejercicio / Período</span>
+                <span class="sap-spec-val mono" x-text="validacionConfig.sap_resolved.gd20_year + ' · P' + validacionConfig.sap_resolved.gd20_period"></span>
+              </div>
+              <div class="sap-spec-item">
+                <span class="sap-spec-lbl">GD20 · Variante / Layout</span>
+                <span class="sap-spec-val mono" x-text="validacionConfig.sap_resolved.gd20_variant + ' · ' + validacionConfig.sap_resolved.gd20_layout"></span>
+              </div>
+              <div class="sap-spec-item">
+                <span class="sap-spec-lbl">Query ZVCSD381 · Rango 3 meses</span>
+                <span class="sap-spec-val mono" x-text="validacionConfig.sap_resolved.query_date_from + ' → ' + validacionConfig.sap_resolved.query_date_to"></span>
+              </div>
+              <div class="sap-spec-item">
+                <span class="sap-spec-lbl">Query · Sociedad / Disposición</span>
+                <span class="sap-spec-val mono" x-text="validacionConfig.sap_resolved.query_sociedad + ' · ' + validacionConfig.sap_resolved.query_variant"></span>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+      <div class="dialog-f">
+        <button type="button" class="btn btn-ghost" @click="validarConfiguracion()" :disabled="validandoConfig">Revalidar</button>
+        <button type="button" class="btn btn-primary" @click="dialogo = null">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOASTS DE NOTIFICACIÓN FLOTANTES -->
   <div class="toasts" aria-live="polite" aria-atomic="false">
     <template x-for="t in toasts" :key="t.id">
@@ -1991,7 +2065,7 @@ const DEMO = {
       ayuda: 'Alimenta QUERY, DESPACHO BI y DESPACHO MES (3 meses móviles hacia atrás si fechas quedan vacías).',
       destino: 'QUERY.xlsx',
       variante: '/IM',
-      layout: '/IM',
+      layout: '',
       ledger: 'N/A',
       periodoTipo: 'rango',
       campos: [
@@ -2074,6 +2148,10 @@ document.addEventListener('alpine:init', () => {
     estado: { step_statuses: {}, step_times: {}, has_error: false, finished: false, error_message: null },
     ejecutando: false,
     deteniendo: false,
+    sapDescargando: false,
+    ultimoSapDownloadId: 0,
+    validandoConfig: false,
+    validacionConfig: null,
     descargarSapAntes: false,
     ultimaCorrida: null,
     sondeo: null,
@@ -3883,9 +3961,71 @@ document.addEventListener('alpine:init', () => {
 
       const r = await this.llamar('download_sap', t.id, JSON.stringify(params));
       if (r) {
-        this.avisar(r.message || 'Descarga solicitada', r.status === 'ok' ? 'success' : 'error');
+        this.avisar(r.message || 'Descarga solicitada', r.status === 'ok' ? 'success' : (r.status === 'busy' ? 'warn' : 'error'));
+        if (r.status === 'ok') {
+          this.sapDescargando = true;
+          this.asegurarSondeo();
+        }
       } else {
         this.avisar(`Descarga simulada de ${t.tcode} iniciada`, 'info');
+      }
+    },
+
+    async validarConfiguracion() {
+      if (this.validandoConfig) return;
+      if (this.vista === 'config' && this.cambiosEnv() > 0) {
+        this.avisar('Tienes cambios sin guardar en .env. Presiona "Guardar en disco" antes de validar.', 'warn');
+        return;
+      }
+      const cfg = (typeof this.configuracionEjecucionActiva === 'function' ? this.configuracionEjecucionActiva() : null)
+        || this.configuracionActiva();
+      this.validandoConfig = true;
+      try {
+        if (!this.api) {
+          this.validacionConfig = {
+            ok: true,
+            errors: 0,
+            warnings: 0,
+            summary: 'Modo demostración en navegador.',
+            checks: [
+              { id: 'env', label: 'Archivo .env', status: 'ok', detail: 'Simulado en modo demostración' },
+            ],
+            sap_resolved: {
+              profile_name: cfg?.nombre || 'Demo',
+              gd20_year: (cfg?.fechaHasta || hoyISO()).slice(0, 4),
+              gd20_period: String(Number((cfg?.fechaHasta || hoyISO()).slice(5, 7))),
+              gd20_variant: 'BOT_GD20',
+              gd20_layout: '//AVRILGD20',
+              query_sociedad: '4253',
+              query_variant: '/IM',
+              query_date_from: hoyISO(-90),
+              query_date_to: cfg?.fechaHasta || hoyISO(),
+            },
+          };
+          this.dialogo = 'validacion';
+          return;
+        }
+        const profileId = cfg?.configuracionId || cfg?.id || this.configuracionActivaId;
+        const r = await this.llamar('validate_web_configuration', profileId, JSON.stringify(cfg || {}));
+        if (!r) {
+          this.avisar('No se pudo validar la configuración en Python.', 'error');
+          return;
+        }
+        this.validacionConfig = r;
+        const sqlCheck = (r.checks || []).find(c => c.id === 'sql_conn');
+        const sapCheck = (r.checks || []).find(c => c.id === 'sap_gui');
+        if (sqlCheck) {
+          this.conexiones.sql.estado = sqlCheck.status === 'ok' ? 'ok' : 'err';
+          this.conexiones.sql.mensaje = sqlCheck.detail;
+        }
+        if (sapCheck) {
+          this.conexiones.sap.estado = sapCheck.status === 'ok' ? 'ok' : 'err';
+          this.conexiones.sap.mensaje = sapCheck.detail;
+        }
+        this.dialogo = 'validacion';
+        this.avisar(r.summary || 'Validación finalizada', r.ok ? 'success' : 'warn');
+      } finally {
+        this.validandoConfig = false;
       }
     },
 
@@ -3968,6 +4108,13 @@ document.addEventListener('alpine:init', () => {
       if (r.state) this.estado = r.state;
       if (r.logs && r.logs.length) this.agregarLogs(r.logs);
       this.ejecutando = !!r.is_running;
+      this.sapDescargando = !!r.sap_download_running;
+
+      if (r.sap_download_result && r.sap_download_result.id && r.sap_download_result.id !== this.ultimoSapDownloadId) {
+        this.ultimoSapDownloadId = r.sap_download_result.id;
+        this.avisar(r.sap_download_result.message || 'Descarga SAP finalizada', r.sap_download_result.status === 'ok' ? 'success' : 'error');
+        if (r.sap_download_result.status === 'ok') this.recargar();
+      }
 
       if (!r.is_running) {
         this.deteniendo = false;
@@ -3980,7 +4127,7 @@ document.addEventListener('alpine:init', () => {
             this.recargar();
           }
         }
-        if (!this.cronogramaActivo && this.sondeo) {
+        if (!this.sapDescargando && !this.cronogramaActivo && this.sondeo) {
           clearInterval(this.sondeo);
           this.sondeo = null;
         }

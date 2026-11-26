@@ -1095,7 +1095,7 @@ class TestEltPipeline(unittest.TestCase):
         def _make_mgr():
             mgr = MagicMock()
             mgr.session.ActiveWindow = SimpleNamespace(Name="wnd[0]", Text="SAP")
-            mgr.element_exists.return_value = False
+            mgr.element_exists.side_effect = lambda s, timeout=0.0: s == "wnd[0]/mbar/menu[0]/menu[3]/menu[1]"
             return mgr
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1123,9 +1123,11 @@ class TestEltPipeline(unittest.TestCase):
 
             def fake_sleep(seconds: float) -> None:
                 if seconds == 0.5:
-                    now_ts["val"] += 20.0
+                    now_ts["val"] += 35.0
 
             with patch("pathlib.Path.home", return_value=tmp_home), \
+                 patch("itacamba_reportes.sap.actions.download_action.SapSecurityWatchdog") as _m_wd, \
+                 patch("itacamba_reportes.sap.actions.download_action.close_excel_workbook_by_name", return_value=0), \
                  patch("itacamba_reportes.sap.actions.download_action.time.sleep", side_effect=fake_sleep), \
                  patch("itacamba_reportes.sap.actions.download_action.time.time", side_effect=fake_time):
                 with self.assertRaises(SapExportError):
@@ -1134,6 +1136,8 @@ class TestEltPipeline(unittest.TestCase):
             now_ts["val"] = 1000.0
             os.utime(exported_file, (1001.0, 1001.0))
             with patch("pathlib.Path.home", return_value=tmp_home), \
+                 patch("itacamba_reportes.sap.actions.download_action.SapSecurityWatchdog") as _m_wd, \
+                 patch("itacamba_reportes.sap.actions.download_action.close_excel_workbook_by_name", return_value=0), \
                  patch("itacamba_reportes.sap.actions.download_action.time.sleep", side_effect=fake_sleep), \
                  patch("itacamba_reportes.sap.actions.download_action.time.time", side_effect=fake_time):
                 out_path = execute_download_report(_make_mgr(), cfg)
@@ -1239,12 +1243,311 @@ class TestEltPipeline(unittest.TestCase):
             )
             now_box = {"val": 1000.0}
             with patch("pathlib.Path.home", return_value=tmp_home), \
+                 patch("itacamba_reportes.sap.actions.download_action.SapSecurityWatchdog"), \
+                 patch("itacamba_reportes.sap.actions.download_action.close_excel_workbook_by_name", return_value=0), \
                  patch("itacamba_reportes.sap.actions.download_action.time.sleep", return_value=None), \
                  patch("itacamba_reportes.sap.actions.download_action.time.time", side_effect=lambda: now_box["val"]):
                 execute_download_report(fake_mgr, cfg)
 
         self.assertLess(call_order.index("press:wnd[0]/tbar[1]/btn[17]"), call_order.index("year:2027"))
         self.assertLess(call_order.index("year:2027"), call_order.index("press:wnd[0]/tbar[1]/btn[8]"))
+
+    def test_sap_wait_for_alv_and_separate_lifecycles(self):
+        from itacamba_reportes.sap.actions import execute_download_gd20, execute_download_query
+        from itacamba_reportes.sap.actions.download_action import _wait_for_alv_after_f8
+        from itacamba_reportes.sap.exceptions import SapExportError
+        from itacamba_reportes.sap.selectors import SELECTORES_SAP
+
+        # 1. _wait_for_alv_after_f8 detecta menu_export_excel cuando Query carga sin btn[33]
+        mgr_ok = MagicMock()
+        mgr_ok.get_status_message.return_value = ("", "")
+        calls = {"n": 0}
+
+        def exists_after_two(selector: str, timeout: float = 0.0) -> bool:
+            if selector == SELECTORES_SAP.gd20.menu_export_excel:
+                calls["n"] += 1
+                return calls["n"] >= 2
+            return False
+
+        mgr_ok.element_exists.side_effect = exists_after_two
+        with patch("itacamba_reportes.sap.actions.download_action.time.sleep", return_value=None):
+            _wait_for_alv_after_f8(mgr_ok, SELECTORES_SAP, "ZVCSD381", timeout=5.0)
+        self.assertEqual(calls["n"], 2)
+
+        # 2. Error en sbar aborta de inmediato sin esperar timeout completo
+        mgr_err = MagicMock()
+        mgr_err.get_status_message.return_value = ("E", "No existen partidas")
+        with self.assertRaises(SapExportError):
+            _wait_for_alv_after_f8(mgr_err, SELECTORES_SAP, "ZVCSD381", timeout=45.0)
+
+        # 3. Flujo separado GD20 y Query con ensure_ready + close_at_end garantizado en finally
+        mgr_gd = MagicMock()
+        with patch("itacamba_reportes.sap.actions.download_gd20_action.execute_download_report", return_value=Path("GD20.xlsx")) as m_dl, \
+             patch("itacamba_reportes.sap.actions.download_gd20_action.finalize_sap_session") as m_fin:
+            out = execute_download_gd20(mgr_gd, period_low=11, year=2026, ensure_ready=True, close_at_end=True)
+        self.assertEqual(out, Path("GD20.xlsx"))
+        mgr_gd.ensure_connected_and_ready.assert_called_once_with(auto_launch=True)
+        m_dl.assert_called_once()
+        m_fin.assert_called_once_with(mgr_gd, close_at_end=True)
+
+        mgr_q = MagicMock()
+        with patch("itacamba_reportes.sap.actions.download_query_action.execute_download_report", side_effect=SapExportError("boom")), \
+             patch("itacamba_reportes.sap.actions.download_query_action.finalize_sap_session") as m_fin_q:
+            with self.assertRaises(SapExportError):
+                execute_download_query(mgr_q, date_to="26.11.2026", ensure_ready=True, close_at_end=True)
+        mgr_q.ensure_connected_and_ready.assert_called_once_with(auto_launch=True)
+        m_fin_q.assert_called_once_with(mgr_q, close_at_end=True)
+
+    def test_cli_download_sap_separate_gd20_and_query_flags(self):
+        from itacamba_reportes import cli
+
+        captured_cfgs: list[object] = []
+        fake_mgr = MagicMock()
+
+        def fake_dl(_mgr, cfg):
+            captured_cfgs.append(cfg)
+            return Path(cfg.export_filename)
+
+        with patch("itacamba_reportes.sap.SapSessionManager", return_value=fake_mgr), \
+             patch("itacamba_reportes.sap.actions.execute_download_report", side_effect=fake_dl), \
+             patch("itacamba_reportes.sap.actions.finalize_sap_session") as m_fin:
+            rc1 = cli.main(["download-sap", "-t", "gd20", "-y", "2027", "-p", "1", "--period-high", "2", "--layout", "//AVRILGD20"])
+            rc2 = cli.main(["download-sap", "-t", "query", "--date-to", "26.11.2026", "--keep-open"])
+
+        self.assertEqual(rc1, 0)
+        self.assertEqual(rc2, 0)
+        self.assertEqual(len(captured_cfgs), 2)
+        gd_cfg, q_cfg = captured_cfgs
+        self.assertEqual(gd_cfg.year_low, "2027")
+        self.assertEqual(gd_cfg.period_low, "1")
+        self.assertEqual(gd_cfg.period_high, "2")
+        self.assertEqual(gd_cfg.layout_name, "//AVRILGD20")
+        self.assertEqual(q_cfg.transaction, "ZVCSD381")
+        self.assertEqual(q_cfg.date_from, "26.08.2026")
+        self.assertEqual(q_cfg.date_to, "26.11.2026")
+        self.assertEqual(m_fin.call_args_list[0].kwargs["close_at_end"], True)
+        self.assertEqual(m_fin.call_args_list[1].kwargs["close_at_end"], False)
+
+    def test_bridge_validate_web_configuration_and_zbcs_layout(self):
+        from itacamba_reportes.ui.bridge import BotBridge, SAP_TASKS_PATH
+
+        bridge = BotBridge()
+        stored = json.loads(SAP_TASKS_PATH.read_text(encoding="utf-8"))
+        zbcs_stored = next(t for t in stored if t["id"] == "zbcs")
+        zbcs_default = next(t for t in bridge._default_sap_tasks() if t["id"] == "zbcs")
+        self.assertEqual(zbcs_stored["layout"], "")
+        self.assertEqual(zbcs_default["layout"], "")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            fijos = root / "fijos"
+            din = root / "dinamicos"
+            rep = root / "reports"
+            for d in (fijos, din, rep):
+                d.mkdir(parents=True, exist_ok=True)
+            (fijos / "REFERENCIAS.xlsx").write_bytes(b"ok")
+            (fijos / "PROYECCION-SEMANAL.xlsx").write_bytes(b"ok")
+            (din / "CARTERA.xlsx").write_bytes(b"ok")
+            (din / "GD20.xlsx").write_bytes(b"ok")
+            (din / "QUERY.xlsx").write_bytes(b"ok")
+            sap_exe = root / "saplogon.exe"
+            sap_exe.write_bytes(b"exe")
+
+            env_file = root / ".env"
+            env_file.write_text(
+                "\n".join([
+                    f"SAP_LOGON_PATH={sap_exe}",
+                    "SAP_AMBIENT=PRD",
+                    "SAP_SYSTEM=E05",
+                    "SAP_MANDANTE=300",
+                    "SAP_USER=bot_user",
+                    "SAP_PASSWORD=test_pass",
+                    "DB_SERVER=127.0.0.1",
+                    "DB_NAME=ItacambaTest",
+                    "DB_USER=sa",
+                    "DB_PASSWORD=db_pass",
+                    f"PATH_INSUMOS_FIJOS={fijos}",
+                    f"PATH_INSUMOS_DINAMICOS={din}",
+                    f"PATH_REPORTES_SALIDA={rep}",
+                ]),
+                encoding="utf-8",
+            )
+            prof_json = json.dumps({
+                "id": "diaria",
+                "nombre": "Corrida Diaria",
+                "mesEjecucion": "2026-11",
+                "fechaDesde": "2026-11-01",
+                "fechaHasta": "2026-11-26",
+            })
+            with patch.dict(os.environ, {}, clear=False), \
+                 patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_file), \
+                 patch.object(bridge, "test_sql_connection", return_value={"ok": True, "message": "SQL OK"}), \
+                 patch.object(bridge, "test_sap_logon", return_value={"ok": True, "message": "SAP OK"}):
+                res = bridge.validate_web_configuration(profile_id="diaria", profile_json=prof_json)
+
+            self.assertTrue(res["ok"])
+            self.assertEqual(res["errors"], 0)
+            self.assertEqual(res["sap_resolved"]["gd20_year"], "2026")
+            self.assertEqual(res["sap_resolved"]["gd20_period"], "11")
+            self.assertEqual(res["sap_resolved"]["query_date_from"], "26.08.2026")
+            self.assertEqual(res["sap_resolved"]["query_date_to"], "26.11.2026")
+
+            bad_prof = json.dumps({
+                "id": "bad",
+                "nombre": "Rango malo",
+                "fechaDesde": "2026-11-28",
+                "fechaHasta": "2026-11-10",
+            })
+            with patch.dict(os.environ, {}, clear=False), \
+                 patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_file), \
+                 patch.object(bridge, "test_sql_connection", return_value={"ok": False, "message": "VPN off"}), \
+                 patch.object(bridge, "test_sap_logon", return_value={"ok": True, "message": "SAP OK"}):
+                res_bad = bridge.validate_web_configuration(profile_json=bad_prof)
+            self.assertFalse(res_bad["ok"])
+            self.assertGreaterEqual(res_bad["errors"], 2)
+
+    def test_win_dialogs_security_popup_and_excel_closer(self):
+        from itacamba_reportes.sap.win_dialogs import (
+            SapSecurityWatchdog,
+            close_excel_workbook_by_name,
+            dismiss_sap_security_popup,
+        )
+
+        # 1. Simular dialogo Win32 "Seguridad SAP GUI" con Recordar + Permitir + Rechazar
+        posted: list[tuple[int, int]] = []
+        sent: list[tuple[int, int]] = []
+
+        titles = {
+            100: "Seguridad SAP GUI",
+            101: "&Recordar mi decisión",
+            102: "&Permitir",
+            103: "&Rechazar",
+            200: "Otra ventana cualquiera",
+            201: "Permitir",
+        }
+        classes = {101: "Button", 102: "Button", 103: "Button", 201: "Button"}
+
+        fake_win32con = SimpleNamespace(BM_GETCHECK=0x00F0, BM_CLICK=0x00F5, BST_CHECKED=1)
+
+        class _FakeWin32Gui:
+            @staticmethod
+            def IsWindowVisible(hwnd):
+                return True
+
+            @staticmethod
+            def IsWindowEnabled(hwnd):
+                return True
+
+            @staticmethod
+            def GetWindowText(hwnd):
+                return titles.get(hwnd, "")
+
+            @staticmethod
+            def GetClassName(hwnd):
+                return classes.get(hwnd, "#32770")
+
+            @staticmethod
+            def EnumWindows(cb, extra):
+                for top in (100, 200):
+                    cb(top, extra)
+
+            @staticmethod
+            def EnumChildWindows(parent, cb, extra):
+                for ch in ({100: (101, 102, 103), 200: (201,)}[parent]):
+                    cb(ch, extra)
+
+            @staticmethod
+            def SetForegroundWindow(hwnd):
+                pass
+
+            @staticmethod
+            def SendMessage(hwnd, msg, wparam, lparam):
+                sent.append((hwnd, msg))
+                if hwnd == 101 and msg == 0x00F0:
+                    return 0  # desmarcado inicialmente
+                return 0
+
+            @staticmethod
+            def PostMessage(hwnd, msg, wparam, lparam):
+                posted.append((hwnd, msg))
+
+        with patch.dict(sys.modules, {"win32gui": _FakeWin32Gui, "win32con": fake_win32con}), \
+             patch("itacamba_reportes.sap.win_dialogs.time.sleep", return_value=None):
+            count = dismiss_sap_security_popup(remember_decision=True)
+
+        self.assertEqual(count, 1)
+        self.assertIn((101, fake_win32con.BM_CLICK), sent)
+        self.assertEqual(posted, [(102, fake_win32con.BM_CLICK)])
+
+        # 2. Watchdog ejecuta y detiene hilo limpiamente
+        with patch("itacamba_reportes.sap.win_dialogs.dismiss_sap_security_popup", return_value=1):
+            with SapSecurityWatchdog(poll_interval=0.01) as wd:
+                import time as _t
+                _t.sleep(0.03)
+        self.assertGreaterEqual(wd.dismissed_count, 1)
+
+        # 3. close_excel_workbook_by_name solo cierra libros exportados y respeta libros del usuario
+        class _FakeWorkbooks(list):
+            @property
+            def Count(self) -> int:
+                return len(self)
+
+        wb_query = MagicMock()
+        wb_query.Name = "QUERY.xlsx"
+        wb_query.FullName = r"C:\tmp\QUERY.xlsx"
+        wb_user = MagicMock()
+        wb_user.Name = "Presupuesto.xlsx"
+        wb_user.FullName = r"C:\tmp\Presupuesto.xlsx"
+
+        books_mixed = _FakeWorkbooks([wb_query, wb_user])
+        wb_query.Close.side_effect = lambda SaveChanges=False: books_mixed.remove(wb_query)
+        app_mixed = MagicMock()
+        app_mixed.Workbooks = books_mixed
+
+        wb_gd20 = MagicMock()
+        wb_gd20.Name = "GD20.xlsx"
+        wb_gd20.FullName = r"C:\tmp\GD20.xlsx"
+        books_only = _FakeWorkbooks([wb_gd20])
+        wb_gd20.Close.side_effect = lambda SaveChanges=False: books_only.remove(wb_gd20)
+        app_only = MagicMock()
+        app_only.Workbooks = books_only
+
+        class _FakeEnum:
+            def Next(self, _n):
+                return []
+
+        class _FakeRot:
+            def EnumRunning(self):
+                return _FakeEnum()
+
+        active_holder = {"app": app_mixed}
+        fake_pythoncom = SimpleNamespace(
+            CoInitialize=MagicMock(),
+            CoUninitialize=MagicMock(),
+            GetRunningObjectTable=lambda: _FakeRot(),
+            CreateBindCtx=lambda _x: None,
+            IID_IDispatch=0,
+        )
+        fake_win32com_client = SimpleNamespace(
+            GetActiveObject=lambda prog_id: active_holder["app"],
+            Dispatch=lambda obj: obj,
+        )
+        fake_win32com = SimpleNamespace(client=fake_win32com_client)
+
+        with patch.dict(sys.modules, {"pythoncom": fake_pythoncom, "win32com": fake_win32com, "win32com.client": fake_win32com_client}), \
+             patch("itacamba_reportes.sap.win_dialogs._has_excel_window", return_value=True):
+            closed_n = close_excel_workbook_by_name(["QUERY.xlsx"], wait_timeout=0.0)
+            active_holder["app"] = app_only
+            closed_gd = close_excel_workbook_by_name(["GD20.xlsx"], wait_timeout=0.0)
+
+        self.assertEqual(closed_n, 1)
+        wb_query.Close.assert_called_once_with(SaveChanges=False)
+        wb_user.Close.assert_not_called()
+        app_mixed.Quit.assert_not_called()
+
+        self.assertEqual(closed_gd, 1)
+        wb_gd20.Close.assert_called_once_with(SaveChanges=False)
+        app_only.Quit.assert_called_once()
 
 
 if __name__ == "__main__":

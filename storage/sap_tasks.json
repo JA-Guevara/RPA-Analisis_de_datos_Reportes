@@ -50,7 +50,7 @@
     "destino": "QUERY.xlsx",
     "ledger": "N/A",
     "variante": "/IM",
-    "layout": "/IM",
+    "layout": "",
     "periodoTipo": "rango",
     "campos": [
       {
