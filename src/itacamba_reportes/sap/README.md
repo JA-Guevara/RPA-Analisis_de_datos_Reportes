@@ -11,19 +11,21 @@ Sigue una estricta separación de responsabilidades:
 
 ## 2. Variables Dinámicas Reales (Auditadas contra VBScript)
 
-A partir de las grabaciones reales (`Script1.vbs`, `Script2.vbs`, `Script4.vbs`), las **únicas variables dinámicas** que intervienen en la descarga son:
+A partir de las grabaciones reales (`Script5.vbs`, `Script6 qyery.vbs`, `Script4.vbs`), las variables dinámicas que intervienen en la descarga son:
 
 | Parámetro | Tipo | Ejemplo GD20 | Ejemplo Query | Control SAP Asociado |
 | :--- | :--- | :--- | :--- | :--- |
-| `transaction` | `str` | `"gd20"` | `"zbcs"` | Caja de transacciones (`okcd`) |
+| `transaction` | `str` | `"gd20"` | `"ZVCSD381"` | Caja de transacciones (`okcd`) |
 | `ledger` | `str` | `"VC"` | `""` | Campo Ledger (`RGUD0-LEDGER`) |
-| `variant` | `str` | `"Prueba_GD20"` | `""` | Campo Variante (`V-LOW` tras `btn[17]`) |
-| `period` | `str / int`| `10` | `""` | Período Contable (`F9008025-LOW`) |
-| `layout_row` | `int` | `16` | `None` | Fila en grilla ALV (`btn[33]`) |
-| `export_filename` | `str` | `"GD20.xlsx"`| `"QUERY.xlsx"` | Nombre de archivo exportado |
+| `sociedad` | `str` | `"4253"` | `"4253"` | Sociedad (`P_BUKRS`) |
+| `variant` | `str` | `"BOT_GD20"` | `"/IM"` | Variante / Disposición (`BOT_GD20`, `P_VARI`) |
+| `period` | `str / int` | Mes actual | `None` | Período Contable (`F9008025-LOW`) |
+| `date_from` / `date_to` | `str` | `None` | 3 meses atrás → Hoy | Rango móvil (`S_BUDAT-LOW` / `S_BUDAT-HIGH`) |
+| `layout_name` | `str` | `"//AVRILGD20"` | `""` | Búsqueda dinámica en grilla ALV (`btn[33]`) |
+| `export_filename` | `str` | `"GD20.xlsx"` | `"QUERY.xlsx"` | Nombre de archivo exportado |
 
 > [!NOTE]
-> No se requieren variables de rangos de fechas (inicio/fin) si la transacción utiliza período o variante fija. Los campos en blanco (`""`) son omitidos automáticamente por el motor sin generar errores.
+> El flujo unificado (`execute_download_all_sap`) realiza **1 solo login**, ejecuta GD20, regresa limpiamente al menú principal (`return_to_main_menu`), ejecuta Query (`ZVCSD381` con 3 meses móviles) y finaliza con cierre en 2 niveles (`/nex` + `taskkill`).
 
 ---
 
@@ -33,12 +35,12 @@ A partir de las grabaciones reales (`Script1.vbs`, `Script2.vbs`, `Script4.vbs`)
 src/itacamba_reportes/sap/
 ├── selectors.py                   # Catálogo tipado de IDs técnicos de SAP GUI
 ├── config.py                      # Clases y variables dinámicas editables (CONFIG_GD20, CONFIG_QUERY)
-├── session.py                     # Gestor de conexión COM, ciclo de vida de procesos y reintentos
+├── session.py                     # Gestor de conexión COM, ciclo de vida de procesos y retorno a menú
 ├── exceptions.py                  # Excepciones tipadas (SapConnectionError, SapLoginError, SapExportError)
 ├── actions/
-│   ├── download_action.py         # Motor de descarga y exportación Excel
+│   ├── download_action.py         # Motor de descarga individual y flujo conjunto (execute_download_all_sap)
 │   ├── download_gd20_action.py    # Wrapper específico GD20
-│   ├── download_query_action.py   # Wrapper específico ZBCS / Query
+│   ├── download_query_action.py   # Wrapper específico ZVCSD381 / Query
 │   ├── login_action.py            # Autenticación de usuario/clave y manejo de multi-logon
 │   └── logout_action.py           # Desconexión /nex y cierre de procesos
 └── README.md                      # Documentación funcional y técnica del módulo
@@ -51,18 +53,16 @@ src/itacamba_reportes/sap/
 Para cambiar cualquier valor operativo, edita directamente las clases en [`config.py`](config.py):
 
 ```python
-# Modificar para GD20:
+# Configuración GD20:
 CONFIG_GD20.ledger = "VC"
-CONFIG_GD20.variant = "Prueba_GD20"
-CONFIG_GD20.period = 11
-CONFIG_GD20.layout_row = 16
+CONFIG_GD20.variant = "BOT_GD20"
+CONFIG_GD20.layout_name = "//AVRILGD20"
 
-# Modificar para Query cuando tengas los datos:
-CONFIG_QUERY.transaction = "zbcs"
-CONFIG_QUERY.ledger = "VC"
-CONFIG_QUERY.variant = "MI_VARIANTE"
-CONFIG_QUERY.period = 11
-CONFIG_QUERY.layout_row = 16
+# Configuración Query (ZVCSD381 con ventana móvil de 3 meses):
+CONFIG_QUERY.transaction = "ZVCSD381"
+CONFIG_QUERY.sociedad = "4253"
+CONFIG_QUERY.variant = "/IM"
+CONFIG_QUERY.months_back = 3
 ```
 
 ---
@@ -72,9 +72,10 @@ CONFIG_QUERY.layout_row = 16
 Para probar la descarga directa desde consola:
 
 ```powershell
-# Probar GD20
-python.exe main.py test-sap --task gd20
+# Descarga conjunta (GD20 + Query en 1 solo Login)
+python main.py download-sap -t all
 
-# Probar Query
-python.exe main.py test-sap --task zbcs
+# Descarga individual GD20 / Query
+python main.py download-sap -t gd20
+python main.py download-sap -t query
 ```

@@ -38,6 +38,8 @@ class SelectoresGD20:
     period_low: str = "wnd[0]/usr/ctxtF9008025-LOW"
     period_high: str = "wnd[0]/usr/ctxtF9008025-HIGH"
     popup_variant_name: str = "wnd[1]/usr/txtV-LOW"
+    popup_variant_created_by: str = "wnd[1]/usr/txtENAME-LOW"
+    popup_variant_grid: str = "wnd[1]/usr/cntlALV_CONTAINER_1/shellcont/shell"
     popup_btn_push_values: str = "wnd[1]/usr/btn%_V_%_APP_%-VALU_PUSH"
     popup_btn_find_variant: str = "wnd[1]/tbar[0]/btn[8]"
     btn_choose_layout: str = "wnd[0]/tbar[1]/btn[33]"

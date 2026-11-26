@@ -11,12 +11,22 @@ from itacamba_reportes.inputs.gd20.transform import transform_gd20
 logger = logging.getLogger(__name__)
 
 
-def run_pipeline(corte_fecha: date | str | None = None, is_fin_de_mes: bool = False) -> dict[str, int]:
+def run_pipeline(
+    corte_fecha: date | str | None = None,
+    is_fin_de_mes: bool = False,
+    fecha_desde: date | str | None = None,
+    incluir_hasta: bool = False,
+) -> dict[str, int]:
     t0 = perf_counter()
     logger.info("=== Iniciando pipeline GD20 (BASE PANEL) ===")
     try:
         stg_rows = ingest_gd20()
-        int_rows = transform_gd20(corte_fecha=corte_fecha, is_fin_de_mes=is_fin_de_mes)
+        int_rows = transform_gd20(
+            corte_fecha=corte_fecha,
+            is_fin_de_mes=is_fin_de_mes,
+            fecha_desde=fecha_desde,
+            incluir_hasta=incluir_hasta,
+        )
         duration = perf_counter() - t0
         record_execution("gd20", "SUCCESS", int_rows, duration, f"stg={stg_rows}, int={int_rows}")
         logger.info("=== Pipeline GD20 completado exitosamente: %d filas en %.2fs ===", int_rows, duration)

@@ -17,9 +17,12 @@ def execute_download_gd20(
     month: int | None = None,
     period_low: str | int | None = None,
     period_high: str | int | None = None,
+    year: str | int | None = None,
+    year_high: str | int | None = None,
     ledger: str = "VC",
-    variant: str = "Prueba_GD20",
-    layout_row: int = 16,
+    variant: str = "BOT_GD20",
+    layout_name: str | None = "//AVRILGD20",
+    layout_row: int | None = None,
     export_filename: str = "GD20.xlsx",
     target_dir: Path | str | None = None,
     config: SapDownloadConfig | None = None,
@@ -28,15 +31,20 @@ def execute_download_gd20(
     if config is None:
         p_low = period_low if period_low is not None else month
         p_high = period_high if period_high is not None else month
-        config = SapDownloadConfig(
+        config = SapDownloadConfig.for_gd20(
             transaction=transaction,
             variant=variant,
             ledger=ledger,
-            period_low=p_low,
-            period_high=p_high,
+            period=p_low if p_low is not None else p_high,
+            year=year,
+            layout_name=layout_name,
             layout_row=layout_row,
             export_filename=export_filename,
             target_dir=target_dir,
         )
+        if p_high is not None:
+            config.period_high = p_high
+        if year_high is not None:
+            config.year_high = year_high
 
     return execute_download_report(session_manager, config, selectors=selectors)

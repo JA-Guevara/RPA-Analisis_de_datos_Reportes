@@ -27,9 +27,10 @@ def execute_download_report(
     is_gd20 = tcode_lower == "gd20"
 
     logger.info(
-        "Iniciando descarga parametrizada en SAP (Tx: %s, Variante: %s, Periodo: %s, Fechas: %s a %s, Archivo: %s)",
+        "Iniciando descarga parametrizada en SAP (Tx: %s, Variante: %s, Ejercicio: %s, Periodo: %s, Fechas: %s a %s, Archivo: %s)",
         config.transaction,
         config.variant,
+        config.year_low,
         config.period_low,
         config.date_from,
         config.date_to,
@@ -72,10 +73,37 @@ def execute_download_report(
         if config.variant and session_manager.element_exists(sel.gd20.btn_get_variant, timeout=5.0):
             session_manager.press_button(sel.gd20.btn_get_variant)
             session_manager.set_text(sel.gd20.popup_variant_name, str(config.variant), timeout=5.0)
+            if session_manager.element_exists(sel.gd20.popup_variant_created_by, timeout=1.0):
+                try:
+                    session_manager.set_text(sel.gd20.popup_variant_created_by, "")
+                except Exception:
+                    pass
             session_manager.press_button(sel.gd20.popup_btn_find_variant, timeout=5.0)
             time.sleep(0.5)
+            # Si aparecen multiples variantes en lista modal, seleccionar la fila activa
+            if getattr(session_manager.session.ActiveWindow, "Name", "") == "wnd[1]" and \
+               session_manager.element_exists(sel.gd20.popup_variant_grid, timeout=1.0):
+                try:
+                    v_grid = session_manager.find_element(sel.gd20.popup_variant_grid, timeout=2.0)
+                    v_grid.doubleClickCurrentCell()
+                    time.sleep(0.5)
+                except Exception:
+                    pass
 
-        # Paso 4: Parametrizacion dinamica de periodos
+        # Paso 4: Parametrizacion dinamica de ejercicio (ano) y periodos
+        if config.year_low is not None:
+            year_updated = session_manager.set_selection_field_by_label(
+                labels=("ejercicio", "fiscal year", "año", "year"),
+                value_low=str(config.year_low),
+                value_high=str(config.year_high) if config.year_high is not None else None,
+                field_hint_tokens=("ryear", "gjahr"),
+            )
+            if not year_updated:
+                logger.warning(
+                    "No se pudo ubicar dinámicamente el campo 'Ejercicio' en GD20; se usará el año guardado en la variante (%s).",
+                    config.variant or "default",
+                )
+
         if config.period_low is not None and session_manager.element_exists(sel.gd20.period_low, timeout=5.0):
             session_manager.set_text(sel.gd20.period_low, str(config.period_low))
         if config.period_high is not None and session_manager.element_exists(sel.gd20.period_high, timeout=2.0):
@@ -123,6 +151,8 @@ def execute_download_report(
                         logger.debug("Búsqueda por nombre de layout: %s", exc)
 
                 if chosen_row is None:
+                    if target_name:
+                        logger.warning("Layout '%s' no encontrado en la grilla ALV; usando fila 0 como respaldo.", config.layout_name)
                     chosen_row = 0
 
                 logger.info("Seleccionando disposición ALV en fila %d...", chosen_row)
@@ -139,11 +169,24 @@ def execute_download_report(
                 except Exception:
                     pass
                 grid.selectedRows = str(chosen_row)
-                grid.clickCurrentCell()
-                time.sleep(1.5)
+                try:
+                    grid.clickCurrentCell()
+                except Exception:
+                    pass
+                time.sleep(1.0)
 
                 if getattr(session_manager.session.ActiveWindow, "Name", "") == "wnd[1]":
-                    session_manager.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                    try:
+                        grid.doubleClickCurrentCell()
+                        time.sleep(1.0)
+                    except Exception:
+                        pass
+
+                if getattr(session_manager.session.ActiveWindow, "Name", "") == "wnd[1]":
+                    try:
+                        session_manager.session.findById("wnd[1]/tbar[0]/btn[0]").press()
+                    except Exception:
+                        session_manager.send_vkey(sel.barra.btn_enter_key, window_id=sel.ventana.modal_1)
                     time.sleep(1.0)
 
                 logger.info("Disposición ALV aplicada exitosamente.")
@@ -153,6 +196,7 @@ def execute_download_report(
             logger.warning("No se detectó el botón de disposición ALV (btn[33]) tras ejecutar reporte.")
 
     # Paso 7: Exportacion a archivo Excel / Hoja de Calculo
+    export_started_at = time.time()
     try:
         logger.info("Iniciando exportación a Excel en SAP (sendVKey 43 / Menú)...")
         filename_base = Path(config.export_filename).stem
@@ -200,30 +244,48 @@ def execute_download_report(
     # Paso 8: Retorno limpio al menu principal de SAP (SIN desloguear ni matar procesos)
     session_manager.return_to_main_menu()
 
-    # Paso 11: Resolucion y ubicacion final del archivo descargado
+    # Paso 11: Resolucion del archivo recien exportado (sin confundirlo con uno viejo de ayer)
     target_name = Path(config.export_filename).name
-    candidate_paths = [
-        Path(config.target_dir or ".") / target_name,
-        Path(config.export_filename),
-        Path.cwd() / target_name,
-        Path.home() / "Documents" / "SAP" / "SAP GUI" / target_name,
-        Path.home() / "Documents" / target_name,
-        Path.home() / "Documents" / "Archivos" / target_name,
-        Path.home() / "Downloads" / target_name,
+    name_variants = list(dict.fromkeys([
+        target_name,
+        f"{Path(target_name).stem}.xlsx",
+        f"{Path(target_name).stem}.XLSX",
+    ]))
+    search_dirs = [
+        Path.home() / "Documents" / "SAP" / "SAP GUI",
+        Path.home() / "Documents",
+        Path.home() / "Downloads",
+        Path(config.target_dir or "."),
+        Path.cwd(),
     ]
-    found_file = next((p for p in candidate_paths if p.exists() and p.is_file()), None)
+    candidate_paths = [d / name for d in search_dirs for name in name_variants] + [Path(config.export_filename)]
 
-    if found_file and config.target_dir:
+    found_file: Path | None = None
+    deadline = time.time() + 10.0
+    while time.time() <= deadline:
+        fresh_matches = [
+            p for p in candidate_paths
+            if p.exists() and p.is_file() and p.stat().st_mtime >= (export_started_at - 2.0)
+        ]
+        if fresh_matches:
+            found_file = max(fresh_matches, key=lambda p: p.stat().st_mtime)
+            break
+        time.sleep(0.5)
+
+    if found_file is None:
+        raise SapExportError(
+            f"No se detectó un archivo recién exportado para '{target_name}' tras la exportación en {config.transaction}."
+        )
+
+    if config.target_dir:
         target_dir = Path(config.target_dir)
         target_dir.mkdir(parents=True, exist_ok=True)
-        dest = target_dir / found_file.name
+        dest = target_dir / target_name
         if found_file.resolve() != dest.resolve():
             shutil.move(str(found_file), str(dest))
         out_path = dest
-    elif found_file:
-        out_path = found_file
     else:
-        out_path = Path(config.target_dir or ".") / target_name
+        out_path = found_file
 
     logger.info("Descarga parametrizada de %s finalizada: %s", config.transaction, out_path)
     return out_path
@@ -233,6 +295,9 @@ def execute_download_all_sap(
     session_manager: SapSessionManager | None = None,
     target_dir: Path | str | None = None,
     period_gd20: str | int | None = None,
+    period_high_gd20: str | int | None = None,
+    year_gd20: str | int | None = None,
+    year_high_gd20: str | int | None = None,
     date_from_query: str | None = None,
     date_to_query: str | None = None,
     close_at_end: bool = True,
@@ -252,9 +317,21 @@ def execute_download_all_sap(
     results: dict[str, Path] = {}
 
     try:
-        # 2. Descarga GD20 (Mes en curso o indicado)
-        cfg_gd20 = CONFIG_GD20.to_download_config(target_dir=dest_dir, period_override=period_gd20)
-        logger.info("--> [1/2] Ejecutando descarga GD20 (Período: %s)...", cfg_gd20.period_low)
+        # 2. Descarga GD20 (Mes/año en curso o indicado)
+        cfg_gd20 = CONFIG_GD20.to_download_config(
+            target_dir=dest_dir,
+            period_override=period_gd20,
+            period_high_override=period_high_gd20,
+            year_override=year_gd20,
+            year_high_override=year_high_gd20,
+        )
+        logger.info(
+            "--> [1/2] Ejecutando descarga GD20 (Ejercicio: %s%s, Períodos: %s a %s)...",
+            cfg_gd20.year_low,
+            f"..{cfg_gd20.year_high}" if cfg_gd20.year_high else "",
+            cfg_gd20.period_low,
+            cfg_gd20.period_high,
+        )
         path_gd20 = execute_download_report(mgr, cfg_gd20)
         results["gd20"] = path_gd20
         logger.info("[OK] GD20 descargado exitosamente: %s", path_gd20)

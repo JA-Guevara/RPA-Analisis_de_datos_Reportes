@@ -26,7 +26,7 @@ logger = setup_logging()
 
 
 def export_all_reports_parallel() -> None:
-    logger.info("--> Iniciando EXPORTACIONES en paralelo (4 hilos concurrentes)...")
+    logger.info("--> Iniciando EXPORTACIONES en paralelo (reutilizando DataFrames en memoria)...")
     t_exp = perf_counter()
     from concurrent.futures import ThreadPoolExecutor, as_completed
     from itacamba_reportes.outputs.ventas_bi.export import export_ventas_bi
@@ -35,22 +35,29 @@ def export_all_reports_parallel() -> None:
     from itacamba_reportes.outputs.historial_ventas.export import export_historial_ventas
 
     tasks = {
-        "VENTAS BI": lambda: export_ventas_bi(),
-        "DESPACHO BI": lambda: export_despacho_bi(),
+        "VENTAS BI": lambda: export_ventas_bi(return_df=True),
+        "DESPACHO BI": lambda: export_despacho_bi(return_df=True),
         "DESPACHO MES": lambda: export_despacho_mes(),
-        "HISTORIAL VENTAS": lambda: export_historial_ventas(),
     }
 
-    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="ExportWorker") as executor:
+    results: dict[str, object] = {}
+    with ThreadPoolExecutor(max_workers=3, thread_name_prefix="ExportWorker") as executor:
         future_to_name = {executor.submit(fn): name for name, fn in tasks.items()}
         for future in as_completed(future_to_name):
             name = future_to_name[future]
             try:
                 res = future.result()
-                logger.info("Exportación completada: %s -> %s", name, getattr(res, "name", res))
+                results[name] = res
+                out_file = res[0] if isinstance(res, tuple) else res
+                logger.info("Exportación completada: %s -> %s", name, getattr(out_file, "name", out_file))
             except Exception as exc:
                 logger.error("Fallo crítico en exportación %s: %s", name, exc)
                 raise
+
+    _, df_ventas = results["VENTAS BI"]  # type: ignore[misc]
+    _, df_despachos = results["DESPACHO BI"]  # type: ignore[misc]
+    hist_path = export_historial_ventas(df_ventas=df_ventas, df_despachos=df_despachos)
+    logger.info("Exportación completada: HISTORIAL VENTAS -> %s", getattr(hist_path, "name", hist_path))
     logger.info("Todas las exportaciones paralelas completadas exitosamente en %.2fs", perf_counter() - t_exp)
 
 
@@ -63,12 +70,12 @@ def run_all(force_cartera: bool = False, is_fin_de_mes: bool = False, corte_fech
     steps = [
         ("REFERENCIAS", lambda: run_referencias()),
         ("CARTERA", lambda: run_cartera(force=force_cartera)),
-        ("QUERY", lambda: run_query()),
+        ("QUERY", lambda: run_query(corte_fecha=corte_fecha, is_fin_de_mes=is_fin_de_mes)),
         ("PROYECCION", lambda: run_proyeccion()),
         ("GD20", lambda: run_gd20(is_fin_de_mes=is_fin_de_mes, corte_fecha=corte_fecha)),
         ("VENTAS BI (Transformación BD)", lambda: run_ventas_bi(do_export=False)),
         ("DESPACHO BI (Transformación BD)", lambda: run_despacho_bi(do_export=False)),
-        ("DESPACHO MES (Transformación BD)", lambda: run_despacho_mes(do_export=False)),
+        ("DESPACHO MES (Transformación BD)", lambda: run_despacho_mes(corte_fecha=corte_fecha, is_fin_de_mes=is_fin_de_mes, do_export=False)),
         ("EXPORTACIONES (En Paralelo)", lambda: export_all_reports_parallel()),
     ]
 
@@ -134,7 +141,9 @@ def main(argv: list[str] | None = None) -> int:
     subparsers.add_parser("run-referencias", help="Pipeline REFERENCIAS -> tablas int_ref_*.")
     p_cartera = subparsers.add_parser("run-cartera", help="Pipeline CARTERA -> stg_cartera + int_cartera.")
     p_cartera.add_argument("--force", action="store_true", help="Fuerza re-ingesta aunque el archivo no haya cambiado.")
-    subparsers.add_parser("run-query", help="Pipeline QUERY ZBCS -> stg_query + int_query.")
+    p_qry = subparsers.add_parser("run-query", help="Pipeline QUERY ZVCSD381 -> stg_query + int_query.")
+    p_qry.add_argument("--fin-de-mes", action="store_true", help="Conserva las filas del día de corte para cierre.")
+    p_qry.add_argument("--corte-fecha", default=None, help="Fecha de corte YYYY-MM-DD.")
     subparsers.add_parser("run-proyeccion", help="Pipeline PROYECCIÓN -> stg_proyeccion.")
 
     p_gd20 = subparsers.add_parser("run-gd20", help="Pipeline GD20 (BASE PANEL) -> int_gd20 + int_ventas_bi.")
@@ -144,7 +153,9 @@ def main(argv: list[str] | None = None) -> int:
 
     subparsers.add_parser("run-ventas-bi", help="Pipeline VENTAS BI -> acumula histórico SCD2 y exporta.")
     subparsers.add_parser("run-despacho-bi", help="Pipeline DESPACHO BI -> acumula histórico real y exporta.")
-    subparsers.add_parser("run-despacho-mes", help="Pipeline DESPACHO MES -> resumen mensual y proyección.")
+    p_dmes = subparsers.add_parser("run-despacho-mes", help="Pipeline DESPACHO MES -> resumen mensual y proyección.")
+    p_dmes.add_argument("--fin-de-mes", action="store_true", help="Incluye todos los días hasta el cierre.")
+    p_dmes.add_argument("--corte-fecha", default=None, help="Fecha de corte YYYY-MM-DD.")
     subparsers.add_parser("export-historial", help="Exporta HISTORIAL VENTAS.xlsx (hojas VENTAS y DESPACHOS) para Power BI.")
 
     p_all = subparsers.add_parser("run-all", help="Ejecuta todos los pipelines con exportaciones en paralelo.")
@@ -298,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run-cartera":
             run_cartera(force=getattr(args, "force", False))
         elif args.command == "run-query":
-            run_query()
+            run_query(is_fin_de_mes=args.fin_de_mes, corte_fecha=args.corte_fecha)
         elif args.command == "run-proyeccion":
             run_proyeccion()
         elif args.command == "run-gd20":
@@ -309,7 +320,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "run-despacho-bi":
             run_despacho_bi()
         elif args.command == "run-despacho-mes":
-            run_despacho_mes()
+            run_despacho_mes(is_fin_de_mes=args.fin_de_mes, corte_fecha=args.corte_fecha)
         elif args.command == "export-historial":
             export_historial_ventas()
         elif args.command == "run-all":

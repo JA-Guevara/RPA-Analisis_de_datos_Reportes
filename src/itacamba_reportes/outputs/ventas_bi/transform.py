@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from time import perf_counter
+from typing import Any
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
 from itacamba_reportes.core.audit.hashing import add_hashes_to_df
 from itacamba_reportes.core.db.bulk import bulk_insert_df
@@ -12,6 +13,27 @@ from itacamba_reportes.core.db.connection import engine
 from itacamba_reportes.outputs.ventas_bi.models import SalesBiIntModel
 
 logger = logging.getLogger(__name__)
+
+
+def _build_composite_keys(df: pd.DataFrame, cols: list[str]) -> list[str]:
+    if df.empty:
+        return []
+    return ["|".join(parts) for parts in zip(*(df[c].astype(str).tolist() for c in cols))]
+
+
+def _execute_chunked_ids(
+    conn: Any,
+    sql_template: str,
+    ids: list[int],
+    extra_params: dict[str, Any] | None = None,
+    chunk_size: int = 1000,
+) -> None:
+    stmt = text(sql_template).bindparams(bindparam("ids", expanding=True))
+    for i in range(0, len(ids), chunk_size):
+        params: dict[str, Any] = {"ids": ids[i:i + chunk_size]}
+        if extra_params:
+            params.update(extra_params)
+        conn.execute(stmt, params)
 
 # Columnas SAP de origen vs Columnas calculadas derivadas
 SOURCE_COLS = (
@@ -78,19 +100,19 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
         df_existing = pd.read_sql(query_existing, conn)
 
     biz_key = ["ejercicio", "documento_comercial", "numero_documento", "material"]
-    df_existing["key"] = df_existing[biz_key].astype(str).agg("|".join, axis=1)
-    df_int["key"] = df_int[biz_key].astype(str).agg("|".join, axis=1)
+    df_existing["key"] = _build_composite_keys(df_existing, biz_key)
+    df_int["key"] = _build_composite_keys(df_int, biz_key)
 
     existing_map = df_existing.set_index("key").to_dict(orient="index")
 
     to_insert = []
-    ids_to_expire = []
-    ids_to_replace_today = []
+    ids_to_expire: list[int] = []
+    ids_to_replace_today: list[int] = []
+    today_date = now.date()
 
-    for _, row in df_int.iterrows():
-        k = row["key"]
-        r_dict = row.to_dict()
-        r_dict["full_row_hash"] = row["full_hash"]
+    for r_dict in df_int.to_dict(orient="records"):
+        k = r_dict["key"]
+        r_dict["full_row_hash"] = r_dict["full_hash"]
 
         if k not in existing_map:
             # Documento nuevo en el historico
@@ -110,13 +132,13 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
             else:
                 ext_date = None
 
-            if ext["source_hash"] != row["source_hash"]:
+            if ext["source_hash"] != r_dict["source_hash"]:
                 # Caso 1: Los datos SAP cambiaron. Si se registraron hoy mismo, sobreescribir hoy sin duplicar version
-                if ext_date == now.date():
-                    ids_to_replace_today.append(ext["id"])
+                if ext_date == today_date:
+                    ids_to_replace_today.append(int(ext["id"]))
                     r_dict["version"] = ext["version"]
                 else:
-                    ids_to_expire.append(ext["id"])
+                    ids_to_expire.append(int(ext["id"]))
                     r_dict["version"] = ext["version"] + 1
 
                 r_dict["is_current"] = True
@@ -125,9 +147,9 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
                 r_dict["cd_status"] = "PENDING"
                 to_insert.append(r_dict)
 
-            elif ext["derived_hash"] != row["derived_hash"] or force_rebuild:
+            elif ext["derived_hash"] != r_dict["derived_hash"] or force_rebuild:
                 # Caso 2: Las reglas de negocio o catalogos cambiaron -> actualizar en sitio
-                ids_to_replace_today.append(ext["id"])
+                ids_to_replace_today.append(int(ext["id"]))
                 r_dict["version"] = ext["version"]
                 r_dict["is_current"] = True
                 r_dict["valid_from"] = ext_vf or now
@@ -137,21 +159,15 @@ def upsert_ventas_bi_scd2(force_rebuild: bool = False) -> int:
 
     with engine.begin() as conn:
         if ids_to_replace_today:
-            chunk_size = 1000
-            for i in range(0, len(ids_to_replace_today), chunk_size):
-                chunk = ids_to_replace_today[i:i + chunk_size]
-                del_list = ",".join(str(cid) for cid in chunk)
-                conn.execute(text(f"DELETE FROM int_ventas_bi WHERE id IN ({del_list})"))
+            _execute_chunked_ids(conn, "DELETE FROM int_ventas_bi WHERE id IN :ids", ids_to_replace_today)
 
         if ids_to_expire:
-            chunk_size = 1000
-            for i in range(0, len(ids_to_expire), chunk_size):
-                chunk = ids_to_expire[i:i + chunk_size]
-                exp_list = ",".join(str(cid) for cid in chunk)
-                conn.execute(
-                    text(f"UPDATE int_ventas_bi SET is_current = 0, valid_to = :val_to WHERE id IN ({exp_list})"),
-                    {"val_to": now_str},
-                )
+            _execute_chunked_ids(
+                conn,
+                "UPDATE int_ventas_bi SET is_current = 0, valid_to = :val_to WHERE id IN :ids",
+                ids_to_expire,
+                extra_params={"val_to": now_str},
+            )
 
     if to_insert:
         df_ins = pd.DataFrame(to_insert)

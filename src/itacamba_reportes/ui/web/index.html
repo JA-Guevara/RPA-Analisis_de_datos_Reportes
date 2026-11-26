@@ -9,64 +9,92 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #0c121d;
-      --surface: #141c2b;
-      --surface-2: #1b263a;
-      --surface-3: #223049;
-      --surface-hover: #293a58;
-      --line: #273752;
-      --line-soft: #1d2a40;
-      --text: #f0f4f9;
-      --text-2: #a7b7cd;
-      --text-3: #75869e;
-      --accent: #3fb7a5;
-      --accent-strong: #2a9c8b;
-      --accent-ink: #052420;
-      --accent-soft: rgba(63, 183, 165, .15);
-      --accent-cyan: #38bdf8;
-      --ok: #34d399;
-      --ok-soft: rgba(52, 211, 153, .14);
-      --warn: #fbbf24;
-      --warn-soft: rgba(251, 191, 36, .14);
-      --err: #f87171;
-      --err-soft: rgba(248, 113, 113, .16);
-      --idle: #75869e;
-      --idle-soft: rgba(117, 134, 158, .14);
-      --shadow: 0 4px 14px rgba(0, 0, 0, .35), 0 1px 3px rgba(0, 0, 0, .2);
+      color-scheme: light;
+      --bg: #f3f4ef;
+      --surface: #fbfbf8;
+      --surface-2: #f1f2ed;
+      --surface-3: #e9ebe4;
+      --surface-hover: #e3e6de;
+      --line: #d9ddd3;
+      --line-soft: #e6e9e1;
+      --text: #293630;
+      --text-2: #53625b;
+      --text-3: #748078;
+      --accent: #718f83;
+      --accent-strong: #5e7b70;
+      --accent-ink: #ffffff;
+      --accent-soft: rgba(113, 143, 131, .12);
+      --accent-cyan: #8299a0;
+      --ok: #668775;
+      --ok-soft: rgba(102, 135, 117, .12);
+      --warn: #aa855a;
+      --warn-soft: rgba(170, 133, 90, .12);
+      --err: #ad716d;
+      --err-soft: rgba(173, 113, 109, .12);
+      --idle: #7b8780;
+      --idle-soft: rgba(123, 135, 128, .10);
+      --shadow: 0 2px 8px rgba(44, 54, 47, .05), 0 8px 20px rgba(44, 54, 47, .035);
       --radius: 12px;
       --radius-sm: 8px;
       --font: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       --mono: "JetBrains Mono", Consolas, Menlo, monospace;
-      --sidebar: 234px;
+      --sidebar: 220px;
     }
 
     :root[data-theme="light"] {
       color-scheme: light;
-      --bg: #f4f6fa;
-      --surface: #ffffff;
-      --surface-2: #f8fafc;
-      --surface-3: #edf2f7;
-      --surface-hover: #e2e8f0;
-      --line: #dbe2ea;
-      --line-soft: #e9eff5;
-      --text: #111827;
-      --text-2: #475569;
-      --text-3: #64748b;
-      --accent: #14b8a6;
-      --accent-strong: #0f766e;
+      --bg: #f3f4ef;
+      --surface: #fbfbf8;
+      --surface-2: #f1f2ed;
+      --surface-3: #e9ebe4;
+      --surface-hover: #e3e6de;
+      --line: #d9ddd3;
+      --line-soft: #e6e9e1;
+      --text: #293630;
+      --text-2: #53625b;
+      --text-3: #748078;
+      --accent: #718f83;
+      --accent-strong: #5e7b70;
       --accent-ink: #ffffff;
-      --accent-soft: rgba(20, 184, 166, .12);
-      --accent-cyan: #0284c7;
-      --ok: #10b981;
-      --ok-soft: rgba(16, 185, 129, .12);
-      --warn: #d97706;
-      --warn-soft: rgba(217, 119, 6, .12);
-      --err: #ef4444;
-      --err-soft: rgba(239, 68, 68, .12);
-      --idle: #64748b;
-      --idle-soft: rgba(100, 116, 139, .10);
-      --shadow: 0 2px 6px rgba(15, 23, 42, .06), 0 8px 20px rgba(15, 23, 42, .04);
+      --accent-soft: rgba(113, 143, 131, .12);
+      --accent-cyan: #8299a0;
+      --ok: #668775;
+      --ok-soft: rgba(102, 135, 117, .12);
+      --warn: #aa855a;
+      --warn-soft: rgba(170, 133, 90, .12);
+      --err: #ad716d;
+      --err-soft: rgba(173, 113, 109, .12);
+      --idle: #7b8780;
+      --idle-soft: rgba(123, 135, 128, .10);
+      --shadow: 0 2px 8px rgba(44, 54, 47, .05), 0 8px 20px rgba(44, 54, 47, .035);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #111923;
+      --surface: #1b2734;
+      --surface-2: #263647;
+      --surface-3: #33485d;
+      --surface-hover: #3c5369;
+      --line: #52677b;
+      --line-soft: #3c5063;
+      --text: #f3f6fa;
+      --text-2: #c8d3df;
+      --text-3: #a5b4c2;
+      --accent: #70d5c1;
+      --accent-strong: #8ce4d2;
+      --accent-ink: #102824;
+      --accent-soft: rgba(112, 213, 193, .16);
+      --accent-cyan: #8cc9e7;
+      --ok: #66dfa9;
+      --ok-soft: rgba(102, 223, 169, .16);
+      --warn: #ffd071;
+      --warn-soft: rgba(255, 208, 113, .17);
+      --err: #ff9d98;
+      --err-soft: rgba(255, 157, 152, .17);
+      --idle: #b3c0cc;
+      --idle-soft: rgba(179, 192, 204, .15);
+      --shadow: 0 16px 44px rgba(0, 0, 0, .38);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -129,18 +157,24 @@
 
     .main { min-width: 0; display: flex; flex-direction: column; }
     .topbar {
-      position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 14px;
-      padding: 12px 28px; background: color-mix(in srgb, var(--surface) 85%, transparent);
+      position: sticky; top: 0; z-index: 20; display: flex; justify-content: center;
+      padding: 12px 0; background: color-mix(in srgb, var(--surface) 92%, transparent);
       backdrop-filter: blur(12px); border-bottom: 1px solid var(--line-soft);
     }
+    .topbar-inner { display: flex; align-items: center; gap: 14px; width: 100%; max-width: 1220px; min-width: 0; padding: 0 24px; }
+    .topbar-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .topbar-heading { min-width: 0; }
+    .topbar-brand-mark { display: none; }
+    .topbar-status { display: flex; align-items: center; gap: 8px; flex: none; }
     .topbar h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.2px; }
     .topbar .sub { color: var(--text-3); font-size: 12.5px; }
     .topbar .spacer { flex: 1; }
-    .content { padding: 22px 28px 96px; max-width: 1340px; width: 100%; margin: 0 auto; }
+    .content { padding: 22px 24px 96px; max-width: 1220px; width: 100%; margin: 0 auto; }
     .mobile-nav { display: none; }
 
     .grid { display: grid; gap: 16px; }
-    .cols-run { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.05fr); }
+    .cols-run { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+    .cols-run > .card { min-width: 0; }
     .cols-3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
     .stack { display: grid; gap: 16px; }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -155,6 +189,7 @@
       padding: 16px 20px; display: flex; align-items: flex-start; justify-content: space-between;
       gap: 12px; border-bottom: 1px solid var(--line-soft);
     }
+    .card-h > div { min-width: 0; }
     .card-h h2 { margin: 0; font-size: 14.5px; font-weight: 700; color: var(--text); }
     .card-h p { margin: 2px 0 0; color: var(--text-3); font-size: 12.5px; }
     .card-b { padding: 18px 20px; }
@@ -169,13 +204,12 @@
     .btn:active:not(:disabled) { transform: scale(0.98); }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent) 0%, #22a08f 100%);
+      background: var(--accent-strong);
       border-color: var(--accent); color: var(--accent-ink); font-weight: 700;
-      box-shadow: 0 2px 8px rgba(63, 183, 165, .3);
+      box-shadow: none;
     }
     .btn-primary:hover:not(:disabled) {
-      background: linear-gradient(135deg, #4dd2bf 0%, var(--accent-strong) 100%);
-      border-color: #4dd2bf; box-shadow: 0 4px 14px rgba(63, 183, 165, .4);
+      background: var(--accent); border-color: var(--accent);
     }
     .btn-danger {
       background: linear-gradient(135deg, var(--err) 0%, #dc2626 100%);
@@ -196,6 +230,8 @@
     .seg button { border: 0; background: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; color: var(--text-2); font-weight: 600; font-size: 12.5px; transition: all .15s; }
     .seg button:hover { color: var(--text); }
     .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); border: 1px solid var(--line); }
+    .period-seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; }
+    .period-seg button { min-width: 0; padding: 8px 7px; line-height: 1.25; }
 
     .field { display: grid; gap: 6px; }
     .field label, .label { font-size: 12.5px; color: var(--text-2); font-weight: 600; }
@@ -281,13 +317,22 @@
     .progress { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
     .progress > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-cyan)); border-radius: 99px; transition: width .4s ease; }
 
+    .log-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .log-stat { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface-2); }
+    .log-stat span { color: var(--text-2); font-size: 12px; }
+    .log-stat b { color: var(--text); font-size: 15px; }
+    .log-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .log-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .log-follow { display: inline-flex; align-items: center; gap: 7px; color: var(--text-2); font-size: 12px; }
+    .log-follow input { accent-color: var(--accent-strong); }
     .log {
-      height: 270px; overflow: auto; padding: 10px 0; font-family: var(--mono); font-size: 12px; line-height: 1.6;
-      background: #090e17; border-top: 1px solid var(--line-soft); border-radius: 0 0 var(--radius) var(--radius);
+      height: min(62vh, 620px); min-height: 300px; overflow: auto; padding: 10px 0; font-family: var(--mono); font-size: 12px; line-height: 1.6;
+      background: var(--bg); border: 1px solid var(--line-soft); border-radius: 10px;
     }
-    .log-line { display: grid; grid-template-columns: 74px 1fr; gap: 10px; padding: 1px 18px; }
-    .log-line:hover { background: rgba(255, 255, 255, .03); }
+    .log-line { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; padding: 2px 14px; }
+    .log-line:hover { background: var(--surface-2); }
     .log-line .t { color: var(--text-3); user-select: none; }
+    .log-line .m { overflow-wrap: anywhere; }
     .log-line.error .m { color: var(--err); font-weight: 600; }
     .log-line.warn .m { color: var(--warn); }
     .log-line.success .m { color: var(--ok); font-weight: 600; }
@@ -319,15 +364,16 @@
     .env-key { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--text); }
 
     .savebar {
-      position: fixed; left: calc(var(--sidebar) + 28px); right: 28px; bottom: 20px; z-index: 35;
+      position: fixed; left: calc(var(--sidebar) + (100vw - var(--sidebar)) / 2); right: auto; bottom: 20px; z-index: 35;
+      width: min(960px, calc(100vw - var(--sidebar) - 56px)); transform: translateX(-50%);
       display: flex; align-items: center; gap: 14px; padding: 12px 18px;
       background: var(--surface); border: 1px solid var(--warn); border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, .4);
       animation: slideUp .2s ease-out;
     }
     @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-    .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(5, 9, 15, .7); backdrop-filter: blur(5px); display: grid; place-items: center; padding: 16px; }
-    .dialog { width: min(580px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,.5); max-height: 90vh; display: flex; flex-direction: column; }
+    .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(17, 25, 35, .62); backdrop-filter: blur(5px); display: grid; place-items: center; padding: 16px; }
+    .dialog { width: min(580px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 40px rgba(0,0,0,.28); max-height: min(92vh, 920px); display: flex; flex-direction: column; }
     .dialog-h { padding: 18px 22px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line-soft); flex-shrink: 0; }
     .dialog-h h3 { margin: 0; font-size: 15.5px; font-weight: 700; }
     .dialog-b { padding: 18px 22px; display: grid; gap: 14px; overflow-y: auto; }
@@ -425,6 +471,180 @@
       color: var(--text-3);
     }
 
+    .home-profile-select { display: flex; align-items: flex-end; gap: 12px; }
+    .home-profile-select .field { flex: 1; margin: 0; }
+    .home-profile-summary { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--surface-2); }
+    .home-profile-summary h3 { margin: 0; font-size: 16px; }
+    .home-profile-summary p { margin: 0; color: var(--text-2); font-size: 12px; }
+    .home-profile-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    .home-profile-fact { min-width: 0; padding: 10px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface); }
+    .home-profile-fact small, .home-profile-fact b { display: block; }
+    .home-profile-fact small { margin-bottom: 4px; color: var(--text-3); font-size: 10px; }
+    .home-profile-fact b { font-size: 11px; overflow-wrap: anywhere; }
+    .home-execution-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .home-execution-actions .btn { width: 100%; }
+    .profile-manager-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .profile-manager-card { display: grid; align-content: start; gap: 12px; min-width: 0; padding: 15px; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--surface); }
+    .profile-manager-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .profile-manager-card h3 { margin: 0; font-size: 14px; }
+    .profile-manager-card p { margin: 4px 0 0; color: var(--text-3); font-size: 11px; line-height: 1.45; }
+    .profile-manager-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .profile-manager-facts > div { min-width: 0; padding: 9px; border-radius: 8px; background: var(--surface-2); }
+    .profile-manager-facts small, .profile-manager-facts b { display: block; }
+    .profile-manager-facts small { margin-bottom: 4px; color: var(--text-3); font-size: 9px; }
+    .profile-manager-facts b { font-size: 10.5px; line-height: 1.35; overflow-wrap: anywhere; }
+    .profile-manager-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+    .profile-manager-actions .spacer { flex: 1; }
+    .profile-config-dialog { width: min(1040px, calc(100vw - 24px)); max-height: min(94vh, 980px); }
+    .profile-calendar-builder, .profile-schedule-section { display: grid; gap: 13px; min-width: 0; }
+    .profile-calendar-builder { padding: 14px; border: 1px solid var(--line-soft); border-radius: 12px; background: var(--surface); }
+    .profile-builder-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+    .profile-builder-heading h4 { margin: 0; font-size: 14px; }
+    .profile-builder-heading p { margin: 4px 0 0; color: var(--text-3); font-size: 11.5px; line-height: 1.45; }
+    .profile-builder-heading.compact { align-items: flex-start; }
+    .profile-builder-month { width: min(230px, 100%); flex: none; margin: 0; }
+    .profile-calendar-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .profile-calendar-types .calendar-type { min-height: 62px; }
+    .profile-calendar-toolbar { display: grid; gap: 8px; }
+    .profile-calendar-counts { padding: 0; gap: 6px 13px; }
+    .profile-calendar-grid { gap: 5px; }
+    .profile-calendar-grid .calendar-day { min-height: 52px; padding: 5px 7px; }
+    .profile-calendar-selection { padding: 12px; }
+    .profile-selected-fields { display: grid; grid-template-columns: minmax(180px, .65fr) minmax(0, 1.35fr); gap: 12px; align-items: end; }
+    .profile-calendar-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .profile-type-schedule-toggle { display: flex; align-items: flex-start; gap: 9px; padding: 11px 12px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface-2); cursor: pointer; }
+    .profile-type-schedule-toggle input { margin-top: 3px; accent-color: var(--accent-strong); }
+    .profile-type-schedule-toggle span { display: grid; gap: 3px; }
+    .profile-type-schedule-toggle b { font-size: 12px; }
+    .profile-type-schedule-toggle small { color: var(--text-3); font-size: 11px; line-height: 1.4; }
+    .profile-type-schedule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .profile-type-schedule { display: grid; gap: 9px; min-width: 0; padding: 12px; border: 1px solid var(--type-border); border-radius: 10px; background: var(--surface); }
+    .profile-type-schedule-title { display: flex; align-items: center; gap: 8px; color: var(--type-ink); font-size: 12px; }
+    .profile-type-schedule .field { gap: 5px; }
+    .profile-type-interval { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .profile-direct-settings { border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface-2); }
+    .profile-direct-settings summary { padding: 11px 13px; color: var(--text-2); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .profile-direct-body { display: grid; gap: 12px; padding: 0 13px 13px; }
+    .profile-schedule-section { padding-top: 2px; }
+    .progress-details > summary { list-style: none; cursor: pointer; }
+    .progress-details > summary::-webkit-details-marker { display: none; }
+    .progress-details[open] > summary { border-bottom: 1px solid var(--line-soft); }
+    .progress-details > .card-b { padding-top: 14px; }
+
+    @media (max-width: 760px) {
+      .profile-config-dialog { width: min(100%, 720px); max-height: calc(100dvh - 16px); }
+      .profile-selected-fields { grid-template-columns: 1fr; }
+      .profile-type-interval { grid-template-columns: 1fr 1fr; }
+    }
+
+    .calendar-panel { gap: 18px; }
+    .calendar-intro, .calendar-selection-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .calendar-intro { flex-wrap: wrap; }
+    .calendar-intro > div:first-child { min-width: 220px; flex: 1 1 220px; }
+    .calendar-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+    .calendar-intro h3, .calendar-selection h3 { margin: 0; font-size: 15px; font-weight: 700; }
+    .calendar-intro p { margin: 3px 0 0; color: var(--text-3); font-size: 12.5px; }
+    .calendar-month-control { display: flex; align-items: center; gap: 4px; }
+    .calendar-month-label { min-width: 150px; text-align: center; text-transform: capitalize; font-size: 13px; }
+    .calendar-types { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .calendar-type { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 10px 11px; text-align: left; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface-2); color: var(--text); }
+    .calendar-type.active { border-color: var(--type-ink); background: var(--type-soft); box-shadow: inset 0 0 0 1px var(--type-ink), 0 2px 8px color-mix(in srgb, var(--type-ink) 18%, transparent); }
+    .calendar-type-mark { display: grid; place-items: center; width: 26px; height: 26px; flex: none; border-radius: 8px; background: var(--type-soft); color: var(--type-ink); font-size: 11px; font-weight: 800; }
+    .calendar-type-copy { display: grid; gap: 2px; min-width: 0; }
+    .calendar-type-copy b { font-size: 11.5px; line-height: 1.3; }
+    .calendar-type-copy small { color: var(--text-3); font-size: 10.5px; line-height: 1.3; }
+    .type-mes_actual { --type-ink: #087f5b; --type-soft: #d3f3e3; --type-fill: #c6f0d9; --type-border: #68c696; }
+    .type-mes_anterior { --type-ink: #245bb5; --type-soft: #dce9ff; --type-fill: #d2e2ff; --type-border: #83a9eb; }
+    .type-cierre { --type-ink: #b64b13; --type-soft: #ffead6; --type-fill: #ffdfc1; --type-border: #e89b5c; }
+    .type-rango { --type-ink: #7041b8; --type-soft: #eee4ff; --type-fill: #e7d9ff; --type-border: #aa8ce0; }
+    .calendar-counts { display: flex; flex-wrap: wrap; gap: 8px 15px; padding: 1px 2px; }
+    .calendar-count { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 11.5px; }
+    .calendar-count i { width: 8px; height: 8px; border-radius: 50%; background: var(--type-ink); }
+    .calendar-count.unassigned { --type-ink: var(--text-3); }
+    .calendar-count.unassigned i { border: 1px solid var(--text-3); background: transparent; }
+    .calendar-count b { color: var(--text); font-weight: 700; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .calendar-weekday { padding: 2px 0 5px; text-align: center; color: var(--text-3); font-size: 11px; font-weight: 700; }
+    .calendar-day, .calendar-blank { min-height: 58px; border-radius: 10px; }
+    .calendar-day { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 7px 9px; border: 1px solid var(--line-soft); background: var(--surface); color: var(--text); cursor: pointer; transition: border-color .14s, background .14s, transform .14s; }
+    .calendar-day.blank { visibility: hidden; pointer-events: none; }
+    .calendar-day:hover { border-color: var(--line); background: var(--surface-2); transform: translateY(-1px); }
+    .calendar-day.day-mes_actual { background: var(--type-fill); border-color: var(--type-border); }
+    .calendar-day.day-mes_anterior { background: var(--type-fill); border-color: var(--type-border); }
+    .calendar-day.day-cierre { background: var(--type-fill); border-color: var(--type-border); }
+    .calendar-day.day-rango { background: var(--type-fill); border-color: var(--type-border); }
+    .calendar-day.day-libre { border-style: dashed; color: var(--text-3); }
+    .calendar-day.today .calendar-day-number { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 3px; }
+    .calendar-day.chosen { outline: 2px solid var(--accent-strong); outline-offset: 2px; box-shadow: 0 0 0 4px var(--accent-soft); }
+    .calendar-day-number { font-size: 13px; font-weight: 700; }
+    .calendar-day-time { color: var(--type-ink, var(--text-3)); font-size: 8px; font-weight: 800; line-height: 1; }
+    .calendar-day-type { padding: 3px 5px; border-radius: 99px; background: var(--type-ink, var(--text-3)); color: #fff; font-size: 9px; font-weight: 800; letter-spacing: .2px; }
+    .calendar-day-status { color: var(--text-3); font-size: 8px; font-weight: 600; }
+    .calendar-day-meta, .prep-editor-day-meta { display: inline-flex; align-items: center; gap: 4px; }
+    .calendar-day-cut, .prep-editor-day-cut { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #eff2f5; color: #45525e; font-size: 9px; font-weight: 900; }
+    .calendar-day-cut.included, .prep-editor-day-cut.included { background: #dcf8e8; color: #087f5b; }
+    .calendar-selection { display: grid; gap: 10px; padding: 14px 16px; border-radius: 11px; background: var(--surface-2); }
+    .eyebrow { display: block; margin-bottom: 3px; color: var(--text-3); font-size: 9.5px; font-weight: 800; letter-spacing: .7px; }
+    .calendar-selected-type { display: inline-flex; align-items: center; padding: 5px 9px; border-radius: 99px; background: var(--type-soft, var(--surface-3)); color: var(--type-ink, var(--text-2)); font-size: 11px; font-weight: 700; }
+    .calendar-period-preview { margin: 0; color: var(--text-2); font-size: 12px; }
+    .calendar-include-day { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; cursor: pointer; }
+    .calendar-include-day input { width: 15px; height: 15px; accent-color: var(--accent-strong); }
+    .calendar-time-mark { color: var(--accent-strong); font-weight: 800; font-size: 15px; line-height: 1; }
+    .calendar-range { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .calendar-note { margin: -5px 0 0; color: var(--text-3); font-size: 11px; }
+    .calendar-schedule-status { display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--accent-soft); color: var(--text-2); }
+    .calendar-schedule-status b { display: block; color: var(--text); font-size: 12px; }
+    .calendar-schedule-status small { display: block; margin-top: 2px; color: var(--text-2); }
+    .calendar-run-actions { display: grid; gap: 8px; }
+    .calendar-run-actions .btn { width: 100%; }
+    .prep-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .prep-option { display: flex; align-items: flex-start; gap: 10px; padding: 13px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface-2); cursor: pointer; }
+    .prep-option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+    .prep-option input { margin-top: 3px; accent-color: var(--accent-strong); }
+    .prep-option span { display: grid; gap: 3px; }
+    .prep-option b { font-size: 12.5px; }
+    .prep-option small { color: var(--text-3); line-height: 1.4; }
+    .prep-preview { padding: 12px 14px; border-radius: 10px; background: var(--surface-2); }
+    .prep-preview h4 { margin: 0 0 8px; font-size: 12px; }
+    .prep-dialog { width: min(960px, 100%); }
+    .prep-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1.1fr); gap: 16px; align-items: start; }
+    .prep-side, .prep-calendar { display: grid; gap: 14px; min-width: 0; }
+    .prep-type-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .prep-type { cursor: pointer; }
+    .prep-type:hover { border-color: var(--type-border); }
+    .prep-type.active { border-color: var(--type-ink); background: var(--type-soft); box-shadow: inset 0 0 0 1px var(--type-ink); }
+    .prep-type-clear { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 1px dashed var(--line); border-radius: 10px; background: var(--surface); color: var(--text-2); cursor: pointer; }
+    .prep-type-clear.active { border: 2px solid var(--text-2); background: var(--surface-3); color: var(--text); }
+    .prep-type-clear .calendar-type-mark { background: var(--surface-3); color: var(--text-2); }
+    .prep-editor-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+    .prep-weekday { padding: 3px 0 5px; text-align: center; color: var(--text-3); font-size: 10px; font-weight: 800; }
+    .prep-editor-day { display: flex; align-items: center; justify-content: space-between; gap: 3px; min-width: 0; min-height: 47px; padding: 5px 7px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--surface); color: var(--text); cursor: pointer; transition: transform .12s, border-color .12s, background .12s; }
+    .prep-editor-day:hover { transform: translateY(-1px); border-color: var(--accent); }
+    .prep-editor-day.blank { visibility: hidden; pointer-events: none; }
+    .prep-editor-day.assigned { background: var(--type-fill); border-color: var(--type-border); }
+    .prep-editor-day.selected { outline: 2px solid var(--accent-strong); outline-offset: 1px; }
+    .prep-editor-day-number { font-weight: 800; font-size: 12px; }
+    .prep-editor-day-type { padding: 2px 4px; border-radius: 99px; background: var(--type-ink); color: #fff; font-size: 8px; font-weight: 800; }
+    .prep-help { padding: 10px 12px; border-radius: 9px; background: var(--accent-soft); color: var(--text-2); font-size: 11.5px; }
+    .calendar-shortcuts { display: flex; flex-wrap: wrap; gap: 6px; }
+    .calendar-shortcuts .btn { min-height: 32px; padding: 5px 8px; font-size: 11px; }
+    .prep-selected { padding: 12px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface-2); }
+    .prep-selected .calendar-range { margin-top: 10px; }
+    .prep-time-default { padding: 12px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface-2); }
+    .prep-time-controls { display: flex; align-items: flex-end; gap: 8px; }
+    .prep-time-controls .field { flex: 1; min-width: 100px; }
+    .prep-time-controls .btn { flex: none; }
+    .prep-editor-day-label { display: grid; justify-items: start; gap: 2px; }
+    .prep-editor-day-time { color: var(--type-ink, var(--text-3)); font-size: 8px; font-weight: 700; line-height: 1; }
+    :root[data-theme="dark"] .type-mes_actual { --type-ink: #54e0a4; --type-soft: #174c3b; --type-fill: #1d513f; --type-border: #34b981; }
+    :root[data-theme="dark"] .type-mes_anterior { --type-ink: #8dbaff; --type-soft: #203d68; --type-fill: #244675; --type-border: #5488d2; }
+    :root[data-theme="dark"] .type-cierre { --type-ink: #ffc083; --type-soft: #653b25; --type-fill: #70452b; --type-border: #d88748; }
+    :root[data-theme="dark"] .type-rango { --type-ink: #c4a1ff; --type-soft: #49316d; --type-fill: #52377c; --type-border: #9669d9; }
+    :root[data-theme="dark"] .calendar-day-type, :root[data-theme="dark"] .prep-editor-day-type { color: #111923; }
+    :root[data-theme="dark"] .calendar-day.day-libre { background: #1b2734; }
+    :root[data-theme="dark"] .calendar-day-cut, :root[data-theme="dark"] .prep-editor-day-cut { background: #d8e1eb; color: #263647; }
+    :root[data-theme="dark"] .calendar-day-cut.included, :root[data-theme="dark"] .prep-editor-day-cut.included { background: #a1f0c7; color: #103c2a; }
+
     /* ESPECIFICACIÓN TÉCNICA Y GESTIÓN COMPLETA SAP */
     .sap-spec-grid {
       display: grid;
@@ -467,20 +687,101 @@
       color: var(--text-2);
     }
 
+    @media (max-width: 1450px) { .calendar-types { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 1280px) {
+      .calendar-day { padding: 5px 4px; }
+      .calendar-day-meta { gap: 3px; }
+      .calendar-day-type { padding: 2px 4px; font-size: 8px; }
+      .calendar-day-cut { width: 13px; height: 13px; font-size: 8px; }
+    }
     @media (max-width: 1100px) { .cols-run { grid-template-columns: 1fr; } }
-    @media (max-width: 860px) {
+    @media (max-width: 960px) {
       .shell { grid-template-columns: 1fr; }
       .sidebar { display: none; }
-      .topbar { padding: 12px 16px; }
+      .topbar { padding: 10px 0; }
+      .topbar-inner { flex-wrap: wrap; gap: 8px; }
+      .topbar-inner { padding: 0 16px; }
+      .topbar-title { flex: 1 1 100%; }
+      .topbar-brand-mark { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 9px; background: linear-gradient(135deg, var(--accent) 0%, #0284c7 100%); color: #062420; font-size: 12px; font-weight: 800; }
+      .topbar .spacer { display: none; }
+      .topbar-status { margin-left: auto; }
       .content { padding: 16px 16px 120px; }
       .mobile-nav {
-        display: grid; grid-template-columns: repeat(4, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+        display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
         background: var(--surface); border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
       }
-      .mobile-nav button { border: 0; background: none; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; font-size: 11px; color: var(--text-3); cursor: pointer; border-radius: 8px; }
+      .mobile-nav button { min-width: 0; overflow: hidden; border: 0; background: none; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; font-size: 10px; color: var(--text-3); cursor: pointer; border-radius: 8px; }
+      .mobile-nav button span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mobile-nav button[aria-current="page"] { color: var(--accent); background: var(--accent-soft); font-weight: 700; }
-      .savebar { left: 12px; right: 12px; bottom: 76px; }
+      .savebar { left: 12px; right: 12px; bottom: 76px; width: auto; transform: none; }
       .env-row { grid-template-columns: 1fr; gap: 8px; }
+      .calendar-types { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .calendar-day, .calendar-blank { min-height: 48px; }
+      .calendar-day { padding: 6px; }
+      .calendar-type-copy small { font-size: 10px; }
+      .calendar-header-actions { width: 100%; justify-content: space-between; }
+      .log { height: 56vh; min-height: 260px; }
+      .log-line { grid-template-columns: 62px minmax(0, 1fr); gap: 8px; padding: 2px 10px; }
+      .prep-options { grid-template-columns: 1fr; }
+      .prep-layout { grid-template-columns: 1fr; }
+      .prep-dialog { width: min(720px, 100%); }
+      .home-profile-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .profile-manager-grid { grid-template-columns: 1fr; }
+      .period-seg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .profile-builder-heading { align-items: stretch; flex-direction: column; }
+      .profile-builder-month { width: 100%; }
+      .profile-selected-fields { grid-template-columns: 1fr; }
+      .profile-type-schedule-grid { grid-template-columns: 1fr; }
+      .profile-type-interval { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .topbar { padding: 10px 0; }
+      .topbar-inner { padding: 0 12px; }
+      .topbar-inner { gap: 7px; }
+      .topbar h1 { font-size: 15px; }
+      .topbar .sub { font-size: 11px; }
+      .topbar-status { width: 100%; }
+      .topbar-status .conn { flex: 1; justify-content: center; }
+      .content { padding: 14px 12px 112px; }
+      .card-h { padding: 14px 15px; flex-wrap: wrap; }
+      .card-b { padding: 15px; }
+      .calendar-intro { align-items: flex-start; flex-direction: column; }
+      .calendar-month-control { width: 100%; }
+      .calendar-month-label { flex: 1; }
+      .calendar-grid { gap: 4px; }
+      .calendar-day, .calendar-blank { min-height: 42px; }
+      .calendar-day { position: relative; align-items: flex-start; justify-content: flex-start; flex-direction: column; gap: 0; padding: 4px; }
+      .calendar-day-meta { position: absolute; right: 3px; bottom: 3px; gap: 2px; }
+      .calendar-day-type { padding: 2px 3px; font-size: 7px; }
+      .calendar-day-cut { width: 12px; height: 12px; font-size: 8px; }
+      .calendar-range { grid-template-columns: 1fr; }
+      .calendar-day-status { font-size: 7px; }
+      .overlay { padding: 8px; }
+      .dialog-h, .dialog-b, .dialog-f { padding-left: 14px; padding-right: 14px; }
+      .profile-config-dialog { width: 100%; max-height: calc(100dvh - 16px); }
+      .profile-calendar-builder { padding: 10px; }
+      .profile-builder-heading:not(.compact) { align-items: stretch; flex-direction: column; gap: 10px; }
+      .profile-builder-month { width: 100%; }
+      .profile-calendar-types, .profile-type-schedule-grid { grid-template-columns: 1fr; }
+      .profile-type-interval { grid-template-columns: 1fr; }
+      .profile-schedule-mode { display: grid; grid-template-columns: 1fr; }
+      .profile-calendar-grid .calendar-day { min-height: 44px; }
+      .profile-calendar-footer { align-items: stretch; }
+      .profile-calendar-footer .btn { width: 100%; }
+      .prep-editor-day { position: relative; align-items: flex-start; justify-content: flex-start; flex-direction: column; min-height: 42px; padding: 4px; }
+      .prep-editor-day-meta { position: absolute; right: 2px; bottom: 2px; gap: 2px; }
+      .prep-editor-day-type { font-size: 7px; padding: 2px 3px; }
+      .prep-editor-day-cut { width: 12px; height: 12px; font-size: 8px; }
+      .prep-type-grid { grid-template-columns: 1fr; }
+      .home-profile-select { align-items: stretch; flex-direction: column; }
+      .home-profile-select .btn { width: 100%; }
+      .home-execution-actions { grid-template-columns: 1fr; }
+    }
+    @media (max-height: 760px) { .prep-dialog { max-height: 96dvh; } }
+    @media (max-height: 760px) and (min-width: 861px) {
+      .content { padding-top: 14px; }
+      .calendar-panel { gap: 12px; }
+      .calendar-day, .calendar-blank { min-height: 46px; }
       .summary { grid-template-columns: 1fr; }
       .conn-label { display: none; }
     }
@@ -506,14 +807,13 @@
         <button type="button" @click="ir(s.id)" :aria-current="vista === s.id ? 'page' : null">
           <span x-html="icono(s.icono)"></span>
           <span x-text="s.nombre"></span>
-          <span class="count" x-show="s.id === 'fuentes' && alertasFuentes() > 0" x-text="alertasFuentes()"></span>
+          <span class="count" x-show="(s.id === 'fuentes' && alertasFuentes() > 0) || (s.id === 'registro' && cantidadErroresLog() > 0)" x-text="s.id === 'registro' ? cantidadErroresLog() : alertasFuentes()"></span>
         </button>
       </template>
     </nav>
 
     <div class="sidebar-foot">
       <div class="seg" role="group" aria-label="Tema">
-        <button type="button" :aria-pressed="tema === 'system'" @click="ponerTema('system')" title="Seguir al sistema">Auto</button>
         <button type="button" :aria-pressed="tema === 'light'" @click="ponerTema('light')">Claro</button>
         <button type="button" :aria-pressed="tema === 'dark'" @click="ponerTema('dark')">Oscuro</button>
       </div>
@@ -529,31 +829,28 @@
   <!-- ============================================================== -->
   <div class="main">
     <header class="topbar">
-      <div>
-        <h1 x-text="seccionActual().nombre"></h1>
-        <div class="sub" x-text="seccionActual().ayuda"></div>
+      <div class="topbar-inner">
+        <div class="topbar-title">
+          <span class="topbar-brand-mark" aria-hidden="true">IT</span>
+          <div class="topbar-heading">
+            <h1 x-text="seccionActual().nombre"></h1>
+            <div class="sub" x-text="seccionActual().ayuda"></div>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="topbar-status" aria-label="Estado de conexiones">
+          <button type="button" class="conn" @click="probar('sql')" :title="conexiones.sql.mensaje">
+            <span class="dot" :class="claseDot(conexiones.sql.estado)"></span>
+            <span>SQL Server</span>
+            <span class="faint conn-label" x-text="textoEstado(conexiones.sql.estado)"></span>
+          </button>
+          <button type="button" class="conn" @click="probar('sap')" :title="conexiones.sap.mensaje">
+            <span class="dot" :class="claseDot(conexiones.sap.estado)"></span>
+            <span>SAP GUI</span>
+            <span class="faint conn-label" x-text="textoEstado(conexiones.sap.estado)"></span>
+          </button>
+        </div>
       </div>
-      <div class="spacer"></div>
-
-      <!-- Píldoras interactivas de conectividad directa -->
-      <button type="button" class="conn" @click="probar('sql')" :title="conexiones.sql.mensaje">
-        <span class="dot" :class="claseDot(conexiones.sql.estado)"></span>
-        <span>SQL Server</span>
-        <span class="faint conn-label" x-text="textoEstado(conexiones.sql.estado)"></span>
-      </button>
-
-      <button type="button" class="conn" @click="probar('sap')" :title="conexiones.sap.mensaje">
-        <span class="dot" :class="claseDot(conexiones.sap.estado)"></span>
-        <span>SAP GUI</span>
-        <span class="faint conn-label" x-text="textoEstado(conexiones.sap.estado)"></span>
-      </button>
-
-      <!-- Pill de Planificador Cíclico -->
-      <button type="button" class="conn" @click="alternarPlanificador()" :title="'Clic para ' + (schedulerActivo ? 'pausar' : 'activar') + ' el ciclo automático'">
-        <span class="dot" :class="schedulerActivo ? 'ok' : 'idle'"></span>
-        <span>Planificador:</span>
-        <span :style="schedulerActivo ? 'color:var(--ok); font-weight:700' : 'color:var(--text-3)'" x-text="schedulerActivo ? (configuracionActiva().horaFija || '06:00 AM') : 'Pausado'"></span>
-      </button>
     </header>
 
     <main class="content" id="contenido">
@@ -570,202 +867,181 @@
       <section x-show="vista === 'inicio'" class="stack" aria-labelledby="t-inicio">
         <h2 id="t-inicio" class="sr-only">Inicio</h2>
 
-        <div class="grid cols-run">
-          <!-- CARD: EJECUTAR BOT -->
-          <div class="card">
-            <div class="card-h">
-              <div>
-                <h2>Ejecución del Bot de Reportes</h2>
-                <p>Ingesta de insumos, cálculo ELT en SQL Server y generación de reportes BI.</p>
-              </div>
-              <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
+        <div class="card">
+          <div class="card-h">
+            <div>
+              <h2>Ejecutar una configuración</h2>
+              <p>Elige un perfil guardado. Sus días, periodo y horario ya están preparados.</p>
             </div>
-
-            <div class="card-b stack">
-              <!-- Selector Dinámico y Visual de Perfiles de Ejecución -->
-              <div class="field">
-                <div class="row between" style="margin-bottom:6px">
-                  <div class="row" style="gap:8px">
-                    <label class="label" style="font-size:13px; font-weight:700">Perfil de Ejecución</label>
-                    <span class="chip" x-text="configuraciones.length + ' configuraciones'"></span>
-                  </div>
-                  <div class="row" style="gap:6px">
-                    <button type="button" class="btn btn-sm btn-ghost" @click="abrirModalConfiguracion(configuracionActiva())" title="Editar parámetros y horarios de este perfil">
-                      <span x-html="icono('settings')"></span> Editar Perfil
-                    </button>
-                    <button type="button" class="btn btn-sm btn-ghost" @click="abrirModalConfiguracion(null)" title="Crear nueva configuración">
-                      <span x-html="icono('plus')"></span> Nuevo
-                    </button>
-                    <button type="button" class="btn btn-sm btn-ghost icon-btn" style="color:var(--err)" @click="pedirConfirmarEliminarCfg(configuracionActiva())" title="Eliminar este perfil de ejecución">
-                      <span x-html="icono('trash')"></span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- SELECTOR DINÁMICO DE TARJETAS / PILLS -->
-                <div class="profile-selector">
-                  <template x-for="c in configuraciones" :key="c.id">
-                    <div class="profile-card" :class="{ active: configuracionActivaId === c.id }" @click="seleccionarConfiguracion(c.id)">
-                      <div class="p-header">
-                        <div class="p-title">
-                          <span x-text="iconoModo(c.modo)"></span>
-                          <span x-text="c.nombre"></span>
-                        </div>
-                        <span class="p-radio"></span>
-                      </div>
-                      <div class="p-meta">
-                        <span class="chip" style="font-size:10.5px" x-text="c.modo === 'diaria' ? 'Diaria (< hoy)' : (c.modo === 'cierre' ? 'Cierre Mes' : 'Rango Libre')"></span>
-                        <span class="mono" x-text="textoCicloCorto(c)"></span>
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-
-              <!-- Detalle Estructurado de la Configuración Seleccionada -->
-              <div class="card" style="background:var(--surface-2); border:1px solid var(--line-soft); box-shadow:none">
-                <div style="padding:14px 16px; border-bottom:1px solid var(--line-soft)">
-                  <div class="row between" style="margin-bottom:4px">
-                    <div class="row" style="gap:8px">
-                      <span class="badge plain" :class="badgeModo(configuracionActiva().modo).clase" x-text="badgeModo(configuracionActiva().modo).texto"></span>
-                      <span class="chip mono" style="font-size:11px" x-text="'ID: ' + configuracionActiva().id"></span>
-                    </div>
-                    <span class="hint mono" x-text="'Planificador: ' + (schedulerActivo ? 'ACTIVO' : 'PAUSADO')"></span>
-                  </div>
-                  <p class="hint" style="margin:4px 0 0; font-size:12.5px; color:var(--text-2)" x-text="configuracionActiva().descripcion"></p>
-                </div>
-
-                <div class="summary" style="border:0; border-radius:0">
-                  <div>
-                    <span>Periodo / Corte</span>
-                    <strong x-text="textoCorte()"></strong>
-                  </div>
-                  <div>
-                    <span>Día en Curso</span>
-                    <strong x-text="configuracionActiva().incluirHoy ? 'Incluido (Día completo)' : 'Excluido (< hoy)'"></strong>
-                  </div>
-                  <div>
-                    <span>Ciclo Programado</span>
-                    <strong x-text="textoCiclo(configuracionActiva())"></strong>
-                  </div>
-                </div>
-
-                <!-- Si la modalidad es Rango Libre, muestra selectores de fecha claros y accesos rápidos -->
-                <div x-show="configuracionActiva().modo === 'rango'" style="padding:12px 16px; border-top:1px solid var(--line-soft)">
-                  <div class="row between" style="margin-bottom:8px">
-                    <span class="label" style="font-size:11.5px">Rango Personalizado:</span>
-                    <div class="row" style="gap:4px">
-                      <button type="button" class="btn btn-sm btn-ghost" style="height:24px; font-size:11px; padding:0 8px" @click="aplicarPresetRango(7)">Últimos 7 días</button>
-                      <button type="button" class="btn btn-sm btn-ghost" style="height:24px; font-size:11px; padding:0 8px" @click="aplicarPresetRango(30)">Últimos 30 días</button>
-                      <button type="button" class="btn btn-sm btn-ghost" style="height:24px; font-size:11px; padding:0 8px" @click="aplicarPresetRango(60)">Últimos 60 días</button>
-                    </div>
-                  </div>
-                  <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px">
-                    <div class="field">
-                      <label for="f-desde">Fecha Desde</label>
-                      <input id="f-desde" class="input" type="date" x-model="configuracionActiva().fechaDesde" :disabled="ejecutando">
-                    </div>
-                    <div class="field">
-                      <label for="f-hasta">Fecha Hasta (Corte)</label>
-                      <input id="f-hasta" class="input" type="date" x-model="configuracionActiva().fechaHasta" :disabled="ejecutando">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Botón principal de Ejecutar / Detener -->
-              <div class="row" style="margin-top:2px">
-                <button type="button" class="btn btn-lg" style="flex:1"
-                        :class="ejecutando ? 'btn-danger' : 'btn-primary'"
-                        :disabled="deteniendo"
-                        @click="ejecutando ? detener() : ejecutar()">
-                  <span x-html="icono(ejecutando ? 'stop' : 'play')"></span>
-                  <span x-text="ejecutando ? (deteniendo ? 'Deteniendo corrida…' : 'Detener Ejecución') : 'Iniciar Ejecución Ahora'"></span>
-                  <span class="kbd" x-show="!ejecutando">Ctrl ⏎</span>
-                </button>
-              </div>
-
-              <!-- Banner de Error Real -->
-              <div class="banner err" x-show="estado.has_error && !ejecutando" x-cloak role="alert">
-                <span x-html="icono('alert')"></span>
-                <div>
-                  <b>La ejecución se detuvo por un fallo en el pipeline.</b>
-                  <div style="margin-top:2px; font-family:var(--mono); font-size:12px" x-text="estado.error_message"></div>
-                  <button type="button" class="btn btn-sm btn-ghost" style="margin:6px 0 0 -10px" @click="filtroLog = 'error'">Ver traza exacta en el registro</button>
-                </div>
-              </div>
-
-              <!-- Banner de Éxito -->
-              <div class="banner ok" x-show="estado.finished && !estado.has_error && !ejecutando" x-cloak>
-                <span x-html="icono('check')"></span>
-                <div>
-                  <b>¡Ejecución completada con éxito!</b> Todos los reportes BI están actualizados.
-                  <button type="button" class="btn btn-sm btn-ghost" style="margin-left:4px" @click="ir('reportes')">Ver reportes generados</button>
-                </div>
-              </div>
-            </div>
+            <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
           </div>
-
-          <!-- CARD: PROGRESO Y PASOS -->
-          <div class="card">
-            <div class="card-h">
-              <div>
-                <h2>Progreso del pipeline</h2>
-                <p x-text="textoProgreso()"></p>
+          <div class="card-b stack">
+            <div class="home-profile-select">
+              <div class="field">
+                <label for="home-profile">Perfil de ejecución</label>
+                <select id="home-profile" class="input" x-model="configuracionActivaId" @change="seleccionarConfiguracion(configuracionActivaId)" :disabled="ejecutando || cronogramaActivo">
+                  <template x-for="perfil in configuraciones" :key="perfil.id">
+                    <option :value="perfil.id" x-text="perfil.nombre"></option>
+                  </template>
+                </select>
               </div>
-              <span class="mono faint" x-text="pasosCompletos() + ' / ' + pasos.length + ' pasos'"></span>
             </div>
-            <div class="card-b">
-              <div class="progress" role="progressbar" aria-label="Progreso" aria-valuemin="0" :aria-valuemax="pasos.length" :aria-valuenow="pasosCompletos()" style="margin-bottom:14px">
-                <div :style="'width:' + (pasosCompletos() / pasos.length * 100) + '%'"></div>
-              </div>
 
-              <ol class="steps">
-                <template x-for="p in pasos" :key="p.id">
-                  <li class="step" :class="claseStep(p.id)">
-                    <span class="step-ico">
-                      <template x-if="estadoPaso(p.id) === 'success'"><span x-html="icono('check-sm')"></span></template>
-                      <template x-if="estadoPaso(p.id) === 'error'"><span>✕</span></template>
-                      <template x-if="!['success','error'].includes(estadoPaso(p.id))"><span x-text="p.id"></span></template>
-                    </span>
-                    <div>
-                      <div class="step-name" x-text="p.nombre"></div>
-                      <div class="step-desc" x-text="p.desc"></div>
-                    </div>
-                    <span class="step-time" x-text="tiempoPaso(p.id)"></span>
-                  </li>
-                </template>
-              </ol>
+            <div class="home-profile-summary" x-show="configuraciones.length">
+              <h3 x-text="configuracionActiva().nombre || 'Sin perfil seleccionado'"></h3>
+              <p x-text="configuracionActiva().descripcion || 'Configura los días y horarios desde Programador.'"></p>
+              <div class="home-profile-facts">
+                <div class="home-profile-fact"><small>Horario</small><b x-text="textoCiclo(configuracionActiva())"></b></div>
+                <div class="home-profile-fact"><small>Tipos de periodo</small><b x-text="resumenTiposPerfil(configuracionActiva())"></b></div>
+                <div class="home-profile-fact"><small>Días programados</small><b x-text="textoDiasProgramados(configuracionActiva())"></b></div>
+                <div class="home-profile-fact"><small>Fechas del reporte</small><b x-text="resumenPeriodo(configuracionActiva())"></b></div>
+              </div>
+            </div>
+
+            <label class="calendar-include-day" style="margin-top:-4px">
+              <input type="checkbox" x-model="descargarSapAntes" :disabled="ejecutando || cronogramaActivo">
+              <span>Descargar insumos actualizados desde SAP (GD20 + Query) antes de procesar</span>
+            </label>
+
+            <div class="home-execution-actions">
+              <button type="button" class="btn btn-primary btn-lg" :disabled="ejecutando || cronogramaActivo || deteniendo || !configuracionActiva().id || perfilMesEsFuturo()" @click="ejecutar()">
+                <span x-html="icono('play')"></span> Ejecutar ahora
+              </button>
+              <button type="button" class="btn btn-lg" :class="cronogramaActivo ? 'btn-danger' : 'btn-ghost'" :disabled="ejecutando || iniciandoCronograma || deteniendoCronograma || (!cronogramaActivo && (configuracionActiva().frecuencia === 'manual' || !tieneDiasCalendarioActivo()))" @click="cronogramaActivo ? detenerCronograma() : iniciarCronograma()">
+                <span x-html="icono(cronogramaActivo ? 'stop' : 'clock')"></span>
+                <span x-text="cronogramaActivo ? 'Detener programación' : (configuracionActiva().frecuencia === 'manual' ? 'Perfil solo manual' : (iniciandoCronograma ? 'Preparando…' : 'Iniciar programación'))"></span>
+              </button>
+            </div>
+            <p class="hint" x-show="configuracionActiva().frecuencia === 'manual'">Este perfil solo se ejecuta cuando presionas “Ejecutar ahora”.</p>
+            <p class="hint" x-show="configuracionActiva().frecuencia !== 'manual' && !tieneDiasCalendarioActivo()">Este perfil no tiene fechas próximas asignadas para el mes elegido. Edítalo en Programador antes de iniciar la programación.</p>
+            <p class="hint" x-show="perfilMesEsFuturo()">Este perfil está preparado para un mes futuro. Puedes iniciar la programación; la ejecución inmediata estará disponible cuando empiece ese mes.</p>
+
+            <div class="calendar-schedule-status" x-show="cronogramaActivo || cronogramaMensaje" x-cloak>
+              <span class="dot" :class="cronogramaActivo ? 'run' : 'idle'"></span>
+              <div>
+                <b x-text="cronogramaActivo ? 'Programación activa · ' + (estadoCronograma.profile_name || configuracionActiva().nombre) : cronogramaMensaje"></b>
+                <small x-show="proximaEjecucion" x-text="'Próxima ejecución: ' + fechaHoraCronograma(proximaEjecucion)"></small>
+                <small x-show="cronogramaActivo && estadoCronograma.pending > 0" x-text="estadoCronograma.pending + ' ejecución(es) restante(s)'"></small>
+                <small x-show="cronogramaActivo && estadoCronograma.skipped > 0" x-text="estadoCronograma.skipped + ' horario(s) pasado(s) omitido(s) al iniciar'"></small>
+                <small x-show="estadoCronograma.current_run" x-text="'En curso: ' + estadoCronograma.current_run"></small>
+              </div>
+            </div>
+            <p class="hint" style="margin:0">La programación automática funciona mientras la aplicación esté abierta y el equipo despierto.</p>
+
+            <div class="banner err" x-show="estado.has_error && !ejecutando" x-cloak role="alert">
+              <span x-html="icono('alert')"></span>
+              <div><b>La ejecución se detuvo por un fallo.</b><div style="margin-top:2px;font-family:var(--mono);font-size:12px" x-text="estado.error_message"></div><button type="button" class="btn btn-sm btn-ghost" style="margin:6px 0 0 -10px" @click="filtroLog = 'error'; ir('registro')">Ver detalle del error</button></div>
+            </div>
+            <div class="banner ok" x-show="estado.finished && !estado.has_error && !ejecutando" x-cloak>
+              <span x-html="icono('check')"></span><div><b>¡Ejecución completada!</b> Los reportes terminaron de actualizarse. <button type="button" class="btn btn-sm btn-ghost" @click="ir('reportes')">Ver reportes</button></div>
             </div>
           </div>
         </div>
 
-        <!-- CARD: TERMINAL DE LOGS EN VIVO -->
+        <details class="card progress-details" :open="ejecutando || estado.has_error">
+          <summary class="card-h">
+            <div><h2>Progreso del proceso</h2><p x-text="textoProgreso()"></p></div>
+            <span class="mono faint" x-text="pasosCompletos() + ' / ' + pasos.length + ' pasos · Ver detalle'" aria-label="Abrir progreso por pasos"></span>
+          </summary>
+          <div class="card-b">
+            <div class="progress" role="progressbar" aria-label="Progreso" aria-valuemin="0" :aria-valuemax="pasos.length" :aria-valuenow="pasosCompletos()" style="margin-bottom:14px">
+              <div :style="'width:' + (pasosCompletos() / pasos.length * 100) + '%'"></div>
+            </div>
+            <ol class="steps">
+              <template x-for="p in pasos" :key="p.id">
+                <li class="step" :class="claseStep(p.id)">
+                  <span class="step-ico"><template x-if="estadoPaso(p.id) === 'success'"><span x-html="icono('check-sm')"></span></template><template x-if="estadoPaso(p.id) === 'error'"><span>✕</span></template><template x-if="!['success','error'].includes(estadoPaso(p.id))"><span x-text="p.id"></span></template></span>
+                  <div><div class="step-name" x-text="p.nombre"></div><div class="step-desc" x-text="p.desc"></div></div>
+                  <span class="step-time" x-text="tiempoPaso(p.id)"></span>
+                </li>
+              </template>
+            </ol>
+          </div>
+        </details>
+
+
+
+      </section>
+
+      <section x-show="vista === 'programador'" x-cloak class="stack" aria-labelledby="t-programador">
+        <h2 id="t-programador" class="sr-only">Programador de ejecuciones</h2>
+        <div class="card">
+          <div class="card-h">
+            <div>
+              <h2>Perfiles de ejecución</h2>
+              <p>Crea una rutina completa: mes, días, periodo de datos y horario.</p>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" @click="abrirModalConfiguracion(null)" :disabled="cronogramaActivo"><span x-html="icono('plus')"></span> Nuevo perfil</button>
+          </div>
+          <div class="card-b">
+            <div class="profile-manager-grid">
+              <template x-for="perfil in configuraciones" :key="perfil.id">
+                <article class="profile-manager-card" :class="{ active: perfil.id === configuracionActivaId }">
+                  <div class="row between" style="align-items:flex-start">
+                    <div style="min-width:0">
+                      <h3 x-text="perfil.nombre"></h3>
+                      <p x-text="perfil.descripcion || 'Sin descripción adicional.'"></p>
+                    </div>
+                    <span class="badge" :class="perfil.frecuencia === 'manual' ? 'b-warn' : 'b-ok'" x-text="perfil.frecuencia === 'manual' ? 'Solo manual' : 'Programado desde Inicio'"></span>
+                  </div>
+                  <div class="profile-manager-facts">
+                    <div><small>Frecuencia</small><b x-text="textoCiclo(perfil)"></b></div>
+                    <div><small>Días de este perfil</small><b x-text="textoDiasProgramados(perfil)"></b></div>
+                    <div><small>Tipos de datos</small><b x-text="resumenTiposPerfil(perfil)"></b></div>
+                    <div><small>Periodo para ejecución manual en Inicio</small><b x-text="resumenPeriodo(perfil)"></b></div>
+                  </div>
+                  <div class="profile-manager-actions">
+                    <button type="button" class="btn btn-sm btn-primary" @click="abrirModalConfiguracion(perfil)" :disabled="cronogramaActivo"><span x-html="icono('settings')"></span> Editar programación</button>
+                    <span class="spacer"></span>
+                    <button type="button" class="btn btn-sm btn-ghost" @click="pedirConfirmarEliminarCfg(perfil)" :disabled="cronogramaActivo || configuraciones.length <= 1" :aria-label="'Eliminar ' + perfil.nombre" x-html="icono('trash')"></button>
+                  </div>
+                </article>
+              </template>
+            </div>
+          </div>
+        </div>
+        <div class="banner info">
+          <span x-html="icono('info')"></span>
+          <div><b>Un perfil reúne toda la rutina.</b><br>Dentro de cada perfil eliges las fechas, el periodo de datos y la frecuencia. Para ejecutar o iniciar el cronograma, ve a Inicio.</div>
+        </div>
+
+      </section>
+
+      <section x-show="vista === 'registro'" x-cloak class="stack" aria-labelledby="t-registro">
+        <h2 id="t-registro" class="sr-only">Registro de ejecución</h2>
         <div class="card">
           <div class="card-h">
             <div>
               <h2>Registro de ejecución en tiempo real</h2>
-              <p>Trazas directas emitidas por el motor de logging de Python.</p>
+              <p>Mensajes del bot durante las corridas. La pantalla de ejecución queda despejada y este registro permanece aquí.</p>
             </div>
-            <div class="row">
-              <div class="seg" role="group" aria-label="Filtrar registro">
-                <button type="button" :aria-pressed="filtroLog === 'todo'" @click="filtroLog = 'todo'">Todo</button>
-                <button type="button" :aria-pressed="filtroLog === 'error'" @click="filtroLog = 'error'">
-                  Errores <span x-show="logs.filter(l => l.tipo === 'error').length" x-text="'(' + logs.filter(l => l.tipo === 'error').length + ')'"></span>
-                </button>
-              </div>
-              <button type="button" class="btn btn-sm btn-ghost" @click="copiarLog()" title="Copiar al portapapeles">Copiar</button>
-              <button type="button" class="btn btn-sm btn-ghost" @click="logs = []">Limpiar</button>
-            </div>
+            <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
           </div>
-          <div class="log" x-ref="log" role="log" aria-live="polite" @scroll="seguirLog = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 24">
-            <template x-for="l in logsFiltrados()" :key="l.id">
-              <div class="log-line" :class="l.tipo">
-                <span class="t" x-text="l.hora"></span>
-                <span class="m" x-text="l.mensaje"></span>
+          <div class="card-b stack">
+            <div class="log-stats" aria-label="Resumen del registro">
+              <div class="log-stat"><span>Mensajes en esta sesión</span><b x-text="logs.length"></b></div>
+              <div class="log-stat"><span>Errores</span><b :style="cantidadErroresLog() ? 'color:var(--err)' : ''" x-text="cantidadErroresLog()"></b></div>
+            </div>
+            <div class="log-toolbar">
+              <div class="seg" role="group" aria-label="Filtrar registro">
+                <button type="button" :aria-pressed="filtroLog === 'todo'" @click="filtroLog = 'todo'">Todo <span x-text="logs.length"></span></button>
+                <button type="button" :aria-pressed="filtroLog === 'error'" @click="filtroLog = 'error'">Errores <span x-text="cantidadErroresLog()"></span></button>
               </div>
-            </template>
-            <div class="log-empty" x-show="logsFiltrados().length === 0" x-text="filtroLog === 'error' ? 'Sin errores en esta sesión.' : 'Esperando mensajes. Al iniciar una corrida aparecerán las trazas aquí.'"></div>
+              <div class="log-actions">
+                <label class="log-follow"><input type="checkbox" x-model="seguirLog"> Seguir mensajes nuevos</label>
+                <button type="button" class="btn btn-sm" @click="copiarLog()" :disabled="logsFiltrados().length === 0">Copiar visibles</button>
+                <button type="button" class="btn btn-sm btn-ghost" @click="limpiarLog()" :disabled="logs.length === 0">Limpiar registro</button>
+              </div>
+            </div>
+            <div class="log" x-ref="log" role="log" aria-live="polite" @scroll="seguirLog = $el.scrollTop + $el.clientHeight >= $el.scrollHeight - 24">
+              <template x-for="l in logsFiltrados()" :key="l.id">
+                <div class="log-line" :class="l.tipo">
+                  <span class="t" x-text="l.hora"></span>
+                  <span class="m" x-text="l.mensaje"></span>
+                </div>
+              </template>
+              <div class="log-empty" x-show="logsFiltrados().length === 0" x-text="filtroLog === 'error' ? 'No hay errores registrados en esta sesión.' : 'Aquí aparecerán los mensajes cuando inicies una ejecución.'"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -904,7 +1180,7 @@
                         <template x-for="c in t.campos" :key="c.id">
                           <div class="field">
                             <label :for="t.id + c.id" x-text="c.etiqueta"></label>
-                            <input class="input mono" :id="t.id + c.id" :type="c.tipo || 'text'" x-model="c.valor">
+                            <input class="input mono" :id="t.id + c.id" :type="c.tipo || 'text'" x-model="c.valor" @change="guardarTareasSap()">
                             <span class="hint" x-show="c.nota" x-text="c.nota"></span>
                           </div>
                         </template>
@@ -913,11 +1189,13 @@
                   </div>
                 </div>
 
+                <div class="hint" style="padding:0 16px 10px" x-text="resumenDescarga(t)"></div>
+
                 <!-- Footer de la Card -->
                 <div class="card-b" style="padding-top:0">
                   <div class="row between" style="border-top:1px solid var(--line-soft); padding-top:12px">
                     <span class="hint mono" x-text="'Ruta: dinamicos/' + t.destino"></span>
-                    <button type="button" class="btn btn-primary btn-sm" @click="descargarSap(t)">
+                    <button type="button" class="btn btn-primary btn-sm" @click="descargarSap(t)" :disabled="descargaSapInvalida(t)">
                       <span x-html="icono('download')"></span> Descargar
                     </button>
                   </div>
@@ -1065,109 +1343,241 @@
     <button type="button" class="btn btn-primary btn-sm" @click="guardarEnv()" :disabled="guardando" x-text="guardando ? 'Guardando…' : 'Guardar en disco'"></button>
   </div>
 
+    <!-- MODAL: GESTIONAR CONFIGURACIÓN DE EJECUCIÓN (CICLOS & HORAS)   -->
   <!-- ============================================================== -->
-  <!-- MODAL: GESTIONAR CONFIGURACIÓN DE EJECUCIÓN (CICLOS & HORAS)   -->
-  <!-- ============================================================== -->
-  <div class="overlay" x-show="dialogo === 'configuracion'" x-cloak @click.self="dialogo = null" x-transition.opacity>
-    <div class="dialog" role="dialog" aria-modal="true" style="width:min(640px, 100%)">
+  <div class="overlay" x-show="dialogo === 'configuracion'" x-cloak @click.self="!guardandoPerfil && (dialogo = null)" x-transition.opacity>
+    <div class="dialog profile-config-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-config-title">
       <div class="dialog-h">
         <div>
-          <h3 x-text="editCfg.esNueva ? 'Nueva Configuración de Ejecución' : 'Editar Configuración: ' + editCfg.nombre"></h3>
-          <p class="hint" style="margin:2px 0 0">Ajusta modalidad, periodos de corte y ciclos automáticos de repetición.</p>
+          <h3 id="profile-config-title" x-text="editCfg.esNueva ? 'Crear perfil de ejecución' : 'Editar perfil de ejecución'"></h3>
+          <p class="hint" style="margin:2px 0 0">Configura días, datos y horario en un solo lugar. Guardar el perfil no inicia el bot.</p>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" :disabled="guardandoPerfil" aria-label="Cerrar" x-html="icono('x')"></button>
       </div>
 
       <div class="dialog-b">
         <div class="field">
-          <label for="cfg-nombre">Nombre de la Configuración</label>
+          <label for="cfg-nombre">Nombre del perfil</label>
           <input id="cfg-nombre" class="input" x-model="editCfg.nombre" placeholder="ej. Corrida Diaria Matutina">
         </div>
 
         <div class="field">
-          <label for="cfg-desc">Descripción Operativa</label>
-          <input id="cfg-desc" class="input" x-model="editCfg.descripcion" placeholder="Notas sobre cuándo y quién debe usar esta configuración">
+          <label for="cfg-desc">Descripción de la rutina</label>
+          <input id="cfg-desc" class="input" x-model="editCfg.descripcion" placeholder="Cuándo debe usarse este perfil">
         </div>
 
-        <div class="field">
-          <label>Modalidad de Corrida</label>
-          <div class="seg" role="group">
-            <button type="button" :aria-pressed="editCfg.modo === 'diaria'" @click="editCfg.modo = 'diaria'; editCfg.incluirHoy = false">☀️ Diaria (< hoy)</button>
-            <button type="button" :aria-pressed="editCfg.modo === 'cierre'" @click="editCfg.modo = 'cierre'; editCfg.incluirHoy = true">🏁 Cierre de Mes (Día completo)</button>
-            <button type="button" :aria-pressed="editCfg.modo === 'rango'" @click="editCfg.modo = 'rango'">📅 Rango Libre</button>
+        <section class="profile-calendar-builder" aria-labelledby="profile-calendar-title">
+          <div class="profile-builder-heading">
+            <div>
+              <span class="eyebrow">1 · DÍAS Y DATOS</span>
+              <h4 id="profile-calendar-title">¿Qué días y qué información se procesan?</h4>
+              <p>Elige un tipo y marca las fechas del mes. Cada color representa un periodo distinto.</p>
+            </div>
+            <div class="field profile-builder-month">
+              <label for="cfg-mes-programado">Mes programado</label>
+              <input id="cfg-mes-programado" class="input" type="month" x-model="editCfg.mesEjecucion" @change="cambiarMesCalendarioPerfil()">
+            </div>
           </div>
-          <span class="hint" x-text="editCfg.modo === 'diaria' ? 'Excluye hoy para evitar despachos incompletos.' : (editCfg.modo === 'cierre' ? 'Incluye hoy para cerrar el mes contable completo.' : 'Fechas manuales para reprocesos.')"></span>
+
+          <div class="profile-calendar-types" role="group" aria-label="Tipo de datos para los días seleccionados">
+            <template x-for="tipo in tiposCalendario" :key="tipo.id">
+              <button type="button" class="calendar-type prep-type" :class="['type-' + tipo.id, { active: editCalendar?.tipoActivo === tipo.id }]" :aria-pressed="editCalendar?.tipoActivo === tipo.id" @click="seleccionarTipoCalendarioPerfil(tipo.id)">
+                <span class="calendar-type-mark" x-text="tipo.marca"></span>
+                <span class="calendar-type-copy"><b x-text="tipo.nombre"></b><small x-text="tipo.ayuda"></small></span>
+              </button>
+            </template>
+            <button type="button" class="prep-type-clear" :class="{ active: editCalendar?.tipoActivo === 'libre' }" :aria-pressed="editCalendar?.tipoActivo === 'libre'" @click="seleccionarTipoCalendarioPerfil('libre')">
+              <span class="calendar-type-mark" aria-hidden="true">×</span><span class="calendar-type-copy"><b>Quitar asignación</b><small>Marca fechas para dejarlas libres.</small></span>
+            </button>
+          </div>
+
+          <div class="profile-calendar-toolbar">
+            <div class="calendar-shortcuts" role="group" aria-label="Atajos de días del mes">
+              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarAtajoCalendarioPerfil('primeros')">Primeros 3 días</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarAtajoCalendarioPerfil('ultimos')">Últimos 3 días</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarAtajoCalendarioPerfil('ultimo')">Último día</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarAtajoCalendarioPerfil('todos')">Todo el mes</button>
+              <button type="button" class="btn btn-sm btn-ghost" title="Reemplaza las asignaciones de este mes con las del mes anterior" @click="copiarMesAnteriorPerfil()">Copiar mes anterior</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarAtajoCalendarioPerfil('limpiar')">Limpiar mes</button>
+            </div>
+            <div class="calendar-counts profile-calendar-counts" aria-label="Resumen de fechas">
+              <template x-for="tipo in tiposCalendario" :key="tipo.id">
+                <span class="calendar-count" :class="'type-' + tipo.id"><i></i><span x-text="tipo.nombreCorto"></span><b x-text="cantidadDiasTipoEdicion(tipo.id)"></b></span>
+              </template>
+              <span class="calendar-count unassigned"><i></i><span>Sin asignar</span><b x-text="cantidadDiasLibresEdicion()"></b></span>
+            </div>
+          </div>
+
+          <div class="calendar-grid profile-calendar-grid" role="grid" aria-label="Seleccionar días del mes programado">
+            <template x-for="dia in ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']" :key="dia">
+              <div class="calendar-weekday" role="columnheader" x-text="dia"></div>
+            </template>
+            <template x-for="celda in celdasCalendarioPerfil()" :key="celda.key">
+              <button type="button" role="gridcell" class="calendar-day" :class="['day-' + (celda.tipo || 'libre'), 'type-' + (celda.tipo || 'libre'), { today: celda.hoy, chosen: celda.iso === editCalendar?.fechaActiva, blank: celda.vacia }]" :disabled="celda.vacia" :aria-hidden="celda.vacia" :aria-label="celda.vacia ? null : etiquetaDiaCalendarioPerfil(celda)" :aria-pressed="celda.iso === editCalendar?.fechaActiva" :title="celda.vacia ? null : etiquetaDiaCalendarioPerfil(celda)" @click="!celda.vacia && seleccionarDiaCalendarioPerfil(celda.iso)">
+                <span class="calendar-day-number" x-show="!celda.vacia" x-text="celda.numero"></span>
+                <span class="calendar-day-time" x-show="!celda.vacia && celda.tipo" x-text="horaCorta(celda.hora)"></span>
+                <span class="calendar-day-meta" x-show="!celda.vacia && celda.tipo"><span class="calendar-day-type" x-text="abreviaturaTipo(celda.tipo)"></span><span class="calendar-day-cut" :class="{ included: celda.incluirDia }" x-text="celda.incluirDia ? '✓' : '−'"></span></span>
+                <span class="calendar-day-status" x-show="!celda.vacia && !celda.tipo">Libre</span>
+              </button>
+            </template>
+          </div>
+
+          <div class="calendar-selection profile-calendar-selection" x-show="editCalendar?.fechaActiva">
+            <div class="calendar-selection-heading">
+              <div><span class="eyebrow">DÍA SELECCIONADO</span><h3 x-text="fechaBonita(editCalendar?.fechaActiva)"></h3></div>
+              <span class="calendar-selected-type" :class="tipoDiaEdicion() ? 'type-' + tipoDiaEdicion() : ''" x-text="tipoDiaEdicion() ? nombreTipo(tipoDiaEdicion()) : 'Sin asignar'"></span>
+            </div>
+            <p class="calendar-period-preview" x-text="resumenPeriodoDiaEdicion()"></p>
+            <label class="calendar-include-day" x-show="tipoDiaEdicion()">
+              <input type="checkbox" :checked="incluirDiaEdicion()" @change="actualizarIncluirDiaEdicion($event.target.checked)">
+              <span x-text="tipoDiaEdicion() === 'rango' ? 'Incluir la fecha final del rango' : 'Incluir la fecha de ejecución en los datos'"></span>
+            </label>
+            <div class="profile-selected-fields" x-show="tipoDiaEdicion()">
+              <div class="field">
+                <label for="cfg-dia-hora" x-text="frecuenciaDiaEdicion() === 'intervalo' ? 'Primera ejecución de esta fecha' : 'Hora de esta fecha'"></label>
+                <input id="cfg-dia-hora" class="input mono" type="time" :value="horaDiaEdicion()" @change="actualizarHoraDiaEdicion($event.target.value)">
+              </div>
+              <div class="calendar-range" x-show="tipoDiaEdicion() === 'rango'">
+                <div class="field"><label for="cfg-rango-desde">Rango desde</label><input id="cfg-rango-desde" class="input" type="date" x-model="editCalendar.fechaDesdeManual" @change="actualizarRangoPerfilEdicion()"></div>
+                <div class="field"><label for="cfg-rango-hasta">Rango hasta</label><input id="cfg-rango-hasta" class="input" type="date" x-model="editCalendar.fechaHastaManual" @change="actualizarRangoPerfilEdicion()"></div>
+              </div>
+            </div>
+            <div class="calendar-include-day" x-show="tipoDiaEdicion()"><span class="calendar-time-mark" aria-hidden="true">◷</span><span x-text="resumenHorarioDiaEdicion()"></span></div>
+            <div class="profile-calendar-footer">
+              <span class="hint">Puedes cambiar la hora de esta fecha o aplicar aquí el horario que corresponde a su tipo.</span>
+              <button type="button" class="btn btn-sm btn-ghost" x-show="tipoDiaEdicion()" @click="seleccionarTipoCalendarioPerfil('libre'); seleccionarDiaCalendarioPerfil(editCalendar.fechaActiva)">Dejar este día libre</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarHorarioGeneralPerfil()" :disabled="cantidadDiasAsignadosEdicion() === 0">Aplicar horario del perfil a todos</button>
+            </div>
+          </div>
+        </section>
+
+        <details class="profile-direct-settings">
+          <summary>Periodo para “Ejecutar ahora” desde Inicio</summary>
+          <div class="profile-direct-body">
+        <p class="hint">Este ajuste sirve solo para una corrida manual iniciada en Inicio. No cambia los días ni los periodos del cronograma.</p>
+        <div class="field">
+          <label>Periodo de la ejecución directa</label>
+          <div class="seg period-seg" role="group" aria-label="Periodo de datos">
+            <button type="button" :aria-pressed="tipoPeriodoPerfil(editCfg) === 'mes_anterior'" @click="elegirTipoPeriodoPerfil('mes_anterior')">Mes anterior + actual</button>
+            <button type="button" :aria-pressed="tipoPeriodoPerfil(editCfg) === 'mes_actual'" @click="elegirTipoPeriodoPerfil('mes_actual')">Hasta ayer</button>
+            <button type="button" :aria-pressed="tipoPeriodoPerfil(editCfg) === 'cierre'" @click="elegirTipoPeriodoPerfil('cierre')">Acumulado al día</button>
+            <button type="button" :aria-pressed="tipoPeriodoPerfil(editCfg) === 'rango'" @click="elegirTipoPeriodoPerfil('rango')">Rango manual</button>
+          </div>
+          <span class="hint">Esta opción solo afecta “Ejecutar ahora”. Cada fecha programada conserva el tipo elegido en el calendario de arriba.</span>
         </div>
 
         <!-- Periodo de Fechas -->
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px; padding:12px; background:var(--surface-2); border-radius:var(--radius-sm)">
-          <div class="field" x-show="editCfg.modo === 'rango'">
+          <div class="field">
             <label for="cfg-fdesde">Fecha Desde</label>
-            <input id="cfg-fdesde" class="input" type="date" x-model="editCfg.fechaDesde">
+            <input id="cfg-fdesde" class="input" type="date" x-model="editCfg.fechaDesde" :readonly="editCfg.modo !== 'rango'">
           </div>
           <div class="field">
-            <label for="cfg-fhasta">Fecha Hasta (Corte)</label>
-            <input id="cfg-fhasta" class="input" type="date" x-model="editCfg.fechaHasta">
+            <label for="cfg-fhasta" x-text="editCfg.modo === 'rango' ? 'Fecha Hasta' : 'Fecha de corte base'"></label>
+            <input id="cfg-fhasta" class="input" type="date" x-model="editCfg.fechaHasta" :readonly="editCfg.modo !== 'rango'">
           </div>
+          <span class="hint" style="grid-column:1 / -1" x-show="editCfg.modo !== 'rango'">El mes elegido arriba recalcula el inicio y el corte base. Cada fecha programada ajusta su periodo según el color asignado.</span>
           <div class="field" style="grid-column: 1 / -1">
-            <label class="row" style="cursor:pointer">
+            <label class="row" style="cursor:pointer" x-show="editCfg.modo !== 'rango'">
               <span class="switch"><input type="checkbox" x-model="editCfg.incluirHoy"><span></span></span>
-              <span>Incluir día de corte en el procesamiento</span>
+              <span>Incluir la fecha final en una ejecución directa</span>
             </label>
           </div>
         </div>
+          </div>
+        </details>
 
-        <!-- Ciclos de Repetición y Horarios -->
+        <section class="profile-schedule-section" aria-labelledby="profile-schedule-title">
+        <div class="profile-builder-heading compact">
+          <div>
+            <span class="eyebrow">2 · PROGRAMACIÓN</span>
+            <h4 id="profile-schedule-title">¿Cuándo se ejecuta en los días marcados?</h4>
+          <p>Elige una sola regla para el perfil: el mismo horario para todos o uno propio para cada tipo de periodo.</p>
+          </div>
+        </div>
+
         <div class="field">
-          <label>Ciclo y Planificación Automática</label>
-          <div class="seg" role="group">
-            <button type="button" :aria-pressed="editCfg.frecuencia === 'diaria'" @click="editCfg.frecuencia = 'diaria'">Hora Fija Diaria</button>
-            <button type="button" :aria-pressed="editCfg.frecuencia === 'intervalo'" @click="editCfg.frecuencia = 'intervalo'">Intervalo Cíclico</button>
-            <button type="button" :aria-pressed="editCfg.frecuencia === 'manual'" @click="editCfg.frecuencia = 'manual'">Solo Manual</button>
+          <label>Horario del perfil</label>
+          <div class="seg profile-schedule-mode" role="group" aria-label="Aplicación del horario">
+            <button type="button" :aria-pressed="!editCfg.usarHorarioPorTipo" @click="editCfg.usarHorarioPorTipo = false">Mismo horario para todos</button>
+            <button type="button" :aria-pressed="!!editCfg.usarHorarioPorTipo" @click="activarHorarioPorTipoPerfil()">Horario por tipo de periodo</button>
           </div>
         </div>
 
-        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px" x-show="editCfg.frecuencia !== 'manual'">
-          <div class="field" x-show="editCfg.frecuencia === 'diaria'">
-            <label for="cfg-horafija">Hora de Ejecución Programada</label>
-            <input id="cfg-horafija" class="input mono" type="time" x-model="editCfg.horaFija">
+        <div x-show="!editCfg.usarHorarioPorTipo">
+          <div class="field">
+            <label>Frecuencia para todos los tipos</label>
+            <div class="seg" role="group">
+              <button type="button" :aria-pressed="editCfg.frecuencia === 'diaria'" @click="editCfg.frecuencia = 'diaria'">Una vez por día</button>
+              <button type="button" :aria-pressed="editCfg.frecuencia === 'intervalo'" @click="editCfg.frecuencia = 'intervalo'">Repetir por intervalo</button>
+              <button type="button" :aria-pressed="editCfg.frecuencia === 'manual'" @click="editCfg.frecuencia = 'manual'">Solo manual</button>
+            </div>
           </div>
-          <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
-            <label for="cfg-intervalo">Repetir cada cuántas horas</label>
-            <select id="cfg-intervalo" class="input" x-model.number="editCfg.intervaloHoras">
-              <option value="1">Cada 1 hora</option>
-              <option value="2">Cada 2 horas</option>
-              <option value="4">Cada 4 horas</option>
-              <option value="6">Cada 6 horas</option>
-              <option value="12">Cada 12 horas</option>
-              <option value="24">Cada 24 horas</option>
-            </select>
+
+          <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px" x-show="editCfg.frecuencia !== 'manual'">
+            <div class="field" x-show="editCfg.frecuencia === 'diaria'">
+              <label for="cfg-horafija">Hora diaria</label>
+              <input id="cfg-horafija" class="input mono" type="time" x-model="editCfg.horaFija">
+            </div>
+            <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
+              <label for="cfg-intervalo">Repetir cada</label>
+              <select id="cfg-intervalo" class="input" x-model.number="editCfg.intervaloHoras">
+                <option value="1">Cada 1 hora</option><option value="2">Cada 2 horas</option><option value="3">Cada 3 horas</option><option value="4">Cada 4 horas</option><option value="6">Cada 6 horas</option><option value="8">Cada 8 horas</option><option value="12">Cada 12 horas</option><option value="24">Cada 24 horas</option>
+              </select>
+            </div>
+            <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
+              <label for="cfg-hini">Primera ejecución</label>
+              <input id="cfg-hini" class="input mono" type="time" x-model="editCfg.horaInicioVentana">
+            </div>
+            <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
+              <label for="cfg-hfin">Última ejecución permitida</label>
+              <input id="cfg-hfin" class="input mono" type="time" x-model="editCfg.horaFinVentana">
+            </div>
           </div>
-          <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
-            <label for="cfg-hini">Ventana: Hora Inicio</label>
-            <input id="cfg-hini" class="input mono" type="time" x-model="editCfg.horaInicioVentana">
-          </div>
-          <div class="field" x-show="editCfg.frecuencia === 'intervalo'">
-            <label for="cfg-hfin">Ventana: Hora Fin</label>
-            <input id="cfg-hfin" class="input mono" type="time" x-model="editCfg.horaFinVentana">
-          </div>
+          <span class="hint" x-show="editCfg.frecuencia === 'intervalo'">Ejemplo: cada 4 horas, desde 08:00 hasta 20:00. Las corridas respetan ese rango.</span>
+          <p class="hint" x-show="editCfg.frecuencia === 'manual'">El perfil guarda días y periodos. No inicia un cronograma automático.</p>
         </div>
 
-        <!-- Días permitidos -->
-        <div class="field" x-show="editCfg.frecuencia !== 'manual'">
-          <label>Días de Ejecución Permitidos</label>
-          <div class="row" style="gap:6px">
-            <template x-for="d in ['L', 'M', 'X', 'J', 'V', 'S', 'D']" :key="d">
-              <button type="button" class="pill-day" :class="{ active: (editCfg.diasSemana || []).includes(d) }"
-                      @click="alternarDia(d)" x-text="d"></button>
-            </template>
-          </div>
+        <div class="profile-type-schedule-grid" x-show="editCfg.usarHorarioPorTipo">
+          <p class="hint" style="grid-column:1 / -1">Configura una vez los tipos que tienen fechas marcadas. En cada fecha puedes ajustar solo la hora inicial.</p>
+          <template x-for="tipo in tiposCalendario" :key="tipo.id">
+            <article class="profile-type-schedule" :class="'type-' + tipo.id" x-show="cantidadDiasTipoEdicion(tipo.id) > 0">
+              <div class="profile-type-schedule-title"><span class="calendar-type-mark" x-text="tipo.marca"></span><b x-text="tipo.nombre"></b></div>
+              <div class="field">
+                <label :for="'cfg-tipo-frecuencia-' + tipo.id">Frecuencia de este tipo</label>
+                <select class="input" :id="'cfg-tipo-frecuencia-' + tipo.id" x-model="editCfg.horariosPorTipo[tipo.id].frecuencia">
+                  <option value="diaria">Una vez por día</option>
+                  <option value="intervalo">Repetir por intervalo</option>
+                </select>
+              </div>
+              <div class="field" x-show="editCfg.horariosPorTipo[tipo.id].frecuencia === 'diaria'">
+                <label :for="'cfg-tipo-hora-' + tipo.id">Hora diaria</label>
+                <input class="input mono" type="time" :id="'cfg-tipo-hora-' + tipo.id" x-model="editCfg.horariosPorTipo[tipo.id].horaFija">
+              </div>
+              <div class="profile-type-interval" x-show="editCfg.horariosPorTipo[tipo.id].frecuencia === 'intervalo'">
+                <div class="field">
+                  <label :for="'cfg-tipo-cada-' + tipo.id">Repetir cada</label>
+                  <select class="input" :id="'cfg-tipo-cada-' + tipo.id" x-model.number="editCfg.horariosPorTipo[tipo.id].intervaloHoras">
+                    <option value="1">1 hora</option><option value="2">2 horas</option><option value="3">3 horas</option><option value="4">4 horas</option><option value="6">6 horas</option><option value="8">8 horas</option><option value="12">12 horas</option><option value="24">24 horas</option>
+                  </select>
+                </div>
+                <div class="field"><label :for="'cfg-tipo-inicio-' + tipo.id">Desde</label><input class="input mono" type="time" :id="'cfg-tipo-inicio-' + tipo.id" x-model="editCfg.horariosPorTipo[tipo.id].horaInicioVentana"></div>
+                <div class="field"><label :for="'cfg-tipo-fin-' + tipo.id">Hasta</label><input class="input mono" type="time" :id="'cfg-tipo-fin-' + tipo.id" x-model="editCfg.horariosPorTipo[tipo.id].horaFinVentana"></div>
+              </div>
+            </article>
+          </template>
         </div>
+
+        <div class="banner info" x-show="editCfg.usarHorarioPorTipo">
+          <span x-html="icono('info')"></span>
+          <div>El perfil usará la regla de cada tipo marcado. La hora definida en una fecha reemplaza su hora diaria o su primera corrida y conserva el intervalo configurado.</div>
+        </div>
+        </section>
       </div>
 
       <div class="dialog-f">
-        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
-        <button type="button" class="btn btn-primary" @click="guardarConfiguracion()">Guardar Configuración</button>
+        <button type="button" class="btn btn-ghost" @click="dialogo = null" :disabled="guardandoPerfil">Cancelar</button>
+        <button type="button" class="btn btn-primary" @click="guardarConfiguracion()" :disabled="guardandoPerfil" x-text="guardandoPerfil ? 'Guardando perfil…' : 'Guardar perfil y programación'"></button>
       </div>
     </div>
   </div>
@@ -1306,14 +1716,14 @@
   </div>
 
   <!-- MODAL DE CONFIRMACIÓN: ELIMINAR CONFIGURACIÓN DE EJECUCIÓN -->
-  <div class="overlay" x-show="dialogo === 'confirmar_eliminar_cfg'" x-cloak @click.self="dialogo = null" x-transition.opacity>
+  <div class="overlay" x-show="dialogo === 'confirmar_eliminar_cfg'" x-cloak @click.self="!guardandoPerfil && (dialogo = null)" x-transition.opacity>
     <div class="dialog" role="dialog" aria-modal="true" style="width:min(450px, 100%)">
       <div class="dialog-h">
         <div class="row" style="gap:8px">
           <span style="color:var(--err)" x-html="icono('alert')"></span>
           <h3 style="margin:0">¿Eliminar Perfil de Ejecución?</h3>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" aria-label="Cerrar" x-html="icono('x')"></button>
+        <button type="button" class="btn btn-ghost btn-sm icon-btn" @click="dialogo = null" :disabled="guardandoPerfil" aria-label="Cerrar" x-html="icono('x')"></button>
       </div>
       <div class="dialog-b">
         <p style="margin:0; font-size:13px; line-height:1.5">
@@ -1324,8 +1734,8 @@
         </div>
       </div>
       <div class="dialog-f">
-        <button type="button" class="btn btn-ghost" @click="dialogo = null">Cancelar</button>
-        <button type="button" class="btn btn-danger" @click="ejecutarEliminarCfg()">Eliminar Perfil</button>
+        <button type="button" class="btn btn-ghost" @click="dialogo = null" :disabled="guardandoPerfil">Cancelar</button>
+        <button type="button" class="btn btn-danger" @click="ejecutarEliminarCfg()" :disabled="guardandoPerfil" x-text="guardandoPerfil ? 'Eliminando…' : 'Eliminar perfil'"></button>
       </div>
     </div>
   </div>
@@ -1407,6 +1817,7 @@ const ICONOS = {
   sources: '<path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
   reports: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  logs: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h.01M7 13h.01M11 9h6M11 13h6M7 17h10"/>',
   play: '<path d="M7 4v16l13-8z" fill="currentColor" stroke="none"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>',
   check: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
@@ -1430,10 +1841,10 @@ const ICONOS = {
 };
 
 const PASOS = [
-  { id: 1, nombre: 'Base de datos', desc: 'Conexión a SQL Server y versión del esquema' },
-  { id: 2, nombre: 'Referencias', desc: 'Catálogos de REFERENCIAS.xlsx' },
+  { id: 1, nombre: 'Base de datos', desc: 'Conexión a SQL Server, esquema y descarga SAP opcional' },
+  { id: 2, nombre: 'Insumos Fijos', desc: 'REFERENCIAS.xlsx y PROYECCION-SEMANAL.xlsx' },
   { id: 3, nombre: 'Cartera', desc: 'Clientes y donaciones' },
-  { id: 4, nombre: 'Despachos', desc: 'QUERY (ZBCS) del mes' },
+  { id: 4, nombre: 'Despachos', desc: 'QUERY (ZVCSD381), DESPACHO BI y DESPACHO MES' },
   { id: 5, nombre: 'Ventas', desc: 'GD20, BASE PANEL y VENTAS BI' },
   { id: 6, nombre: 'Reportes', desc: 'Exportación de los Excel finales' },
 ];
@@ -1558,49 +1969,49 @@ const DEMO = {
       id: 'gd20',
       tcode: 'GD20',
       titulo: 'Ventas Contables (GD20)',
-      ayuda: 'Alimenta la tabla BASE PANEL y VENTAS BI en SQL Server.',
+      ayuda: 'Alimenta BASE PANEL y VENTAS BI en SQL Server (toma automáticamente el mes de ejecución si Período está vacío).',
       destino: 'GD20.xlsx',
-      variante: 'Prueba_GD20',
-      layout: '/DEFAULT',
+      variante: 'BOT_GD20',
+      layout: '//AVRILGD20',
+      layout_name: '//AVRILGD20',
       ledger: 'VC',
       periodoTipo: 'mes_actual',
       campos: [
-        { id: 'ledger', etiqueta: 'Ledger', valor: 'VC' },
-        { id: 'variante', etiqueta: 'Variante SAP', valor: 'Prueba_GD20' },
-        { id: 'periodo', etiqueta: 'Período / Mes Contable', valor: String(new Date().getMonth() + 1), tipo: 'number', nota: 'Mes contable en SAP' },
-        { id: 'layout', etiqueta: 'Layout de Columnas', valor: '/DEFAULT', nota: 'Disposición de exportación' },
+        { id: 'ledger', etiqueta: 'Ledger Contable', valor: 'VC' },
+        { id: 'variante', etiqueta: 'Variante SAP', valor: 'BOT_GD20' },
+        { id: 'ejercicio', etiqueta: 'Ejercicio / Año', valor: '', tipo: 'number', nota: 'Vacío = año automático del perfil' },
+        { id: 'periodo', etiqueta: 'Período / Mes', valor: '', tipo: 'number', nota: 'Vacío = mes automático del perfil' },
+        { id: 'layout', etiqueta: 'Layout ALV', valor: '//AVRILGD20', nota: 'Disposición de exportación' },
       ],
     },
     {
       id: 'zbcs',
-      tcode: 'ZBCS',
-      titulo: 'Despachos ZBCS (Query)',
-      ayuda: 'Alimenta las tablas QUERY, DESPACHO BI y DESPACHO MES.',
+      tcode: 'ZVCSD381',
+      titulo: 'Despachos Query (ZVCSD381)',
+      ayuda: 'Alimenta QUERY, DESPACHO BI y DESPACHO MES (3 meses móviles hacia atrás si fechas quedan vacías).',
       destino: 'QUERY.xlsx',
-      variante: 'IM',
-      layout: '/DESPACHOS',
+      variante: '/IM',
+      layout: '/IM',
       ledger: 'N/A',
       periodoTipo: 'rango',
       campos: [
-        { id: 'desde', etiqueta: 'Fecha Desde', valor: hoyISO(-90), tipo: 'date' },
-        { id: 'hasta', etiqueta: 'Fecha Hasta', valor: hoyISO(-1), tipo: 'date' },
-        { id: 'variante', etiqueta: 'Variante / Layout', valor: 'IM', nota: 'Variante de selección ZBCS' },
+        { id: 'sociedad', etiqueta: 'Sociedad', valor: '4253' },
+        { id: 'desde', etiqueta: 'Fecha Desde', valor: '', tipo: 'date', nota: 'Vacío = 3 meses atrás automático' },
+        { id: 'hasta', etiqueta: 'Fecha Hasta', valor: '', tipo: 'date', nota: 'Vacío = fecha de hoy' },
+        { id: 'variante', etiqueta: 'Disposición / Variante', valor: '/IM', nota: 'Disposición de exportación' },
       ],
     },
     {
-      id: 'cartera',
-      tcode: 'ZSDI',
-      titulo: 'Cartera de Clientes & Cadena',
-      ayuda: 'Maestro de clientes, líneas de crédito y sucursales.',
-      destino: 'CARTERA.xlsx',
-      variante: 'CAD_CLIENTE',
-      layout: '/CARTERA',
-      ledger: 'N/A',
+      id: 'all',
+      tcode: 'LOTE',
+      titulo: 'Descarga Conjunta (GD20 + Query)',
+      ayuda: '1 solo Login -> GD20 (periodo configurado) -> Easy Access -> Query (3 meses atras) -> Cierre seguro.',
+      destino: 'GD20.xlsx + QUERY.xlsx',
+      variante: 'BOT_GD20 + /IM',
+      layout: '//AVRILGD20',
+      ledger: 'VC',
       periodoTipo: 'mes_actual',
-      campos: [
-        { id: 'variante', etiqueta: 'Variante SAP', valor: 'CAD_CLIENTE' },
-        { id: 'layout', etiqueta: 'Layout', valor: '/CARTERA', nota: 'Estructura de columnas exportadas' },
-      ],
+      campos: [],
     },
   ],
 };
@@ -1610,10 +2021,12 @@ document.addEventListener('alpine:init', () => {
     api: null,
     vista: 'inicio',
     subFuentes: 'archivos',
-    tema: 'system',
+    tema: 'light',
     cargando: true,
     secciones: [
-      { id: 'inicio', nombre: 'Panel de Ejecución', corto: 'Ejecución', icono: 'home', ayuda: 'Inicia la corrida del bot, monitorea etapas y sigue trazas en vivo.' },
+      { id: 'inicio', nombre: 'Inicio', corto: 'Inicio', icono: 'home', ayuda: 'Elige un perfil y ejecuta el bot.' },
+      { id: 'programador', nombre: 'Programador', corto: 'Programar', icono: 'calendar', ayuda: 'Crea perfiles con sus días, periodos y horarios de ejecución.' },
+      { id: 'registro', nombre: 'Registro de ejecución', corto: 'Registro', icono: 'logs', ayuda: 'Consulta mensajes, errores y detalles de las corridas.' },
       { id: 'fuentes', nombre: 'Insumos y Fuentes', corto: 'Fuentes', icono: 'sources', ayuda: 'Archivos físicos en OneDrive (3 rutas) y gestión de descargas SAP.' },
       { id: 'reportes', nombre: 'Reportes Generados', corto: 'Reportes', icono: 'reports', ayuda: 'Archivos Excel finales generados y listos para Power BI.' },
       { id: 'config', nombre: 'Configuración (.env)', corto: 'Ajustes', icono: 'settings', ayuda: 'Conexiones a SQL Server, SAP GUI, credenciales y rutas.' },
@@ -1622,12 +2035,32 @@ document.addEventListener('alpine:init', () => {
       sql: { estado: 'unknown', mensaje: 'Sin probar' },
       sap: { estado: 'unknown', mensaje: 'Sin probar' },
     },
-    schedulerActivo: true,
+    schedulerActivo: false,
+    cronogramaActivo: false,
+    estadoCronograma: { active: false, next_run: null, current_run: null, pending: 0, running: false },
+    proximaEjecucion: null,
+    cronogramaMensaje: '',
+    iniciandoCronograma: false,
+    deteniendoCronograma: false,
+
+    calendario: null,
+    calendariosPerfiles: {},
+    perfilCalendarioActivoId: 'diaria',
+    guardandoCalendario: false,
+    guardandoPerfil: false,
+    preparacionMes: { mes: '', modo: 'copiar', confirmarReemplazo: false, tipoActivo: 'mes_actual', asignaciones: {}, fechaActiva: '', fechaDesdeManual: '', fechaHastaManual: '', horaDefault: '06:00' },
+    tiposCalendario: [
+      { id: 'mes_anterior', nombre: 'Mes anterior + actual', nombreCorto: 'Anterior + actual', marca: 'A', ayuda: 'Desde el primer día del mes anterior hasta el corte.' },
+      { id: 'mes_actual', nombre: 'Mes actual hasta ayer', nombreCorto: 'Hasta ayer', marca: 'D', ayuda: 'Desde el día 1; excluye la fecha de ejecución por defecto.' },
+      { id: 'cierre', nombre: 'Acumulado del mes', nombreCorto: 'Acumulado', marca: 'C', ayuda: 'Desde el día 1 e incluye la fecha de ejecución por defecto.' },
+      { id: 'rango', nombre: 'Rango personalizado', nombreCorto: 'Rango', marca: 'R', ayuda: 'Usa fechas inicial y final definidas manualmente.' },
+    ],
 
     // GESTIÓN DE CONFIGURACIONES DE EJECUCIÓN (PROFILES)
     configuraciones: DEMO.execution_profiles,
     configuracionActivaId: 'diaria',
     editCfg: {},
+    editCalendar: null,
     eliminarCfgId: null,
     eliminarCfgNombre: '',
 
@@ -1641,6 +2074,7 @@ document.addEventListener('alpine:init', () => {
     estado: { step_statuses: {}, step_times: {}, has_error: false, finished: false, error_message: null },
     ejecutando: false,
     deteniendo: false,
+    descargarSapAntes: false,
     ultimaCorrida: null,
     sondeo: null,
     logs: [],
@@ -1685,7 +2119,13 @@ document.addEventListener('alpine:init', () => {
     toasts: [],
 
     iniciar() {
-      try { this.tema = localStorage.getItem('tema') || 'system'; } catch (e) {}
+      try {
+        const temaGuardado = localStorage.getItem('tema');
+        this.tema = temaGuardado === 'dark' ? 'dark' : 'light';
+      } catch (e) { this.tema = 'light'; }
+      this.calendariosPerfiles = Object.fromEntries(DEMO.execution_profiles.map(perfil => [perfil.id, this.crearCalendarioDesdePerfil(perfil)]));
+      this.perfilCalendarioActivoId = this.configuracionActivaId;
+      this.calendario = this.clonarCalendario(this.calendariosPerfiles[this.configuracionActivaId]);
       this.aplicarTema();
 
       const conectar = () => {
@@ -1745,16 +2185,60 @@ document.addEventListener('alpine:init', () => {
         nueva: false,
       }));
       if (r.execution_profiles && r.execution_profiles.length) {
-        this.configuraciones = r.execution_profiles.map(p => ({
-          ...p,
-          fechaDesde: p.fechaDesde || hoyISO(-30),
-          fechaHasta: p.fechaHasta || hoyISO(),
-        }));
+        this.configuraciones = r.execution_profiles.map(p => {
+          const perfil = {
+            ...p,
+            frecuencia: p.frecuencia || 'diaria',
+            horaFija: p.horaFija || '06:00',
+            intervaloHoras: Number(p.intervaloHoras) || 4,
+            horaInicioVentana: p.horaInicioVentana || '08:00',
+            horaFinVentana: p.horaFinVentana || '18:00',
+            incluirHoy: p.incluirHoy !== undefined ? !!p.incluirHoy : p.modo === 'cierre',
+            periodoDatos: p.periodoDatos || (p.modo === 'rango' ? 'rango' : (p.modo === 'cierre' ? 'mes_anterior' : 'mes_actual')),
+            mesEjecucion: p.mesEjecucion || (p.fechaHasta || hoyISO()).slice(0, 7),
+            diasMes: Array.isArray(p.diasMes) ? p.diasMes : null,
+            diasSemana: Array.isArray(p.diasSemana) ? p.diasSemana : [],
+            fechaDesde: p.fechaDesde || hoyISO(-30),
+            fechaHasta: p.fechaHasta || hoyISO(),
+          };
+          if (!p.mesEjecucion && p.modo !== 'rango') this.actualizarPeriodoPerfil(perfil);
+          return perfil;
+        });
       }
+      try {
+        const perfilGuardado = localStorage.getItem('perfilEjecucionId');
+        this.configuracionActivaId = this.configuraciones.some(p => String(p.id) === perfilGuardado)
+          ? this.configuraciones.find(p => String(p.id) === perfilGuardado).id
+          : (this.configuraciones[0]?.id || 'diaria');
+      } catch (e) {
+        this.configuracionActivaId = this.configuraciones[0]?.id || 'diaria';
+      }
+      const calendarioGuardado = r.execution_calendar || {};
+      const calendariosGuardados = calendarioGuardado.perfiles && typeof calendarioGuardado.perfiles === 'object'
+        ? { ...calendarioGuardado.perfiles }
+        : {};
+      if (calendarioGuardado.asignaciones && !calendariosGuardados[this.configuracionActivaId]) {
+        calendariosGuardados[this.configuracionActivaId] = calendarioGuardado;
+      }
+      this.calendariosPerfiles = {};
+      this.configuraciones.forEach(perfil => {
+        const guardado = calendariosGuardados[perfil.id];
+        const base = guardado && typeof guardado === 'object'
+          ? { ...this.crearCalendarioDesdePerfil(perfil), ...guardado }
+          : this.crearCalendarioDesdePerfil(perfil);
+        this.calendariosPerfiles[perfil.id] = this.normalizarCalendario(base, perfil);
+      });
+      this.perfilCalendarioActivoId = this.configuracionActivaId;
+      this.calendario = this.clonarCalendario(this.calendariosPerfiles[this.configuracionActivaId] || this.crearCalendarioDesdePerfil(this.configuracionActiva()));
       if (r.sap_tasks && r.sap_tasks.length) {
         this.tareasSap = r.sap_tasks;
       }
-      this.schedulerActivo = r.scheduler_active !== undefined ? r.scheduler_active : true;
+      this.schedulerActivo = r.scheduler_active !== undefined ? r.scheduler_active : false;
+      this.estadoCronograma = r.schedule_status || { active: false, next_run: null, current_run: null, pending: 0, running: false };
+      this.cronogramaActivo = !!this.estadoCronograma.active;
+      this.proximaEjecucion = this.estadoCronograma.next_run || null;
+      this.cronogramaMensaje = '';
+      if (this.cronogramaActivo || this.estadoCronograma.running) this.asegurarSondeo();
 
       const ult = (r.archivos_reportes || []).map(a => a.modificado).sort().pop();
       this.ultimaCorrida = ult ? this.haceCuanto(ult) : null;
@@ -1764,6 +2248,12 @@ document.addEventListener('alpine:init', () => {
     ir(id) {
       this.vista = id;
       window.scrollTo({ top: 0 });
+      if (id === 'registro') {
+        this.$nextTick(() => {
+          const el = this.$refs.log;
+          if (el && this.seguirLog) el.scrollTop = el.scrollHeight;
+        });
+      }
     },
 
     seccionActual() {
@@ -1771,22 +2261,19 @@ document.addEventListener('alpine:init', () => {
     },
 
     ponerTema(t) {
-      this.tema = t;
-      try { localStorage.setItem('tema', t); } catch (e) {}
+      this.tema = t === 'dark' ? 'dark' : 'light';
+      try { localStorage.setItem('tema', this.tema); } catch (e) {}
       this.aplicarTema();
     },
 
     aplicarTema() {
       const root = document.documentElement;
-      if (this.tema === 'system') {
-        root.removeAttribute('data-theme');
-      } else {
-        root.setAttribute('data-theme', this.tema);
-      }
+      root.setAttribute('data-theme', this.tema === 'dark' ? 'dark' : 'light');
     },
 
     atajos(e) {
       if (e.key === 'Escape' && this.dialogo) {
+        if (this.guardandoCalendario || this.guardandoPerfil) return;
         this.dialogo = null;
         return;
       }
@@ -1830,14 +2317,706 @@ document.addEventListener('alpine:init', () => {
     },
 
     async alternarPlanificador() {
-      const nuevo = !this.schedulerActivo;
-      this.schedulerActivo = nuevo;
-      if (this.api) {
-        const r = await this.llamar('toggle_scheduler', nuevo);
-        if (r && r.message) this.avisar(r.message, nuevo ? 'success' : 'warn');
-      } else {
-        this.avisar(`Planificador automático ${nuevo ? 'ACTIVADO' : 'PAUSADO'} (simulado)`, nuevo ? 'success' : 'warn');
+      return this.cronogramaActivo ? this.detenerCronograma() : this.iniciarCronograma();
+    },
+
+    asegurarSondeo() {
+      if (this.sondeo) return;
+      this.sondeo = setInterval(() => {
+        this.leerAvance();
+        if (this.cronogramaActivo || this.estadoCronograma.running) this.leerEstadoCronograma();
+      }, 900);
+    },
+
+    async iniciarCronograma() {
+      if (this.cronogramaActivo || this.iniciandoCronograma) return;
+      this.iniciandoCronograma = true;
+      try {
+        if (!this.api) {
+          this.avisar('Para esperar y ejecutar las horas programadas, abre el portal desde el bot de escritorio.', 'warn');
+          return;
+        }
+        const perfil = this.configuracionActiva();
+        if (!perfil || !perfil.id) {
+          this.avisar('Elige un perfil de ejecución antes de iniciar la programación.', 'warn');
+          return;
+        }
+        if (perfil.frecuencia === 'manual') {
+          this.avisar('Este perfil solo se ejecuta manualmente. Cambia su frecuencia para iniciar un cronograma.', 'warn');
+          return;
+        }
+        if (!this.tieneDiasCalendarioActivo()) {
+          this.avisar('Este perfil todavía no tiene fechas asignadas. Abre Programador y configura los días del calendario.', 'warn');
+          return;
+        }
+        if (!await this.guardarCalendarioEjecucion()) return;
+        const perfilProgramado = { ...perfil, descargarSap: !!this.descargarSapAntes };
+        const result = await this.llamar('start_profile_schedule', JSON.stringify(perfilProgramado), JSON.stringify(this.calendario));
+        if (!result || result.status === 'error') {
+          this.avisar(result?.message || 'No se pudo iniciar el cronograma.', 'error');
+          return;
+        }
+        this.schedulerActivo = true;
+        this.cronogramaActivo = true;
+        this.cronogramaMensaje = '';
+        this.estadoCronograma = { ...this.estadoCronograma, ...result, active: true };
+        this.proximaEjecucion = result.next_run || null;
+        this.avisar(result.message || 'Cronograma iniciado; el bot esperará las horas configuradas.', 'success');
+        this.asegurarSondeo();
+      } finally {
+        this.iniciandoCronograma = false;
       }
+    },
+
+    async detenerCronograma() {
+      if (this.deteniendoCronograma) return;
+      this.deteniendoCronograma = true;
+      try {
+        const result = this.api ? await this.llamar('stop_schedule') : { status: 'ok', message: 'Cronograma detenido.' };
+        if (!result || result.status === 'error') return;
+        this.cronogramaActivo = false;
+        this.schedulerActivo = false;
+        this.estadoCronograma = { ...this.estadoCronograma, ...result, active: false };
+        this.proximaEjecucion = null;
+        this.cronogramaMensaje = result.message || 'Cronograma detenido.';
+        this.avisar(this.cronogramaMensaje, 'warn');
+      } finally {
+        this.deteniendoCronograma = false;
+      }
+    },
+
+    async leerEstadoCronograma() {
+      const status = await this.llamar('get_schedule_status');
+      if (!status) return;
+      this.estadoCronograma = status;
+      this.cronogramaActivo = !!status.active;
+      this.schedulerActivo = this.cronogramaActivo;
+      this.proximaEjecucion = status.next_run || null;
+      this.cronogramaMensaje = status.active ? '' : (status.message || 'Cronograma detenido');
+      if (!status.active && !status.running && !this.ejecutando && this.sondeo) {
+        clearInterval(this.sondeo);
+        this.sondeo = null;
+      }
+    },
+
+    crearCalendarioDesdePerfil(perfil) {
+      const mes = perfil?.mesEjecucion || hoyISO().slice(0, 7);
+      const [year, month] = mes.split('-').map(Number);
+      const diasMes = Array.isArray(perfil?.diasMes) ? perfil.diasMes : Array.from({ length: 31 }, (_, i) => i + 1);
+      const diasSemana = Array.isArray(perfil?.diasSemana) ? perfil.diasSemana : [];
+      const weekCodes = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
+      const tipo = perfil?.modo === 'rango' ? 'rango'
+        : (perfil?.periodoDatos === 'mes_anterior' ? 'mes_anterior'
+          : (perfil?.modo === 'cierre' ? 'cierre' : 'mes_actual'));
+      const asignaciones = {};
+      const ultimoDia = new Date(year, month, 0).getDate();
+      for (let dia = 1; dia <= ultimoDia; dia += 1) {
+        const fecha = `${mes}-${String(dia).padStart(2, '0')}`;
+        const weekday = weekCodes[new Date(year, month - 1, dia).getDay()];
+        if (diasMes.includes(dia) && (!diasSemana.length || diasSemana.includes(weekday))) {
+          asignaciones[fecha] = {
+            tipo,
+            incluirDia: perfil?.incluirHoy !== undefined ? !!perfil.incluirHoy : tipo === 'cierre',
+            hora: perfil?.frecuencia === 'intervalo' ? (perfil?.horaInicioVentana || '08:00') : (perfil?.horaFija || '06:00'),
+          };
+        }
+      }
+      return {
+        id: perfil?.id || 'calendario',
+        mes,
+        fechaActiva: hoyISO().slice(0, 7) === mes ? hoyISO() : `${mes}-01`,
+        tipoActivo: tipo,
+        incluirDiaDefault: perfil?.incluirHoy !== undefined ? !!perfil.incluirHoy : tipo === 'cierre',
+        horaEjecucionDefault: perfil?.frecuencia === 'intervalo' ? (perfil?.horaInicioVentana || '08:00') : (perfil?.horaFija || '06:00'),
+        asignaciones,
+        fechaDesdeManual: `${mes}-01`,
+        fechaHastaManual: mes === hoyISO().slice(0, 7) ? hoyISO() : `${mes}-${String(ultimoDia).padStart(2, '0')}`,
+      };
+    },
+
+    clonarCalendario(calendario) {
+      return calendario ? JSON.parse(JSON.stringify(calendario)) : null;
+    },
+
+    normalizarCalendario(calendario, perfil = this.configuracionActiva()) {
+      const base = calendario && typeof calendario === 'object' ? calendario : this.crearCalendarioDesdePerfil(perfil);
+      if (!base.id) base.id = perfil?.id || 'calendario';
+      if (!base.asignaciones || typeof base.asignaciones !== 'object' || Array.isArray(base.asignaciones)) base.asignaciones = {};
+      if (!base.mes || !/^\d{4}-\d{2}$/.test(base.mes)) base.mes = perfil?.mesEjecucion || hoyISO().slice(0, 7);
+      if (!base.fechaActiva || !/^\d{4}-\d{2}-\d{2}$/.test(base.fechaActiva)) base.fechaActiva = `${base.mes}-01`;
+      if (!base.tipoActivo) base.tipoActivo = this.tipoPredeterminadoPerfil(perfil);
+      if (base.incluirDiaDefault === undefined) base.incluirDiaDefault = !!perfil?.incluirHoy;
+      if (!base.horaEjecucionDefault) base.horaEjecucionDefault = perfil?.frecuencia === 'intervalo'
+        ? (perfil?.horaInicioVentana || '08:00')
+        : (perfil?.horaFija || '06:00');
+      if (!base.fechaDesdeManual) base.fechaDesdeManual = `${base.mes}-01`;
+      if (!base.fechaHastaManual) {
+        const [year, month] = base.mes.split('-').map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        base.fechaHastaManual = `${base.mes}-${String(lastDay).padStart(2, '0')}`;
+      }
+      return base;
+    },
+
+    tipoPredeterminadoPerfil(perfil) {
+      if (perfil?.modo === 'rango') return 'rango';
+      if (perfil?.periodoDatos === 'mes_anterior') return 'mes_anterior';
+      if (perfil?.modo === 'cierre' || perfil?.incluirHoy) return 'cierre';
+      return 'mes_actual';
+    },
+
+    tieneDiasCalendarioActivo() {
+      const hoy = hoyISO();
+      const perfil = this.configuracionActiva();
+      const mesSeleccionado = perfil.mesEjecucion || this.calendario?.mes || hoy.slice(0, 7);
+      const prefijoMes = `${mesSeleccionado}-`;
+      return Object.entries(this.calendario?.asignaciones || {}).some(([fecha, raw]) => {
+        const assignment = typeof raw === 'string' ? { tipo: raw } : raw;
+        return fecha.startsWith(prefijoMes) && fecha >= hoy && !!assignment?.tipo;
+      });
+    },
+
+    configurarCalendarioPerfil(id) {
+      this.seleccionarConfiguracion(id);
+      if (this.vista !== 'programador') this.ir('programador');
+      this.$nextTick(() => this.abrirModalConfiguracion(this.configuracionActiva()));
+    },
+
+    cambiarMesCalendario(delta) {
+      const [year, month] = this.calendario.mes.split('-').map(Number);
+      const activeDay = Number((this.calendario.fechaActiva || `${this.calendario.mes}-01`).slice(-2));
+      const primero = new Date(year, month - 1 + delta, 1);
+      const targetYear = primero.getFullYear();
+      const targetMonth = primero.getMonth() + 1;
+      const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+      this.calendario.mes = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+      this.calendario.fechaActiva = `${this.calendario.mes}-${String(Math.min(activeDay, lastDay)).padStart(2, '0')}`;
+    },
+
+    irAlMesActual() {
+      this.calendario.mes = hoyISO().slice(0, 7);
+      this.calendario.fechaActiva = hoyISO();
+    },
+
+    mesBonito() {
+      const [year, month] = this.calendario.mes.split('-').map(Number);
+      return new Date(year, month - 1, 1).toLocaleDateString('es-BO', { month: 'long', year: 'numeric' });
+    },
+
+    abrirPreparacionMes() {
+      const mes = this.calendario.mes || hoyISO().slice(0, 7);
+      const [year, month] = mes.split('-').map(Number);
+      const ultimoDia = new Date(year, month, 0).getDate();
+      this.preparacionMes = {
+        mes,
+        modo: 'copiar',
+        confirmarReemplazo: false,
+        tipoActivo: this.calendario.tipoActivo || 'mes_actual',
+        asignaciones: {},
+        fechaActiva: this.calendario.fechaActiva?.startsWith(`${mes}-`) ? this.calendario.fechaActiva : `${mes}-01`,
+        fechaDesdeManual: this.calendario.fechaDesdeManual || `${mes}-01`,
+        fechaHastaManual: this.calendario.fechaHastaManual || `${mes}-${String(ultimoDia).padStart(2, '0')}`,
+        horaDefault: this.calendario.horaEjecucionDefault || '06:00',
+      };
+      this.cargarPlantillaPreparacionMes();
+      this.dialogo = 'preparar_mes';
+    },
+
+    mesPreparacionBonito() {
+      if (!this.preparacionMes.mes) return 'sin seleccionar';
+      const [year, month] = this.preparacionMes.mes.split('-').map(Number);
+      return new Date(year, month - 1, 1).toLocaleDateString('es-BO', { month: 'long', year: 'numeric' });
+    },
+
+    horaCorta(hora) {
+      return hora ? `${hora.slice(0, 2)}h` : '';
+    },
+
+    diasAsignadosMes(mes) {
+      const prefix = `${mes}-`;
+      return Object.keys(this.calendario.asignaciones || {}).filter(fecha => fecha.startsWith(prefix)).length;
+    },
+
+    diasDestinoConfigurados() {
+      return this.preparacionMes?.mes ? this.diasAsignadosMes(this.preparacionMes.mes) : 0;
+    },
+
+    cantidadDiasLibres() {
+      const [year, month] = this.calendario.mes.split('-').map(Number);
+      return new Date(year, month, 0).getDate() - this.diasAsignadosMes(this.calendario.mes);
+    },
+
+    copiarAsignacionesMesVisible() {
+      if (this.preparacionMes.modo !== 'copiar' || !this.preparacionMes.mes) return {};
+      const sourceMonth = this.calendario.mes;
+      const targetMonth = this.preparacionMes.mes;
+      const [targetYear, targetMonthNumber] = targetMonth.split('-').map(Number);
+      const targetLastDay = new Date(targetYear, targetMonthNumber, 0).getDate();
+      const [sourceYear, sourceMonthNumber] = sourceMonth.split('-').map(Number);
+      const sourceLastDay = new Date(sourceYear, sourceMonthNumber, 0).getDate();
+      const copied = {};
+      Object.keys(this.calendario.asignaciones || {}).filter(fecha => fecha.startsWith(`${sourceMonth}-`)).sort().forEach(fecha => {
+        const sourceDay = Number(fecha.slice(-2));
+        const targetDay = sourceDay === sourceLastDay ? targetLastDay : Math.min(sourceDay, targetLastDay);
+        const targetDate = `${targetMonth}-${String(targetDay).padStart(2, '0')}`;
+        const assignment = this.calendario.asignaciones[fecha];
+        copied[targetDate] = typeof assignment === 'string' ? assignment : { ...assignment };
+      });
+      return copied;
+    },
+
+    cargarPlantillaPreparacionMes() {
+      const targetMonth = this.preparacionMes.mes;
+      this.preparacionMes.confirmarReemplazo = false;
+      if (!targetMonth) {
+        this.preparacionMes.asignaciones = {};
+        return;
+      }
+      const [year, month] = targetMonth.split('-').map(Number);
+      const lastDay = new Date(year, month, 0).getDate();
+      const copied = this.copiarAsignacionesMesVisible();
+      this.preparacionMes.asignaciones = Object.fromEntries(Object.entries(copied).map(([fecha, value]) => {
+        const assignment = typeof value === 'string' ? { tipo: value } : { ...value };
+        const tipo = assignment.tipo;
+        return [fecha, {
+          ...assignment,
+          incluirDia: assignment.incluirDia !== undefined ? !!assignment.incluirDia : tipo !== 'mes_actual',
+          hora: assignment.hora || this.preparacionMes.horaDefault || '06:00',
+          ...(tipo === 'rango' ? {
+            fechaDesde: assignment.fechaDesde || this.preparacionMes.fechaDesdeManual,
+            fechaHasta: assignment.fechaHasta || this.preparacionMes.fechaHastaManual,
+          } : {}),
+        }];
+      }));
+      if (!this.preparacionMes.fechaActiva?.startsWith(`${targetMonth}-`)) {
+        const assigned = Object.keys(this.preparacionMes.asignaciones).sort();
+        this.preparacionMes.fechaActiva = assigned[0] || `${targetMonth}-01`;
+      }
+      if (targetMonth === this.calendario.mes) {
+        this.preparacionMes.fechaDesdeManual = this.calendario.fechaDesdeManual || `${targetMonth}-01`;
+        this.preparacionMes.fechaHastaManual = this.calendario.fechaHastaManual || `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+      } else {
+        this.preparacionMes.fechaDesdeManual = `${targetMonth}-01`;
+        this.preparacionMes.fechaHastaManual = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+      }
+      this.actualizarRangosPreparacion();
+    },
+
+    asignacionesParaMesPreparado() {
+      return this.preparacionMes.asignaciones || {};
+    },
+
+    previsionTipo(tipo) {
+      return Object.values(this.asignacionesParaMesPreparado()).filter(value => (typeof value === 'string' ? value : value?.tipo) === tipo).length;
+    },
+
+    previsionTotal() {
+      return Object.keys(this.asignacionesParaMesPreparado()).length;
+    },
+
+    previsionLibres() {
+      if (!this.preparacionMes.mes) return 0;
+      const [year, month] = this.preparacionMes.mes.split('-').map(Number);
+      return Math.max(0, new Date(year, month, 0).getDate() - this.previsionTotal());
+    },
+
+    celdasPreparacionMes() {
+      if (!this.preparacionMes.mes) return [];
+      const [year, month] = this.preparacionMes.mes.split('-').map(Number);
+      const days = new Date(year, month, 0).getDate();
+      const offset = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+      const total = Math.ceil((offset + days) / 7) * 7;
+      const assignments = this.asignacionesParaMesPreparado();
+      return Array.from({ length: total }, (_, index) => {
+        const day = index - offset + 1;
+        if (day < 1 || day > days) return { key: `prep-${index}`, vacia: true };
+        const date = `${this.preparacionMes.mes}-${String(day).padStart(2, '0')}`;
+        const assignment = assignments[date];
+        const tipo = typeof assignment === 'string' ? assignment : assignment?.tipo;
+        const incluirDia = typeof assignment === 'object' && assignment && assignment.incluirDia !== undefined
+          ? !!assignment.incluirDia
+          : tipo !== 'mes_actual';
+        return { key: date, iso: date, dia: day, tipo, incluirDia, hora: this.horaDiaPreparacion(date), vacia: false };
+      });
+    },
+
+    seleccionarTipoPreparacion(tipo) {
+      this.preparacionMes.tipoActivo = tipo;
+    },
+
+    aplicarPresetDiasPreparacion(preset) {
+      if (!this.preparacionMes.mes) return;
+      const [year, month] = this.preparacionMes.mes.split('-').map(Number);
+      const lastDay = new Date(year, month, 0).getDate();
+      let days = [];
+      if (preset === 'primeros') days = [1, 2, 3];
+      else if (preset === 'ultimos') days = [Math.max(1, lastDay - 2), lastDay - 1, lastDay];
+      else if (preset === 'ultimo') days = [lastDay];
+      else if (preset === 'todos' || preset === 'limpiar') days = Array.from({ length: lastDay }, (_, index) => index + 1);
+      days.forEach(day => {
+        const fecha = `${this.preparacionMes.mes}-${String(day).padStart(2, '0')}`;
+        if (preset === 'limpiar' || this.preparacionMes.tipoActivo === 'libre') {
+          delete this.preparacionMes.asignaciones[fecha];
+          return;
+        }
+        const tipo = this.preparacionMes.tipoActivo;
+        this.preparacionMes.asignaciones[fecha] = {
+          tipo,
+          incluirDia: tipo === 'mes_actual' ? false : true,
+          hora: this.preparacionMes.horaDefault || '06:00',
+          ...(tipo === 'rango' ? {
+            fechaDesde: this.preparacionMes.fechaDesdeManual,
+            fechaHasta: this.preparacionMes.fechaHastaManual,
+          } : {}),
+        };
+      });
+      if (days.length) this.preparacionMes.fechaActiva = `${this.preparacionMes.mes}-${String(days[0]).padStart(2, '0')}`;
+    },
+
+    tipoDiaPreparacion() {
+      const assignment = this.preparacionMes.asignaciones?.[this.preparacionMes.fechaActiva];
+      return typeof assignment === 'string' ? assignment : (assignment?.tipo || null);
+    },
+
+    alternarDiaPreparacion(fecha) {
+      const tipo = this.preparacionMes.tipoActivo;
+      const existente = this.preparacionMes.asignaciones?.[fecha];
+      const tipoExistente = typeof existente === 'string' ? existente : existente?.tipo;
+      if (tipo === 'libre' || tipoExistente === tipo) {
+        delete this.preparacionMes.asignaciones[fecha];
+      } else {
+        this.preparacionMes.asignaciones[fecha] = {
+          tipo,
+          incluirDia: tipo === 'mes_actual' ? false : true,
+          hora: this.preparacionMes.horaDefault || '06:00',
+          ...(tipo === 'rango' ? {
+            fechaDesde: this.preparacionMes.fechaDesdeManual,
+            fechaHasta: this.preparacionMes.fechaHastaManual,
+          } : {}),
+        };
+      }
+      this.preparacionMes.fechaActiva = fecha;
+    },
+
+    incluirDiaPreparacion() {
+      const assignment = this.preparacionMes.asignaciones?.[this.preparacionMes.fechaActiva];
+      if (typeof assignment === 'object' && assignment) return !!assignment.incluirDia;
+      return this.tipoDiaPreparacion() !== 'mes_actual';
+    },
+
+    cambiarIncluirDiaPreparacion(incluirDia) {
+      const fecha = this.preparacionMes.fechaActiva;
+      const assignment = this.preparacionMes.asignaciones?.[fecha];
+      const tipo = typeof assignment === 'string' ? assignment : assignment?.tipo;
+      if (!tipo) return;
+      this.preparacionMes.asignaciones[fecha] = {
+        ...(typeof assignment === 'object' ? assignment : {}),
+        tipo,
+        incluirDia,
+        hora: this.horaDiaPreparacion(fecha),
+      };
+    },
+
+    horaDiaPreparacion(fecha = this.preparacionMes.fechaActiva) {
+      const assignment = this.preparacionMes.asignaciones?.[fecha];
+      return typeof assignment === 'object' && assignment?.hora
+        ? assignment.hora
+        : (this.preparacionMes.horaDefault || '06:00');
+    },
+
+    cambiarHoraPreparacion(hora) {
+      const fecha = this.preparacionMes.fechaActiva;
+      const assignment = this.preparacionMes.asignaciones?.[fecha];
+      const tipo = typeof assignment === 'string' ? assignment : assignment?.tipo;
+      if (!tipo || !/^\d{2}:\d{2}$/.test(hora)) return;
+      this.preparacionMes.asignaciones[fecha] = {
+        ...(typeof assignment === 'object' ? assignment : {}),
+        tipo,
+        hora,
+      };
+    },
+
+    aplicarHoraATodos() {
+      const hora = this.preparacionMes.horaDefault || '06:00';
+      Object.entries(this.preparacionMes.asignaciones || {}).forEach(([fecha, value]) => {
+        const assignment = typeof value === 'string' ? { tipo: value } : { ...value };
+        assignment.hora = hora;
+        if (assignment.tipo === 'rango') {
+          assignment.fechaDesde = this.preparacionMes.fechaDesdeManual;
+          assignment.fechaHasta = this.preparacionMes.fechaHastaManual;
+        }
+        this.preparacionMes.asignaciones[fecha] = assignment;
+      });
+      this.avisar(`Hora ${hora} aplicada a todos los días asignados del borrador.`, 'info');
+    },
+
+    actualizarRangosPreparacion() {
+      Object.values(this.preparacionMes.asignaciones || {}).forEach(assignment => {
+        if (assignment && typeof assignment === 'object' && assignment.tipo === 'rango') {
+          assignment.fechaDesde = this.preparacionMes.fechaDesdeManual;
+          assignment.fechaHasta = this.preparacionMes.fechaHastaManual;
+        }
+      });
+    },
+
+    etiquetaCeldaPreparacion(celda) {
+      if (!celda.tipo) return `${this.fechaBonita(celda.iso)} · Día libre`;
+      return `${this.fechaBonita(celda.iso)} · ${this.nombreTipo(celda.tipo)} · ${celda.hora} · ${celda.incluirDia ? 'incluye' : 'excluye'} el día de ejecución`;
+    },
+
+    rangoPreparacionInvalido() {
+      const tieneRango = Object.values(this.preparacionMes.asignaciones || {}).some(value => (typeof value === 'string' ? value : value?.tipo) === 'rango');
+      if (!tieneRango) return false;
+      const desde = this.preparacionMes.fechaDesdeManual;
+      const hasta = this.preparacionMes.fechaHastaManual;
+      return !desde || !hasta || !/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || desde > hasta;
+    },
+
+    horariosPreparacionInvalidos() {
+      if (!/^\d{2}:\d{2}$/.test(this.preparacionMes.horaDefault || '')) return true;
+      return Object.values(this.preparacionMes.asignaciones || {}).some(value => {
+        const assignment = typeof value === 'string' ? { tipo: value } : value;
+        return !!assignment?.tipo && !/^\d{2}:\d{2}$/.test(assignment.hora || this.preparacionMes.horaDefault);
+      });
+    },
+
+    async confirmarPreparacionMes() {
+      if (this.guardandoCalendario) return;
+      const targetMonth = this.preparacionMes.mes;
+      if (!targetMonth || this.rangoPreparacionInvalido() || this.horariosPreparacionInvalidos()) return;
+      if (this.diasDestinoConfigurados() > 0 && !this.preparacionMes.confirmarReemplazo) return;
+      const previousCalendar = JSON.parse(JSON.stringify(this.calendario));
+      const perfil = this.configuracionActiva();
+      const previousProfile = JSON.parse(JSON.stringify(perfil));
+      const prefix = `${targetMonth}-`;
+      this.calendario.asignaciones = { ...(this.calendario.asignaciones || {}) };
+      Object.keys(this.calendario.asignaciones || {}).filter(fecha => fecha.startsWith(prefix)).forEach(fecha => delete this.calendario.asignaciones[fecha]);
+      Object.entries(this.asignacionesParaMesPreparado()).forEach(([fecha, assignment]) => {
+        this.calendario.asignaciones[fecha] = typeof assignment === 'string' ? assignment : { ...assignment };
+      });
+      this.calendario.mes = targetMonth;
+      const assignedDates = Object.keys(this.calendario.asignaciones).filter(fecha => fecha.startsWith(prefix)).sort();
+      this.calendario.fechaActiva = this.preparacionMes.fechaActiva?.startsWith(`${targetMonth}-`) ? this.preparacionMes.fechaActiva : (assignedDates[0] || `${targetMonth}-01`);
+      this.calendario.tipoActivo = this.preparacionMes.tipoActivo === 'libre' ? (this.calendario.tipoActivo || 'mes_actual') : this.preparacionMes.tipoActivo;
+      this.calendario.fechaDesdeManual = this.preparacionMes.fechaDesdeManual;
+      this.calendario.fechaHastaManual = this.preparacionMes.fechaHastaManual;
+      this.calendario.horaEjecucionDefault = this.preparacionMes.horaDefault || '06:00';
+      this.calendario.id = perfil.id;
+      if (perfil.modo !== 'rango') {
+        perfil.mesEjecucion = targetMonth;
+        this.actualizarPeriodoPerfil(perfil);
+      }
+      this.guardandoCalendario = true;
+      let saved = false;
+      try {
+        const profileSaved = await this.guardarPerfilesEjecucion();
+        saved = profileSaved && await this.guardarCalendarioEjecucion();
+      } finally {
+        this.guardandoCalendario = false;
+      }
+      if (!saved) {
+        this.calendario = previousCalendar;
+        this.configuraciones = this.configuraciones.map(item => item.id === previousProfile.id ? previousProfile : item);
+        this.calendariosPerfiles[previousProfile.id] = this.clonarCalendario(previousCalendar);
+        await this.guardarPerfilesEjecucion();
+        this.avisar('No se pudo guardar el mes y sus reglas. La configuración anterior sigue activa.', 'error');
+        return;
+      }
+      this.dialogo = null;
+      this.avisar(`${this.mesBonito()} guardado. El calendario ya muestra la configuración aplicada.`, 'success');
+    },
+
+    celdasCalendario() {
+      const [year, month] = this.calendario.mes.split('-').map(Number);
+      const count = new Date(year, month, 0).getDate();
+      const offset = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+      const total = Math.ceil((offset + count) / 7) * 7;
+      return Array.from({ length: total }, (_, index) => {
+        const day = index - offset + 1;
+        if (day < 1 || day > count) return { key: `blank-${index}`, vacia: true };
+        const iso = `${this.calendario.mes}-${String(day).padStart(2, '0')}`;
+        return {
+          key: iso,
+          iso,
+          numero: day,
+          tipo: this.tipoAsignado(iso),
+          hora: this.horaDiaCalendario(iso),
+          incluirDia: (() => {
+            const assignment = this.calendario.asignaciones?.[iso];
+            return typeof assignment === 'object' && assignment && assignment.incluirDia !== undefined
+              ? !!assignment.incluirDia
+              : this.tipoAsignado(iso) !== 'mes_actual';
+          })(),
+          hoy: iso === hoyISO(),
+          vacia: false,
+        };
+      });
+    },
+
+    tipoAsignado(fecha) {
+      const asignacion = this.calendario.asignaciones?.[fecha];
+      return typeof asignacion === 'string' ? asignacion : (asignacion?.tipo || null);
+    },
+
+    horaDiaCalendario(fecha) {
+      const assignment = this.calendario.asignaciones?.[fecha];
+      return typeof assignment === 'object' && assignment?.hora
+        ? assignment.hora
+        : (this.calendario.horaEjecucionDefault || '06:00');
+    },
+
+    horarioDiaCalendario() {
+      const hora = this.horaDiaCalendario(this.calendario.fechaActiva);
+      const perfil = this.configuracionActiva();
+      return perfil.frecuencia === 'intervalo'
+        ? `Desde ${hora} · cada ${perfil.intervaloHoras || 4} h hasta ${perfil.horaFinVentana || '18:00'}`
+        : `Una vez · ${hora}`;
+    },
+
+    seleccionarDiaCalendario(fecha) {
+      this.calendario.fechaActiva = fecha;
+    },
+
+    tipoDiaActivo() {
+      return this.tipoAsignado(this.calendario.fechaActiva);
+    },
+
+    incluirDiaSeleccionado() {
+      const asignacion = this.calendario.asignaciones?.[this.calendario.fechaActiva];
+      if (typeof asignacion === 'object' && asignacion && asignacion.incluirDia !== undefined) return !!asignacion.incluirDia;
+      const tipo = this.tipoDiaActivo();
+      return tipo ? tipo !== 'mes_actual' : !!this.calendario.incluirDiaDefault;
+    },
+
+    cantidadDiasTipo(tipo) {
+      const monthPrefix = `${this.calendario.mes}-`;
+      return Object.entries(this.calendario.asignaciones || {}).filter(([fecha, value]) => fecha.startsWith(monthPrefix) && (typeof value === 'string' ? value : value?.tipo) === tipo).length;
+    },
+
+    nombreTipo(tipo) {
+      return this.tiposCalendario.find(item => item.id === tipo)?.nombre || 'Sin asignar';
+    },
+
+    abreviaturaTipo(tipo) {
+      return this.tiposCalendario.find(item => item.id === tipo)?.marca || '';
+    },
+
+    etiquetaCeldaCalendario(celda) {
+      if (!celda.tipo) return `${this.fechaBonita(celda.iso)} · Día libre`;
+      return `${this.fechaBonita(celda.iso)} · ${this.nombreTipo(celda.tipo)} · ${celda.hora} · ${celda.incluirDia ? 'incluye' : 'excluye'} el día de ejecución`;
+    },
+
+    fechaBonita(value) {
+      if (!value) return 'Selecciona un día';
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    },
+
+    fechaHoraCronograma(value) {
+      if (!value) return '';
+      const [fecha, hora] = value.split(' ');
+      return `${this.fechaBonita(fecha)} · ${hora || ''}`;
+    },
+
+    moverFecha(value, offset) {
+      const [year, month, day] = value.split('-').map(Number);
+      const date = new Date(year, month - 1, day + offset);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    },
+
+    rangoParaFecha(fecha, tipo, incluirDia) {
+      const [year, month] = fecha.split('-').map(Number);
+      if (tipo === 'rango') {
+        const assignment = this.calendario.asignaciones?.[fecha];
+        return {
+          fechaDesde: typeof assignment === 'object' && assignment?.fechaDesde ? assignment.fechaDesde : this.calendario.fechaDesdeManual,
+          fechaHasta: typeof assignment === 'object' && assignment?.fechaHasta ? assignment.fechaHasta : this.calendario.fechaHastaManual,
+          incluirDia,
+        };
+      }
+      const fechaInicioMes = `${year}-${String(month).padStart(2, '0')}-01`;
+      const fechaDesde = tipo === 'mes_anterior'
+        ? `${new Date(year, month - 2, 1).getFullYear()}-${String(new Date(year, month - 2, 1).getMonth() + 1).padStart(2, '0')}-01`
+        : fechaInicioMes;
+      const fechaHasta = fecha;
+      return { fechaDesde, fechaHasta, incluirDia };
+    },
+
+    configuracionEjecucionActiva() {
+      const perfil = this.configuracionActiva();
+      if (!perfil || !perfil.id) return null;
+      const modo = perfil.modo === 'rango'
+        ? 'rango'
+        : (perfil.modo === 'cierre' || perfil.periodoDatos === 'mes_anterior' ? 'cierre' : 'diaria');
+      return {
+        ...perfil,
+        modo,
+        incluirHoy: !!perfil.incluirHoy,
+      };
+    },
+
+    resumenPeriodoCalendario() {
+      const tipo = this.tipoDiaActivo();
+      if (!tipo) return 'Este día está libre. Asígnale un tipo desde el calendario del perfil.';
+      if (this.calendario.fechaActiva > hoyISO()) return 'Este día futuro queda configurado en el calendario; podrás ejecutarlo cuando llegue la fecha.';
+      const rango = this.rangoParaFecha(this.calendario.fechaActiva, tipo, this.incluirDiaSeleccionado());
+      const ultimaFecha = rango.incluirDia === false ? this.moverFecha(rango.fechaHasta, -1) : rango.fechaHasta;
+      if (!rango.fechaDesde || !rango.fechaHasta || rango.fechaDesde > ultimaFecha) return 'No hay fechas completas que procesar con esta selección. Incluye el día elegido o cambia el tipo.';
+      return `${this.fechaBonita(rango.fechaDesde)} – ${this.fechaBonita(ultimaFecha)}${rango.incluirDia === false ? ' · hasta el día anterior' : ' · incluye el día elegido'}`;
+    },
+
+    rangoCalendarioValido() {
+      const tipo = this.tipoDiaActivo();
+      const fecha = this.calendario.fechaActiva;
+      if (!tipo || !fecha || fecha > hoyISO()) return false;
+      const rango = this.rangoParaFecha(fecha, tipo, this.incluirDiaSeleccionado());
+      if (!rango.fechaDesde || !rango.fechaHasta || rango.fechaDesde > rango.fechaHasta) return false;
+      const fechaFinalEfectiva = rango.incluirDia === false ? this.moverFecha(rango.fechaHasta, -1) : rango.fechaHasta;
+      return rango.fechaDesde <= fechaFinalEfectiva;
+    },
+
+    configuracionDiaCalendario() {
+      const perfil = this.configuracionActiva();
+      const fecha = this.calendario.fechaActiva;
+      const tipo = this.tipoDiaActivo();
+      if (!perfil?.id || !tipo) return null;
+      const rango = this.rangoParaFecha(fecha, tipo, this.incluirDiaSeleccionado());
+      return {
+        ...perfil,
+        nombre: `${perfil.nombre} · ${this.fechaBonita(fecha)}`,
+        modo: tipo === 'rango' ? 'rango' : (tipo === 'mes_actual' ? 'diaria' : 'cierre'),
+        periodoDatos: tipo === 'mes_anterior' ? 'mes_anterior' : (tipo === 'rango' ? 'rango' : 'mes_actual'),
+        fechaDesde: rango.fechaDesde,
+        fechaHasta: rango.fechaHasta,
+        incluirHoy: !!rango.incluirDia,
+        configuracionId: `${perfil.id}:${fecha}`,
+      };
+    },
+
+    ejecutarDiaCalendario() {
+      if (!this.rangoCalendarioValido()) {
+        this.avisar('La fecha o el periodo de este día no está listo para una ejecución inmediata.', 'warn');
+        return;
+      }
+      return this.ejecutar(this.configuracionDiaCalendario());
+    },
+
+    async guardarCalendarioEjecucion() {
+      const profileId = this.configuracionActiva().id || this.configuracionActivaId;
+      this.calendario.id = profileId;
+      this.calendariosPerfiles[profileId] = this.clonarCalendario(this.calendario);
+      return this.guardarMapaCalendarios();
+    },
+
+    async guardarMapaCalendarios() {
+      if (!this.api) return true;
+      const payload = { version: 2, perfiles: this.calendariosPerfiles };
+      const result = await this.llamar('save_execution_calendar', JSON.stringify(payload));
+      if (result?.status === 'error') {
+        this.avisar(result.message || 'No se pudo guardar el calendario', 'error');
+        return false;
+      }
+      return !!result;
     },
 
     // -------------------------------------------------------------
@@ -1847,10 +3026,23 @@ document.addEventListener('alpine:init', () => {
       return this.configuraciones.find(c => c.id === this.configuracionActivaId) || this.configuraciones[0] || {};
     },
 
+    perfilMesEsFuturo() {
+      const perfil = this.configuracionActiva();
+      return perfil.modo !== 'rango' && !!perfil.mesEjecucion && perfil.mesEjecucion > hoyISO().slice(0, 7);
+    },
+
     seleccionarConfiguracion(id) {
+      const previousId = this.perfilCalendarioActivoId;
+      if (this.calendario && previousId) this.calendariosPerfiles[previousId] = this.clonarCalendario(this.calendario);
       this.configuracionActivaId = id;
       const c = this.configuracionActiva();
-      this.avisar(`Perfil activo: ${c.nombre}`, 'info');
+      this.perfilCalendarioActivoId = c.id || id;
+      const storedCalendar = this.calendariosPerfiles[this.perfilCalendarioActivoId]
+        || this.crearCalendarioDesdePerfil(c);
+      this.calendario = this.clonarCalendario(this.normalizarCalendario(storedCalendar, c));
+      this.calendariosPerfiles[this.perfilCalendarioActivoId] = this.clonarCalendario(this.calendario);
+      try { localStorage.setItem('perfilEjecucionId', String(c.id || id)); } catch (e) {}
+      return c;
     },
 
     iconoModo(m) {
@@ -1862,7 +3054,7 @@ document.addEventListener('alpine:init', () => {
     textoCicloCorto(c) {
       if (!c) return '';
       if (c.frecuencia === 'manual') return 'Manual';
-      if (c.frecuencia === 'diaria') return (c.horaFija || '06:00') + ' hs';
+      if (c.frecuencia === 'diaria') return 'Una vez · ' + (c.horaFija || '06:00');
       if (c.frecuencia === 'intervalo') return 'Cada ' + (c.intervaloHoras || 4) + 'h';
       return '06:00';
     },
@@ -1883,27 +3075,345 @@ document.addEventListener('alpine:init', () => {
     abrirModalConfiguracion(cfg) {
       if (cfg) {
         this.editCfg = JSON.parse(JSON.stringify(cfg));
+        this.editCfg.periodoDatos = this.editCfg.periodoDatos || (this.editCfg.modo === 'rango' ? 'rango' : (this.editCfg.modo === 'cierre' ? 'mes_anterior' : 'mes_actual'));
+        this.editCfg.mesEjecucion = this.editCfg.mesEjecucion || (this.editCfg.fechaHasta || hoyISO()).slice(0, 7);
+        this.editCfg.diasMes = Array.isArray(this.editCfg.diasMes) ? this.editCfg.diasMes : Array.from({ length: 31 }, (_, i) => i + 1);
         this.editCfg.esNueva = false;
       } else {
         this.editCfg = {
           id: 'cfg_' + Date.now(),
-          nombre: 'Nueva Configuración',
-          descripcion: 'Configuración personalizada para corridas específicas.',
+          nombre: 'Nuevo perfil',
+          descripcion: 'Rutina mensual de reportes.',
           modo: 'diaria',
           incluirHoy: false,
           frecuencia: 'diaria',
           horaFija: '06:00',
-          horaInicioVentana: '06:00',
+          horaInicioVentana: '08:00',
           horaFinVentana: '22:00',
-          intervaloHoras: 24,
-          diasSemana: ['L', 'M', 'X', 'J', 'V'],
+          intervaloHoras: 4,
+          diasSemana: [],
+          diasMes: [],
+          periodoDatos: 'mes_actual',
+          mesEjecucion: hoyISO().slice(0, 7),
           fechaDesde: hoyISO(-30),
           fechaHasta: hoyISO(),
           esNueva: true,
           esPersonalizada: true,
         };
       }
+      this.normalizarHorariosPorTipo();
+      const stored = this.calendariosPerfiles[this.editCfg.id] || this.crearCalendarioDesdePerfil(this.editCfg);
+      this.editCalendar = this.normalizarCalendario(this.clonarCalendario(stored), this.editCfg);
+      this.editCalendar.mes = this.editCfg.mesEjecucion || this.editCalendar.mes || hoyISO().slice(0, 7);
+      this.editCalendar.tipoActivo = this.editCalendar.tipoActivo || this.tipoPredeterminadoPerfil(this.editCfg);
+      this.editCalendar.horaEjecucionDefault = this.horaGeneralEdicionPerfil();
+      Object.values(this.editCalendar.asignaciones || {}).forEach(raw => {
+        if (!raw || typeof raw !== 'object' || raw.horaPersonalizada !== undefined) return;
+        raw.horaPersonalizada = !!raw.hora && raw.hora !== this.editCalendar.horaEjecucionDefault;
+      });
+      this.ajustarRangoBaseCalendarioPerfil();
+      this.seleccionarFechaInicialCalendarioPerfil();
       this.dialogo = 'configuracion';
+    },
+
+    horaGeneralEdicionPerfil(tipo = this.tipoDiaEdicion()) {
+      const rule = this.editCfg?.usarHorarioPorTipo && tipo ? this.editCfg.horariosPorTipo?.[tipo] : null;
+      const frecuencia = rule?.frecuencia || this.editCfg?.frecuencia;
+      return frecuencia === 'intervalo'
+        ? (rule?.horaInicioVentana || this.editCfg?.horaInicioVentana || '08:00')
+        : (rule?.horaFija || this.editCfg?.horaFija || '06:00');
+    },
+
+    ajustarRangoBaseCalendarioPerfil() {
+      if (!this.editCalendar?.mes) return;
+      const [year, month] = this.editCalendar.mes.split('-').map(Number);
+      const lastDay = new Date(year, month, 0).getDate();
+      this.editCalendar.fechaDesdeManual = `${this.editCalendar.mes}-01`;
+      this.editCalendar.fechaHastaManual = `${this.editCalendar.mes}-${String(lastDay).padStart(2, '0')}`;
+    },
+
+    seleccionarFechaInicialCalendarioPerfil() {
+      if (!this.editCalendar?.mes) return;
+      const prefix = `${this.editCalendar.mes}-`;
+      const assigned = Object.keys(this.editCalendar.asignaciones || {}).filter(date => date.startsWith(prefix)).sort();
+      this.editCalendar.fechaActiva = assigned[0] || (this.editCalendar.mes === hoyISO().slice(0, 7) ? hoyISO() : `${this.editCalendar.mes}-01`);
+    },
+
+    cambiarMesCalendarioPerfil() {
+      if (!/^\d{4}-\d{2}$/.test(this.editCfg.mesEjecucion || '')) return;
+      this.editCalendar.mes = this.editCfg.mesEjecucion;
+      this.ajustarRangoBaseCalendarioPerfil();
+      this.seleccionarFechaInicialCalendarioPerfil();
+      this.actualizarPeriodoPerfil(this.editCfg);
+    },
+
+    seleccionarTipoCalendarioPerfil(tipo) {
+      if (this.editCalendar) this.editCalendar.tipoActivo = tipo;
+    },
+
+    normalizarHorariosPorTipo() {
+      if (!this.editCfg) return;
+      if (!this.editCfg.horariosPorTipo || typeof this.editCfg.horariosPorTipo !== 'object') this.editCfg.horariosPorTipo = {};
+      this.tiposCalendario.forEach(tipo => {
+        const current = this.editCfg.horariosPorTipo[tipo.id] || {};
+        const frecuencia = current.frecuencia || (this.editCfg.frecuencia === 'intervalo' ? 'intervalo' : 'diaria');
+        this.editCfg.horariosPorTipo[tipo.id] = {
+          frecuencia,
+          horaFija: current.horaFija || this.editCfg.horaFija || '06:00',
+          horaInicioVentana: current.horaInicioVentana || this.editCfg.horaInicioVentana || '08:00',
+          horaFinVentana: current.horaFinVentana || this.editCfg.horaFinVentana || '18:00',
+          intervaloHoras: Number(current.intervaloHoras || this.editCfg.intervaloHoras || 4),
+        };
+      });
+    },
+
+    tipoDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      return typeof raw === 'string' ? raw : (raw?.tipo || null);
+    },
+
+    incluirDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      if (raw && typeof raw === 'object' && raw.incluirDia !== undefined) return !!raw.incluirDia;
+      const tipo = this.tipoDiaEdicion(fecha);
+      return !!tipo && tipo !== 'mes_actual';
+    },
+
+    horaDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      if (raw && typeof raw === 'object' && raw.horaPersonalizada && raw.hora) return raw.hora;
+      return this.horaGeneralEdicionPerfil(this.tipoDiaEdicion(fecha));
+    },
+
+    frecuenciaDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
+      const tipo = this.tipoDiaEdicion(fecha);
+      const rule = this.editCfg?.usarHorarioPorTipo && tipo ? this.editCfg.horariosPorTipo?.[tipo] : null;
+      return rule?.frecuencia || this.editCfg?.frecuencia || 'diaria';
+    },
+
+    resumenHorarioDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
+      const tipo = this.tipoDiaEdicion(fecha);
+      if (!tipo) return '';
+      const frequency = this.frecuenciaDiaEdicion(fecha);
+      if (frequency === 'manual') return 'Solo ejecución manual';
+      const rule = this.editCfg?.usarHorarioPorTipo ? this.editCfg.horariosPorTipo?.[tipo] : this.editCfg;
+      if (frequency === 'intervalo') {
+        return `Cada ${rule?.intervaloHoras || 4} h · desde ${this.horaDiaEdicion(fecha)} hasta ${rule?.horaFinVentana || '18:00'}`;
+      }
+      return `Una vez · ${this.horaDiaEdicion(fecha)}`;
+    },
+
+    activarHorarioPorTipoPerfil() {
+      if (this.editCfg.frecuencia === 'manual') this.editCfg.frecuencia = 'diaria';
+      this.editCfg.usarHorarioPorTipo = true;
+      this.normalizarHorariosPorTipo();
+    },
+
+    seleccionarDiaCalendarioPerfil(fecha) {
+      if (!this.editCalendar || !fecha) return;
+      const tipo = this.editCalendar.tipoActivo || 'mes_actual';
+      const currentType = this.tipoDiaEdicion(fecha);
+      if (tipo === 'libre') {
+        delete this.editCalendar.asignaciones[fecha];
+      } else if (currentType !== tipo) {
+        this.editCalendar.asignaciones[fecha] = {
+          tipo,
+          incluirDia: tipo !== 'mes_actual',
+          hora: this.horaGeneralEdicionPerfil(tipo),
+          horaPersonalizada: false,
+          ...(tipo === 'rango' ? {
+            fechaDesde: this.editCalendar.fechaDesdeManual,
+            fechaHasta: this.editCalendar.fechaHastaManual,
+          } : {}),
+        };
+      }
+      this.editCalendar.fechaActiva = fecha;
+    },
+
+    actualizarIncluirDiaEdicion(incluirDia) {
+      const fecha = this.editCalendar?.fechaActiva;
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      const tipo = this.tipoDiaEdicion(fecha);
+      if (!tipo) return;
+      this.editCalendar.asignaciones[fecha] = {
+        ...(typeof raw === 'object' ? raw : {}), tipo, incluirDia,
+        hora: this.horaDiaEdicion(fecha),
+        horaPersonalizada: !!raw?.horaPersonalizada,
+      };
+    },
+
+    actualizarHoraDiaEdicion(hora) {
+      const fecha = this.editCalendar?.fechaActiva;
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      const tipo = this.tipoDiaEdicion(fecha);
+      if (!tipo || !/^\d{2}:\d{2}$/.test(hora || '')) return;
+      this.editCalendar.asignaciones[fecha] = {
+        ...(typeof raw === 'object' ? raw : {}), tipo, hora, horaPersonalizada: hora !== this.horaGeneralEdicionPerfil(),
+      };
+    },
+
+    aplicarHorarioGeneralPerfil() {
+      const prefix = `${this.editCfg.mesEjecucion}-`;
+      Object.entries(this.editCalendar?.asignaciones || {}).forEach(([fecha, raw]) => {
+        if (!fecha.startsWith(prefix)) return;
+        const assignment = typeof raw === 'string' ? { tipo: raw } : { ...raw };
+        if (!assignment.tipo) return;
+        assignment.hora = this.horaGeneralEdicionPerfil(assignment.tipo);
+        assignment.horaPersonalizada = false;
+        this.editCalendar.asignaciones[fecha] = assignment;
+      });
+    },
+
+    aplicarAtajoCalendarioPerfil(atajo) {
+      if (!this.editCalendar?.mes) return;
+      const [year, month] = this.editCalendar.mes.split('-').map(Number);
+      const lastDay = new Date(year, month, 0).getDate();
+      let days = [];
+      if (atajo === 'primeros') days = [1, 2, 3];
+      else if (atajo === 'ultimos') days = [Math.max(1, lastDay - 2), lastDay - 1, lastDay];
+      else if (atajo === 'ultimo') days = [lastDay];
+      else if (atajo === 'todos' || atajo === 'limpiar') days = Array.from({ length: lastDay }, (_, index) => index + 1);
+      const tipo = this.editCalendar.tipoActivo || 'mes_actual';
+      days.forEach(day => {
+        const fecha = `${this.editCalendar.mes}-${String(day).padStart(2, '0')}`;
+        if (atajo === 'limpiar' || tipo === 'libre') {
+          delete this.editCalendar.asignaciones[fecha];
+          return;
+        }
+        this.editCalendar.asignaciones[fecha] = {
+          tipo,
+          incluirDia: tipo !== 'mes_actual',
+          hora: this.horaGeneralEdicionPerfil(tipo),
+          horaPersonalizada: false,
+          ...(tipo === 'rango' ? {
+            fechaDesde: this.editCalendar.fechaDesdeManual,
+            fechaHasta: this.editCalendar.fechaHastaManual,
+          } : {}),
+        };
+      });
+      if (days.length) this.editCalendar.fechaActiva = `${this.editCalendar.mes}-${String(days[0]).padStart(2, '0')}`;
+    },
+
+    copiarMesAnteriorPerfil() {
+      if (!this.editCalendar?.mes) return;
+      const [year, month] = this.editCalendar.mes.split('-').map(Number);
+      const targetFirst = new Date(year, month - 1, 1);
+      const sourceFirst = new Date(year, month - 2, 1);
+      const sourceMonth = `${sourceFirst.getFullYear()}-${String(sourceFirst.getMonth() + 1).padStart(2, '0')}`;
+      const targetMonth = this.editCalendar.mes;
+      const sourceLast = new Date(sourceFirst.getFullYear(), sourceFirst.getMonth() + 1, 0).getDate();
+      const targetLast = new Date(targetFirst.getFullYear(), targetFirst.getMonth() + 1, 0).getDate();
+      const prefix = `${sourceMonth}-`;
+      const entries = Object.entries(this.editCalendar.asignaciones || {}).filter(([date]) => date.startsWith(prefix));
+      if (!entries.length) {
+        this.avisar('El mes anterior no tiene días asignados para copiar.', 'warn');
+        return;
+      }
+      const targetPrefix = `${targetMonth}-`;
+      Object.keys(this.editCalendar.asignaciones || {}).filter(date => date.startsWith(targetPrefix)).forEach(date => delete this.editCalendar.asignaciones[date]);
+      entries.forEach(([date, raw]) => {
+        const oldDay = Number(date.slice(-2));
+        const day = oldDay === sourceLast ? targetLast : Math.min(oldDay, targetLast);
+        const nextDate = `${targetMonth}-${String(day).padStart(2, '0')}`;
+        const assignment = typeof raw === 'string' ? { tipo: raw } : { ...raw };
+        if (assignment.tipo === 'rango') {
+          assignment.fechaDesde = this.editCalendar.fechaDesdeManual;
+          assignment.fechaHasta = this.editCalendar.fechaHastaManual;
+        }
+        this.editCalendar.asignaciones[nextDate] = assignment;
+      });
+      this.seleccionarFechaInicialCalendarioPerfil();
+    },
+
+    celdasCalendarioPerfil() {
+      if (!this.editCalendar?.mes) return [];
+      const [year, month] = this.editCalendar.mes.split('-').map(Number);
+      const count = new Date(year, month, 0).getDate();
+      const offset = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+      const total = Math.ceil((offset + count) / 7) * 7;
+      return Array.from({ length: total }, (_, index) => {
+        const day = index - offset + 1;
+        if (day < 1 || day > count) return { key: `edit-blank-${index}`, vacia: true };
+        const iso = `${this.editCalendar.mes}-${String(day).padStart(2, '0')}`;
+        return { key: iso, iso, numero: day, tipo: this.tipoDiaEdicion(iso), hora: this.horaDiaEdicion(iso), incluirDia: this.incluirDiaEdicion(iso), hoy: iso === hoyISO(), vacia: false };
+      });
+    },
+
+    etiquetaDiaCalendarioPerfil(celda) {
+      if (!celda.tipo) return `${this.fechaBonita(celda.iso)} · Sin asignar`;
+      const fechaLabel = celda.tipo === 'rango' ? 'fecha final del rango' : 'fecha de ejecución';
+      return `${this.fechaBonita(celda.iso)} · ${this.nombreTipo(celda.tipo)} · ${celda.hora} · ${celda.incluirDia ? 'incluye' : 'excluye'} la ${fechaLabel}`;
+    },
+
+    cantidadDiasTipoEdicion(tipo) {
+      const prefix = `${this.editCalendar?.mes}-`;
+      return Object.keys(this.editCalendar?.asignaciones || {}).filter(fecha => fecha.startsWith(prefix) && this.tipoDiaEdicion(fecha) === tipo).length;
+    },
+
+    cantidadDiasAsignadosEdicion() {
+      return this.tiposCalendario.reduce((sum, tipo) => sum + this.cantidadDiasTipoEdicion(tipo.id), 0);
+    },
+
+    cantidadDiasLibresEdicion() {
+      if (!this.editCalendar?.mes) return 0;
+      const [year, month] = this.editCalendar.mes.split('-').map(Number);
+      return Math.max(0, new Date(year, month, 0).getDate() - this.cantidadDiasAsignadosEdicion());
+    },
+
+    rangoDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
+      const tipo = this.tipoDiaEdicion(fecha);
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      const assignment = typeof raw === 'object' ? raw : {};
+      if (tipo === 'rango') {
+        return { fechaDesde: assignment.fechaDesde || this.editCalendar.fechaDesdeManual, fechaHasta: assignment.fechaHasta || this.editCalendar.fechaHastaManual };
+      }
+      const [year, month] = fecha.split('-').map(Number);
+      const first = new Date(year, month - 1, 1);
+      const from = tipo === 'mes_anterior' ? new Date(year, month - 2, 1) : first;
+      return { fechaDesde: `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-01`, fechaHasta: fecha };
+    },
+
+    resumenPeriodoDiaEdicion() {
+      const fecha = this.editCalendar?.fechaActiva;
+      const tipo = this.tipoDiaEdicion(fecha);
+      if (!tipo) return 'Elige un tipo de periodo arriba y marca esta fecha para añadirla a la rutina.';
+      const rango = this.rangoDiaEdicion(fecha);
+      const include = this.incluirDiaEdicion(fecha);
+      const hasta = include ? rango.fechaHasta : this.moverFecha(rango.fechaHasta, -1);
+      if (!rango.fechaDesde || !hasta || rango.fechaDesde > hasta) return 'El periodo queda vacío. Incluye el día de ejecución o cambia el rango.';
+      const suffix = tipo === 'rango'
+        ? (include ? ' · incluye la fecha final' : ' · excluye la fecha final')
+        : (include ? ' · incluye el día de ejecución' : ' · hasta el día anterior');
+      return `${this.fechaBonita(rango.fechaDesde)} – ${this.fechaBonita(hasta)}${suffix}`;
+    },
+
+    actualizarRangoPerfilEdicion() {
+      const prefix = `${this.editCalendar?.mes}-`;
+      Object.entries(this.editCalendar?.asignaciones || {}).forEach(([date, raw]) => {
+        const assignment = typeof raw === 'string' ? { tipo: raw } : raw;
+        if (!date.startsWith(prefix) || assignment?.tipo !== 'rango') return;
+        assignment.fechaDesde = this.editCalendar.fechaDesdeManual;
+        assignment.fechaHasta = this.editCalendar.fechaHastaManual;
+      });
+    },
+
+    tipoPeriodoPerfil(cfg) {
+      if (!cfg || cfg.modo === 'rango' || cfg.periodoDatos === 'rango') return 'rango';
+      if (cfg.periodoDatos === 'mes_anterior') return 'mes_anterior';
+      if (cfg.modo === 'cierre' || cfg.incluirHoy) return 'cierre';
+      return 'mes_actual';
+    },
+
+    elegirTipoPeriodoPerfil(tipo) {
+      if (tipo === 'rango') {
+        this.editCfg.modo = 'rango';
+        this.editCfg.periodoDatos = 'rango';
+        return;
+      }
+      this.editCfg.periodoDatos = tipo === 'mes_anterior' ? 'mes_anterior' : 'mes_actual';
+      this.editCfg.modo = tipo === 'mes_actual' ? 'diaria' : 'cierre';
+      this.editCfg.incluirHoy = tipo === 'cierre';
+      this.actualizarPeriodoPerfil(this.editCfg);
     },
 
     alternarDia(d) {
@@ -1913,20 +3423,207 @@ document.addEventListener('alpine:init', () => {
       else this.editCfg.diasSemana.push(d);
     },
 
+    actualizarPeriodoPerfil(cfg) {
+      if (!cfg || cfg.modo === 'rango') return;
+      const [year, month] = (cfg.mesEjecucion || hoyISO().slice(0, 7)).split('-').map(Number);
+      if (!year || !month) return;
+      const mesInicio = new Date(year, month - 1, 1);
+      const start = cfg.periodoDatos === 'mes_anterior' ? new Date(year, month - 2, 1) : mesInicio;
+      const endOfMonth = new Date(year, month, 0);
+      const currentMonth = hoyISO().slice(0, 7);
+      const selectedMonth = `${year}-${String(month).padStart(2, '0')}`;
+      const end = selectedMonth === currentMonth ? new Date() : endOfMonth;
+      const toISO = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      cfg.fechaDesde = toISO(start);
+      cfg.fechaHasta = toISO(end);
+    },
+
+    alternarDiaMes(dia) {
+      if (!Array.isArray(this.editCfg.diasMes)) this.editCfg.diasMes = [];
+      const index = this.editCfg.diasMes.indexOf(dia);
+      if (index >= 0) this.editCfg.diasMes.splice(index, 1);
+      else this.editCfg.diasMes.push(dia);
+    },
+
+    elegirDiasMes(preset) {
+      if (preset === 'primeros') this.editCfg.diasMes = [1, 2, 3];
+      else if (preset === 'fin') this.editCfg.diasMes = [31];
+      else if (preset === 'todos') this.editCfg.diasMes = Array.from({ length: 31 }, (_, i) => i + 1);
+      else this.editCfg.diasMes = [];
+    },
+
+    textoDiasMes(cfg) {
+      const dias = Array.isArray(cfg && cfg.diasMes) ? cfg.diasMes.slice().sort((a, b) => a - b) : [];
+      if (dias.length === 31) return 'todos los días';
+      const fechas = dias.filter(d => d !== 31).join(', ');
+      return [fechas, dias.includes(31) ? 'último día de cada mes' : ''].filter(Boolean).join(' y ') || 'ninguno';
+    },
+
+    textoDiasProgramados(cfg) {
+      if (!cfg || cfg.frecuencia === 'manual') return 'Solo bajo demanda';
+      const calendario = cfg.id === this.perfilCalendarioActivoId
+        ? this.calendario
+        : (this.calendariosPerfiles?.[cfg.id] || null);
+      const mes = cfg.mesEjecucion || calendario?.mes || hoyISO().slice(0, 7);
+      const prefix = `${mes}-`;
+      const count = Object.keys(calendario?.asignaciones || {}).filter(fecha => fecha.startsWith(prefix)).length;
+      if (!count) return 'Sin días · configurar calendario';
+      const [year, month] = mes.split('-').map(Number);
+      const monthName = new Date(year, month - 1, 1).toLocaleDateString('es-BO', { month: 'short' });
+      return `${count} día${count === 1 ? '' : 's'} · ${monthName}`;
+    },
+
+    resumenTiposPerfil(cfg) {
+      if (!cfg) return 'Sin perfil';
+      const calendar = cfg.id === this.perfilCalendarioActivoId
+        ? this.calendario
+        : (this.calendariosPerfiles?.[cfg.id] || null);
+      const month = cfg.mesEjecucion || calendar?.mes || hoyISO().slice(0, 7);
+      const prefix = `${month}-`;
+      const parts = this.tiposCalendario.map(tipo => {
+        const count = Object.entries(calendar?.asignaciones || {}).filter(([date, raw]) => {
+          const assignmentType = typeof raw === 'string' ? raw : raw?.tipo;
+          return date.startsWith(prefix) && assignmentType === tipo.id;
+        }).length;
+        return count ? `${tipo.nombreCorto}: ${count}` : '';
+      }).filter(Boolean);
+      return parts.join(' · ') || 'Sin periodos asignados';
+    },
+
+    textoPeriodoDatos(cfg) {
+      if (!cfg) return '—';
+      if (cfg.modo === 'rango' || cfg.periodoDatos === 'rango') return 'Fechas personalizadas';
+      if (cfg.periodoDatos === 'mes_anterior') return 'Mes anterior + actual hasta el corte';
+      return cfg.incluirHoy ? 'Mes actual, incluye fecha final' : 'Mes actual hasta ayer';
+    },
+
+    resumenPeriodo(cfg) {
+      if (!cfg || !cfg.fechaDesde || !cfg.fechaHasta) return 'Selecciona las fechas';
+      const format = value => {
+        const [year, month, day] = value.split('-').map(Number);
+        return new Date(year, month - 1, day).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
+      };
+      return `${format(cfg.fechaDesde)} – ${format(cfg.fechaHasta)}${cfg.incluirHoy ? ' (incluye fecha final)' : ' (hasta el día anterior)'}`;
+    },
+
     async guardarConfiguracion() {
+      if (this.guardandoPerfil) return;
+      if (this.editCfg.usarHorarioPorTipo && this.editCfg.frecuencia === 'manual') this.editCfg.frecuencia = 'diaria';
+      if (this.cronogramaActivo) {
+        this.avisar('Detén la programación activa antes de editar perfiles.', 'warn');
+        return;
+      }
+      if (!(this.editCfg.nombre || '').trim()) {
+        this.avisar('Escribe un nombre para el perfil.', 'warn');
+        return;
+      }
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(this.editCfg.mesEjecucion || '')) {
+        this.avisar('Elige el mes que vas a programar.', 'warn');
+        return;
+      }
+      const horaValida = hora => {
+        if (!/^\d{2}:\d{2}$/.test(hora || '')) return false;
+        const [hour, minute] = hora.split(':').map(Number);
+        return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+      };
+      const frecuenciaValida = (frecuencia, regla) => {
+        if (frecuencia === 'diaria') return horaValida(regla?.horaFija);
+        if (frecuencia !== 'intervalo') return false;
+        const intervalo = Number(regla?.intervaloHoras);
+        return horaValida(regla?.horaInicioVentana)
+          && horaValida(regla?.horaFinVentana)
+          && regla.horaInicioVentana <= regla.horaFinVentana
+          && Number.isInteger(intervalo) && intervalo >= 1 && intervalo <= 24;
+      };
+      if (!this.editCfg.usarHorarioPorTipo && this.editCfg.frecuencia !== 'manual'
+        && !frecuenciaValida(this.editCfg.frecuencia, this.editCfg)) {
+        this.avisar('Revisa la frecuencia y sus horas. El inicio debe ser anterior o igual al fin.', 'warn');
+        return;
+      }
+      if (this.editCfg.fechaDesde && this.editCfg.fechaHasta && this.editCfg.fechaDesde > this.editCfg.fechaHasta) {
+        this.avisar('La fecha de inicio debe ser anterior o igual a la fecha final.', 'warn');
+        return;
+      }
+      const monthPrefix = `${this.editCfg.mesEjecucion}-`;
+      const assignedDates = Object.keys(this.editCalendar?.asignaciones || {})
+        .filter(fecha => fecha.startsWith(monthPrefix) && !!this.tipoDiaEdicion(fecha));
+      if (this.editCfg.frecuencia !== 'manual' && !assignedDates.length) {
+        this.avisar('Marca al menos un día del mes elegido y asígnale un tipo de periodo.', 'warn');
+        return;
+      }
+      if (this.editCfg.usarHorarioPorTipo && this.editCfg.frecuencia !== 'manual') {
+        this.normalizarHorariosPorTipo();
+        const assignedTypes = [...new Set(assignedDates.map(fecha => this.tipoDiaEdicion(fecha)))];
+        const invalidTypeSchedule = assignedTypes.some(tipo => {
+          const regla = this.editCfg.horariosPorTipo?.[tipo];
+          return !frecuenciaValida(regla?.frecuencia, regla);
+        });
+        if (invalidTypeSchedule) {
+          this.avisar('Revisa los horarios de cada tipo que tiene días marcados.', 'warn');
+          return;
+        }
+      }
+      const fechaValida = value => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+        const [year, month, day] = value.split('-').map(Number);
+        const parsed = new Date(year, month - 1, day);
+        return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day;
+      };
+      const invalidRange = assignedDates.some(fecha => {
+        const range = this.rangoDiaEdicion(fecha);
+        if (!fechaValida(range.fechaDesde) || !fechaValida(range.fechaHasta) || range.fechaDesde > range.fechaHasta) return true;
+        const lastIncluded = this.incluirDiaEdicion(fecha) ? range.fechaHasta : this.moverFecha(range.fechaHasta, -1);
+        return range.fechaDesde > lastIncluded;
+      });
+      if (invalidRange) {
+        this.avisar('Hay un día cuyo periodo queda vacío o tiene fechas incorrectas. Revisa el rango e incluye la fecha de ejecución si corresponde.', 'warn');
+        return;
+      }
+
+      if (this.editCfg.modo !== 'rango') this.actualizarPeriodoPerfil(this.editCfg);
+      this.editCalendar.id = this.editCfg.id;
+      this.editCalendar.mes = this.editCfg.mesEjecucion || this.editCalendar.mes;
+      this.editCalendar.horaEjecucionDefault = this.horaGeneralEdicionPerfil();
+      const perfilGuardado = { ...this.editCfg };
+      delete perfilGuardado.esNueva;
+      const perfilesAnteriores = JSON.parse(JSON.stringify(this.configuraciones));
+      const calendariosAnteriores = JSON.parse(JSON.stringify(this.calendariosPerfiles || {}));
       const idx = this.configuraciones.findIndex(c => c.id === this.editCfg.id);
+      const esNuevo = idx < 0;
       if (idx >= 0) {
-        this.configuraciones[idx] = { ...this.editCfg };
+        this.configuraciones[idx] = perfilGuardado;
       } else {
-        this.configuraciones.push({ ...this.editCfg, esPersonalizada: true });
-        this.configuracionActivaId = this.editCfg.id;
+        this.configuraciones.push({ ...perfilGuardado, esPersonalizada: true });
+      }
+      this.calendariosPerfiles[this.editCfg.id] = this.clonarCalendario(this.editCalendar);
+      this.guardandoPerfil = true;
+      let guardado = false;
+      try {
+        guardado = await this.guardarPerfilesEjecucion();
+        if (guardado) guardado = await this.guardarMapaCalendarios();
+      } finally {
+        this.guardandoPerfil = false;
+      }
+      if (!guardado) {
+        this.configuraciones = perfilesAnteriores;
+        this.calendariosPerfiles = calendariosAnteriores;
+        await this.guardarPerfilesEjecucion();
+        this.avisar('No se pudo guardar el perfil. Revisa el motor y vuelve a intentarlo.', 'error');
+        return;
+      }
+      if (esNuevo) this.seleccionarConfiguracion(this.editCfg.id);
+      else if (this.configuracionActivaId === this.editCfg.id) {
+        this.perfilCalendarioActivoId = this.editCfg.id;
+        this.calendario = this.clonarCalendario(this.editCalendar);
       }
       this.dialogo = null;
-      this.avisar('Configuración de ejecución guardada con éxito', 'success');
+      this.avisar('Perfil y programación guardados. Puedes revisarlo en Inicio antes de ejecutarlo.', 'success');
+    },
 
-      if (this.api) {
-        await this.llamar('save_execution_profiles', JSON.stringify(this.configuraciones));
-      }
+    async guardarPerfilesEjecucion() {
+      if (!this.api) return true;
+      const result = await this.llamar('save_execution_profiles', JSON.stringify(this.configuraciones));
+      return !!result && result.status === 'ok';
     },
 
     pedirConfirmarEliminarCfg(c) {
@@ -1940,21 +3637,42 @@ document.addEventListener('alpine:init', () => {
     },
 
     async ejecutarEliminarCfg() {
-      if (!this.eliminarCfgId) return;
-      this.configuraciones = this.configuraciones.filter(c => c.id !== this.eliminarCfgId);
-      this.configuracionActivaId = this.configuraciones[0].id;
-      this.dialogo = null;
-      this.avisar(`Perfil "${this.eliminarCfgNombre}" eliminado`, 'warn');
-
-      if (this.api) {
-        await this.llamar('save_execution_profiles', JSON.stringify(this.configuraciones));
+      if (!this.eliminarCfgId || this.cronogramaActivo) return;
+      if (this.guardandoPerfil) return;
+      const deletedId = this.eliminarCfgId;
+      const perfilesAnteriores = JSON.parse(JSON.stringify(this.configuraciones));
+      const perfilActivoAnterior = this.configuracionActivaId;
+      const eliminarActivo = deletedId === this.configuracionActivaId;
+      this.configuraciones = this.configuraciones.filter(c => c.id !== deletedId);
+      this.guardandoPerfil = true;
+      let guardado = false;
+      try {
+        guardado = await this.guardarPerfilesEjecucion();
+      } finally {
+        this.guardandoPerfil = false;
       }
+      if (!guardado) {
+        this.configuraciones = perfilesAnteriores;
+        this.configuracionActivaId = perfilActivoAnterior;
+        this.avisar('No se pudo eliminar el perfil. Inténtalo nuevamente.', 'error');
+        return;
+      }
+      if (eliminarActivo) this.seleccionarConfiguracion(this.configuraciones[0].id);
+      delete this.calendariosPerfiles[deletedId];
+      const calendarioGuardado = await this.guardarCalendarioEjecucion();
+      try { localStorage.setItem('perfilEjecucionId', String(this.configuracionActivaId)); } catch (e) {}
+      this.dialogo = null;
+      this.avisar(calendarioGuardado
+        ? `Perfil "${this.eliminarCfgNombre}" eliminado`
+        : `Perfil eliminado; el calendario antiguo se limpiará al guardar otro perfil.`, 'warn');
     },
 
     async eliminarConfiguracion(id) {
       if (this.configuraciones.length <= 1) return;
+      const eliminarActivo = id === this.configuracionActivaId;
       this.configuraciones = this.configuraciones.filter(c => c.id !== id);
-      this.configuracionActivaId = this.configuraciones[0].id;
+      if (eliminarActivo) this.configuracionActivaId = this.configuraciones[0].id;
+      try { localStorage.setItem('perfilEjecucionId', String(this.configuracionActivaId)); } catch (e) {}
       this.avisar('Configuración eliminada', 'warn');
 
       if (this.api) {
@@ -1973,15 +3691,36 @@ document.addEventListener('alpine:init', () => {
 
     textoCiclo(c) {
       if (!c) return '—';
+      if (c.usarHorarioPorTipo) return this.resumenHorarioPerfil(c);
       if (c.frecuencia === 'manual') return 'Solo Manual';
       if (c.frecuencia === 'diaria') {
-        const dias = (c.diasSemana || []).join('');
-        return `Diario ${c.horaFija || '06:00'} (${dias || 'L-V'})`;
+        return `Una vez · ${c.horaFija || '06:00'}`;
       }
       if (c.frecuencia === 'intervalo') {
-        return `Cada ${c.intervaloHoras || 4}h (${c.horaInicioVentana || '08:00'} a ${c.horaFinVentana || '18:00'})`;
+        return `Cada ${c.intervaloHoras || 4} h · ${c.horaInicioVentana || '08:00'}–${c.horaFinVentana || '18:00'}`;
       }
-      return 'Diaria';
+      return 'Solo manual';
+    },
+
+    resumenHorarioPerfil(cfg) {
+      const calendar = cfg.id === this.perfilCalendarioActivoId
+        ? this.calendario
+        : (this.calendariosPerfiles?.[cfg.id] || null);
+      const month = cfg.mesEjecucion || calendar?.mes || hoyISO().slice(0, 7);
+      const prefix = `${month}-`;
+      const entries = this.tiposCalendario.map(tipo => {
+        const hasDays = Object.entries(calendar?.asignaciones || {}).some(([date, raw]) => {
+          const assignedType = typeof raw === 'string' ? raw : raw?.tipo;
+          return date.startsWith(prefix) && assignedType === tipo.id;
+        });
+        if (!hasDays) return '';
+        const rule = cfg.horariosPorTipo?.[tipo.id] || {};
+        const schedule = rule.frecuencia === 'intervalo'
+          ? `cada ${rule.intervaloHoras || 4} h (${rule.horaInicioVentana || '08:00'}–${rule.horaFinVentana || '18:00'})`
+          : (rule.horaFija || '06:00');
+        return `${tipo.nombreCorto} ${schedule}`;
+      }).filter(Boolean);
+      return entries.join(' · ') || 'Horario por tipo de periodo';
     },
 
     // -------------------------------------------------------------
@@ -1993,6 +3732,15 @@ document.addEventListener('alpine:init', () => {
       if (p === 'rango') return 'Rango Fechas (Dinámico)';
       if (p === 'fijo') return 'Parámetros Fijos';
       return 'Automático';
+    },
+
+    resumenDescarga(t) {
+      const values = Object.fromEntries((t.campos || []).map(c => [c.id, c.valor]));
+      const start = values.desde || values.fechaDesde;
+      const end = values.hasta || values.fechaHasta;
+      if (start || end) return `Periodo de descarga: ${start || 'sin inicio'} → ${end || 'sin corte'}`;
+      if (values.periodo) return `Periodo SAP: ${values.periodo}`;
+      return `Periodo: ${this.textoPeriodoSap(t.periodoTipo)}`;
     },
 
     abrirModalSapTarea(t) {
@@ -2043,11 +3791,14 @@ document.addEventListener('alpine:init', () => {
     },
 
     async guardarSapTarea() {
-      const idx = this.tareasSap.findIndex(t => t.id === this.editSap.id);
+      const payload = { ...this.editSap };
+      if (payload.layout && !payload.layout_name) payload.layout_name = payload.layout;
+      if (payload.layout_name && !payload.layout) payload.layout = payload.layout_name;
+      const idx = this.tareasSap.findIndex(t => t.id === payload.id);
       if (idx >= 0) {
-        this.tareasSap[idx] = { ...this.editSap };
+        this.tareasSap[idx] = payload;
       } else {
-        this.tareasSap.push({ ...this.editSap, esPersonalizada: true });
+        this.tareasSap.push({ ...payload, esPersonalizada: true });
       }
       this.dialogo = null;
       this.avisar('Tarea de descarga SAP guardada correctamente', 'success');
@@ -2107,12 +3858,28 @@ document.addEventListener('alpine:init', () => {
     },
 
     async descargarSap(t) {
-      const params = Object.fromEntries((t.campos || []).map(c => [c.id, c.valor]));
-      params.tcode = t.tcode;
-      params.destino = t.destino;
-      params.variante = t.variante;
-      params.layout = t.layout;
-      params.ledger = t.ledger;
+      if (this.descargaSapInvalida(t)) {
+        this.avisar('Revisa las fechas de inicio y fin de la descarga.', 'warn');
+        return;
+      }
+      const cfg = (typeof this.configuracionEjecucionActiva === 'function' ? this.configuracionEjecucionActiva() : null)
+        || this.configuracionActiva();
+      const params = {
+        tcode: t.tcode,
+        destino: t.destino,
+        variante: t.variante,
+        layout: t.layout || t.layout_name || '',
+        layout_name: t.layout_name || t.layout || '',
+        ledger: t.ledger,
+        profileId: cfg?.configuracionId || cfg?.id || this.configuracionActivaId,
+        fechaDesdeConfig: cfg?.fechaDesde || (cfg?.mesEjecucion ? `${cfg.mesEjecucion}-01` : ''),
+        fechaHastaConfig: cfg?.fechaHasta || '',
+      };
+      for (const c of (t.campos || [])) {
+        params[c.id] = c.valor;
+      }
+      if (!params.layout_name && params.layout) params.layout_name = params.layout;
+      if (!params.layout && params.layout_name) params.layout = params.layout_name;
 
       const r = await this.llamar('download_sap', t.id, JSON.stringify(params));
       if (r) {
@@ -2122,17 +3889,44 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
+    descargaSapInvalida(t) {
+      const fields = Object.fromEntries((t.campos || []).map(c => [c.id, c.valor]));
+      const start = fields.desde || fields.fechaDesde;
+      const end = fields.hasta || fields.fechaHasta;
+      return !!(start && end && start > end);
+    },
+
+    async guardarTareasSap() {
+      if (this.api) await this.llamar('save_sap_tasks', JSON.stringify(this.tareasSap));
+    },
+
     // -------------------------------------------------------------
     // EJECUCIÓN DEL PIPELINE
     // -------------------------------------------------------------
-    async ejecutar() {
+    async ejecutar(configuracionForzada = null) {
       if (this.ejecutando) return;
+      if (this.cronogramaActivo) {
+        this.avisar('Detén la programación activa antes de iniciar una corrida independiente.', 'warn');
+        return;
+      }
       if (this.conexiones.sql.estado === 'err') {
         this.avisar('SQL Server no responde. Conecta la VPN y prueba la conexión antes de continuar.', 'error');
         return;
       }
 
-      const cfg = this.configuracionActiva();
+      const cfg = configuracionForzada || this.configuracionEjecucionActiva();
+      if (!cfg) {
+        this.avisar('Elige un perfil de ejecución desde el selector de Inicio.', 'warn');
+        return;
+      }
+      if (!configuracionForzada && this.perfilMesEsFuturo()) {
+        this.avisar('El perfil pertenece a un mes futuro. Usa la programación o cambia su mes antes de ejecutar ahora.', 'warn');
+        return;
+      }
+      if (!cfg.fechaDesde || !cfg.fechaHasta || cfg.fechaDesde > cfg.fechaHasta) {
+        this.avisar('Revisa el rango: la fecha inicial debe ser anterior o igual a la fecha final.', 'warn');
+        return;
+      }
       this.estado = {
         step_statuses: { 1: 'running', 2: 'pending', 3: 'pending', 4: 'pending', 5: 'pending', 6: 'pending' },
         step_times: {},
@@ -2151,7 +3945,8 @@ document.addEventListener('alpine:init', () => {
         fechaDesde: cfg.fechaDesde,
         fechaHasta: cfg.fechaHasta,
         incluirHoy: cfg.incluirHoy,
-        configuracionId: cfg.id,
+        descargarSap: !!this.descargarSapAntes,
+        configuracionId: cfg.configuracionId || cfg.id,
       };
 
       const r = await this.llamar('start_pipeline', JSON.stringify(payload));
@@ -2162,28 +3957,32 @@ document.addEventListener('alpine:init', () => {
 
       this.ejecutando = true;
       this.avisar(`Iniciando ${cfg.nombre}…`, 'info');
-      this.sondeo = setInterval(() => this.leerAvance(), 600);
+      this.asegurarSondeo();
     },
 
     async leerAvance() {
       const r = await this.llamar('get_execution_updates');
       if (!r) return;
 
+      const estabaEjecutando = this.ejecutando;
       if (r.state) this.estado = r.state;
       if (r.logs && r.logs.length) this.agregarLogs(r.logs);
+      this.ejecutando = !!r.is_running;
 
       if (!r.is_running) {
-        clearInterval(this.sondeo);
-        this.sondeo = null;
-        this.ejecutando = false;
         this.deteniendo = false;
-        this.ultimaCorrida = 'hace un momento';
-
-        if (this.estado.has_error) {
-          this.avisar('La ejecución se detuvo por un error en el pipeline', 'error');
-        } else if (this.estado.finished) {
-          this.avisar('¡Pipeline completado con éxito!', 'success');
-          this.recargar();
+        if (estabaEjecutando) {
+          this.ultimaCorrida = 'hace un momento';
+          if (this.estado.has_error) {
+            this.avisar('La ejecución se detuvo por un error en el pipeline', 'error');
+          } else if (this.estado.finished) {
+            this.avisar('¡Pipeline completado con éxito!', 'success');
+            this.recargar();
+          }
+        }
+        if (!this.cronogramaActivo && this.sondeo) {
+          clearInterval(this.sondeo);
+          this.sondeo = null;
         }
       }
     },
@@ -2203,7 +4002,7 @@ document.addEventListener('alpine:init', () => {
       this.ejecutando = true;
       let paso = 1;
       const t0 = Date.now();
-      const cfg = this.configuracionActiva();
+      const cfg = this.configuracionEjecucionActiva();
       const tick = () => {
         if (!this.ejecutando) return;
         const st = { ...this.estado.step_statuses }, tm = { ...this.estado.step_times };
@@ -2292,7 +4091,7 @@ document.addEventListener('alpine:init', () => {
         });
       }
       if (this.logs.length > 1000) this.logs.splice(0, this.logs.length - 1000);
-      if (this.seguirLog) {
+      if (this.seguirLog && this.vista === 'registro') {
         this.$nextTick(() => {
           const el = this.$refs.log;
           if (el) el.scrollTop = el.scrollHeight;
@@ -2302,6 +4101,18 @@ document.addEventListener('alpine:init', () => {
 
     logsFiltrados() {
       return this.filtroLog === 'error' ? this.logs.filter(l => l.tipo === 'error') : this.logs;
+    },
+
+    cantidadErroresLog() {
+      return this.logs.filter(l => l.tipo === 'error').length;
+    },
+
+    limpiarLog() {
+      if (!this.logs.length) return;
+      if (!window.confirm(`¿Limpiar los ${this.logs.length} mensajes de esta sesión?`)) return;
+      this.logs = [];
+      this.filtroLog = 'todo';
+      this.avisar('Registro de esta sesión limpiado', 'success');
     },
 
     async copiarLog() {

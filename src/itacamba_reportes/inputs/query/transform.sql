@@ -112,12 +112,5 @@ CROSS APPLY (
 LEFT JOIN [int_ref_ruta] r ON r.codigo_ruta = q.cod_ruta
 LEFT JOIN [int_cartera] c_dest ON c_dest.cliente = q.cod_destinatario
 WHERE f_calc.fecha_efectiva IS NOT NULL
-  AND DATEFROMPARTS(YEAR(f_calc.fecha_efectiva), MONTH(f_calc.fecha_efectiva), 1) = (
-      SELECT MAX(DATEFROMPARTS(
-          YEAR(CASE WHEN material = 'CLINQUER' AND fecha_salida IS NULL THEN fecha_creacion_entrega ELSE fecha_salida END),
-          MONTH(CASE WHEN material = 'CLINQUER' AND fecha_salida IS NULL THEN fecha_creacion_entrega ELSE fecha_salida END),
-          1
-      ))
-      FROM [stg_query]
-      WHERE (CASE WHEN material = 'CLINQUER' AND fecha_salida IS NULL THEN fecha_creacion_entrega ELSE fecha_salida END) IS NOT NULL
-  );
+  /* OUTER_CUTOFF_FILTER */
+  AND /* MONTH_SELECTOR */;

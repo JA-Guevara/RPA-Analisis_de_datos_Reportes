@@ -257,6 +257,125 @@ class SapSessionManager:
         el = self.find_element(selector, timeout=timeout)
         el.text = str(text_value)
 
+    def _iter_gui_children(self, root: Any, max_depth: int = 3) -> list[Any]:
+        collected: list[Any] = []
+        queue: list[tuple[Any, int]] = [(root, 0)]
+        while queue:
+            node, depth = queue.pop(0)
+            children = getattr(node, "Children", None)
+            if children is None:
+                continue
+            try:
+                child_list = list(children)
+            except Exception:
+                try:
+                    count = int(getattr(children, "Count", 0))
+                    child_list = [children(i) for i in range(count)]
+                except Exception:
+                    child_list = []
+            for child in child_list:
+                collected.append(child)
+                if depth + 1 < max_depth:
+                    queue.append((child, depth + 1))
+        return collected
+
+    def set_selection_field_by_label(
+        self,
+        labels: tuple[str, ...],
+        value_low: str | int,
+        value_high: str | int | None = None,
+        field_hint_tokens: tuple[str, ...] = (),
+    ) -> bool:
+        import re
+
+        try:
+            usr_area = self.find_element("wnd[0]/usr", timeout=2.0)
+        except Exception as exc:
+            logger.debug("No se pudo inspeccionar wnd[0]/usr para ubicar campos: %s", exc)
+            return False
+
+        normalized_targets = {lbl.strip().rstrip(":").lower() for lbl in labels if lbl.strip()}
+        children = self._iter_gui_children(usr_area, max_depth=3)
+
+        matched_labels: list[Any] = []
+        changeable_inputs: list[Any] = []
+        for child in children:
+            child_type = str(getattr(child, "Type", "") or "").lower()
+            child_name = str(getattr(child, "Name", "") or "")
+            child_name_upper = child_name.upper()
+            if child_type == "guilabel" or "%-TEXT" in child_name_upper:
+                lbl_text = str(getattr(child, "Text", "") or "").strip().rstrip(":").lower()
+                if lbl_text in normalized_targets:
+                    matched_labels.append(child)
+                continue
+            if any(tok in child_type for tok in ("label", "button", "check", "radio", "box")):
+                continue
+            if child_name and bool(getattr(child, "Changeable", True)):
+                changeable_inputs.append(child)
+
+        low_field = None
+        high_field = None
+        matched_label_text = ""
+
+        for lbl in matched_labels:
+            lbl_name_upper = str(getattr(lbl, "Name", "") or "").upper()
+            matched_label_text = str(getattr(lbl, "Text", "") or "").strip()
+            stem_match = re.search(r"%_([A-Z0-9_]+?)_%_APP_%", lbl_name_upper) or re.search(r"%_([A-Z0-9_]+)%", lbl_name_upper)
+            if stem_match:
+                stem = stem_match.group(1)
+                low_field = next((c for c in changeable_inputs if str(getattr(c, "Name", "")).upper() == f"{stem}-LOW"), None)
+                high_field = next((c for c in changeable_inputs if str(getattr(c, "Name", "")).upper() == f"{stem}-HIGH"), None)
+                if low_field is not None:
+                    break
+
+            lbl_top = getattr(lbl, "Top", None)
+            lbl_left = getattr(lbl, "Left", 0) or 0
+            if lbl_top is not None:
+                row_inputs = [
+                    c for c in changeable_inputs
+                    if getattr(c, "Top", None) is not None
+                    and abs(int(c.Top) - int(lbl_top)) <= 4
+                    and (getattr(c, "Left", 0) or 0) >= int(lbl_left)
+                ]
+                row_inputs.sort(key=lambda c: int(getattr(c, "Left", 0) or 0))
+                low_field = next((c for c in row_inputs if str(getattr(c, "Name", "")).upper().endswith("-LOW")), None)
+                if low_field is None:
+                    low_field = next((c for c in row_inputs if not str(getattr(c, "Name", "")).upper().endswith("-HIGH")), None)
+                high_field = next((c for c in row_inputs if str(getattr(c, "Name", "")).upper().endswith("-HIGH")), None)
+                if low_field is not None:
+                    break
+
+        if low_field is None and field_hint_tokens:
+            hints = tuple(tok.lower() for tok in field_hint_tokens)
+            for inp in changeable_inputs:
+                name_l = str(getattr(inp, "Name", "") or "").lower()
+                if name_l.endswith("-low") and any(h in name_l for h in hints):
+                    low_field = inp
+                    high_name = str(getattr(inp, "Name", "")).upper()[:-4] + "-HIGH"
+                    high_field = next((c for c in changeable_inputs if str(getattr(c, "Name", "")).upper() == high_name), None)
+                    break
+
+        if low_field is None:
+            return False
+
+        low_str = str(value_low).strip()
+        low_field.text = low_str
+        if high_field is not None:
+            high_str = str(value_high).strip() if value_high is not None else ""
+            if high_str and high_str != low_str:
+                high_field.text = high_str
+            elif str(getattr(high_field, "text", "") or "").strip():
+                high_field.text = ""
+
+        logger.info(
+            "Campo SAP '%s' (%s) actualizado dinámicamente a: %s%s",
+            matched_label_text or ",".join(labels),
+            getattr(low_field, "Name", "campo"),
+            low_str,
+            f" .. {value_high}" if (value_high and str(value_high).strip() != low_str and high_field is not None) else "",
+        )
+        return True
+
     def press_button(self, selector: str, timeout: float = 5.0) -> None:
         el = self.find_element(selector, timeout=timeout)
         el.press()
@@ -283,45 +402,73 @@ class SapSessionManager:
             return True
         return False
 
+    def _is_on_easy_access(self) -> bool:
+        try:
+            tx = str(getattr(self.session.Info, "Transaction", "") or "").strip().upper()
+            if tx == "SESSION_MANAGER":
+                return True
+            title = str(getattr(self.session.ActiveWindow, "Text", "") or "")
+            return "Easy Access" in title
+        except Exception:
+            return False
+
+    def _is_logoff_popup(self) -> bool:
+        try:
+            title = str(getattr(self.session.ActiveWindow, "Text", "") or "").lower()
+            return "salir del sistema" in title or "log off" in title
+        except Exception:
+            return False
+
     def return_to_main_menu(self) -> None:
         from itacamba_reportes.sap.selectors import SELECTORES_SAP
 
         logger.info("Retornando al menu principal de SAP (Easy Access)...")
-        # 1. Resolver popups o ventanas modales residuales (wnd[1], wnd[2])
+        # 1. Resolver ventanas modales residuales sin confirmar un cierre de sesion
         for _ in range(3):
             try:
                 active_wnd = getattr(self.session.ActiveWindow, "Name", "")
-                if active_wnd and active_wnd != "wnd[0]":
-                    if self.element_exists("wnd[1]/usr/btnSPOP-OPTION1", timeout=0.5):
-                        self.press_button("wnd[1]/usr/btnSPOP-OPTION1")
-                        time.sleep(0.5)
-                        continue
-                    if self.element_exists(f"{active_wnd}/tbar[0]/btn[12]", timeout=0.5):
-                        self.press_button(f"{active_wnd}/tbar[0]/btn[12]")
-                        time.sleep(0.5)
-                        continue
-            except Exception:
-                pass
-
-        # 2. Pulsar boton atras (btn[15]) varias veces
-        for _ in range(4):
-            try:
-                if self.element_exists("wnd[1]/usr/btnSPOP-OPTION1", timeout=0.5):
+                if not active_wnd or active_wnd == "wnd[0]":
+                    break
+                if self._is_logoff_popup() and self.element_exists("wnd[1]/usr/btnSPOP-OPTION2", timeout=0.3):
+                    self.press_button("wnd[1]/usr/btnSPOP-OPTION2")
+                    time.sleep(0.4)
+                    continue
+                if self.element_exists("wnd[1]/usr/btnSPOP-OPTION1", timeout=0.3):
                     self.press_button("wnd[1]/usr/btnSPOP-OPTION1")
-                    time.sleep(0.5)
-                self.press_button(SELECTORES_SAP.barra.btn_back)
-                time.sleep(0.3)
+                    time.sleep(0.4)
+                    continue
+                if self.element_exists(f"{active_wnd}/tbar[0]/btn[12]", timeout=0.3):
+                    self.press_button(f"{active_wnd}/tbar[0]/btn[12]")
+                    time.sleep(0.4)
+                    continue
             except Exception:
                 pass
 
-        # 3. Enviar '/n' en okcode para asegurar pantalla base limpia de Easy Access
-        try:
-            if self.element_exists(SELECTORES_SAP.barra.okcode, timeout=2.0):
-                self.set_text(SELECTORES_SAP.barra.okcode, "/n")
-                self.send_vkey(SELECTORES_SAP.barra.btn_enter_key, window_id=SELECTORES_SAP.ventana.main)
-                time.sleep(0.5)
-        except Exception:
-            pass
+        # 2. Pulsar boton atras (btn[15]) solo mientras no estemos en Easy Access
+        for _ in range(4):
+            if self._is_on_easy_access():
+                break
+            try:
+                self.press_button(SELECTORES_SAP.barra.btn_back)
+                time.sleep(0.4)
+                if self.element_exists("wnd[1]/usr/btnSPOP-OPTION1", timeout=0.4):
+                    if self._is_logoff_popup() and self.element_exists("wnd[1]/usr/btnSPOP-OPTION2", timeout=0.2):
+                        self.press_button("wnd[1]/usr/btnSPOP-OPTION2")
+                        break
+                    self.press_button("wnd[1]/usr/btnSPOP-OPTION1")
+                    time.sleep(0.4)
+            except Exception:
+                break
+
+        # 3. Enviar '/n' en okcode para garantizar retorno limpio a Easy Access sin /nex
+        if not self._is_on_easy_access():
+            try:
+                if self.element_exists(SELECTORES_SAP.barra.okcode, timeout=2.0):
+                    self.set_text(SELECTORES_SAP.barra.okcode, "/n")
+                    self.send_vkey(SELECTORES_SAP.barra.btn_enter_key, window_id=SELECTORES_SAP.ventana.main)
+                    time.sleep(0.5)
+            except Exception:
+                pass
 
         self.maximize()
         logger.info("SAP en menu principal listo para la siguiente transaccion")

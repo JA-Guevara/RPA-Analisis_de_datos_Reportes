@@ -11,6 +11,7 @@ class ConfigDescargaGD20:
     ledger: str = "VC"
     variant: str = "BOT_GD20"
     period: str | int | None = None
+    year: str | int | None = None
     layout_name: str | None = "//AVRILGD20"
     layout_row: int | None = None
     export_filename: str = "GD20.xlsx"
@@ -19,19 +20,42 @@ class ConfigDescargaGD20:
         self,
         target_dir: Path | str | None = None,
         period_override: str | int | None = None,
+        period_high_override: str | int | None = None,
+        year_override: str | int | None = None,
+        year_high_override: str | int | None = None,
     ) -> SapDownloadConfig:
         p = period_override or self.period
         if p is None or str(p).strip() in ("", "0"):
-            p = str(datetime.now().month)
+            p_low = str(datetime.now().month)
         else:
-            p = str(p).strip()
+            p_low = str(p).strip()
+
+        p_high_raw = period_high_override
+        if p_high_raw is None or str(p_high_raw).strip() in ("", "0"):
+            p_high = p_low
+        else:
+            p_high = str(p_high_raw).strip()
+
+        y = year_override or self.year
+        if y is None or str(y).strip() in ("", "0"):
+            y_low = str(datetime.now().year)
+        else:
+            y_low = str(y).strip()
+
+        y_high_raw = year_high_override
+        if y_high_raw is not None and str(y_high_raw).strip() not in ("", "0", y_low):
+            y_high: str | None = str(y_high_raw).strip()
+        else:
+            y_high = None
 
         return SapDownloadConfig(
             transaction=self.transaction,
             ledger=self.ledger,
             variant=self.variant,
-            period_low=p,
-            period_high=p,
+            period_low=p_low,
+            period_high=p_high,
+            year_low=y_low,
+            year_high=y_high,
             layout_name=self.layout_name,
             layout_row=self.layout_row,
             export_filename=self.export_filename,
@@ -116,9 +140,19 @@ class ConfigDescargaQuery:
         )
 
 
+@dataclass(slots=True)
+class ConfigDescargaCartera:
+    available_in_sap_gui: bool = False
+    source_note: str = "CARTERA.xlsx llega por correo automático (Q_VCBO_ZSDI_I03_CAD_CLIENTE_000), sin script SAP GUI."
+
+    def to_download_config(self, target_dir: Path | str | None = None) -> SapDownloadConfig:
+        from itacamba_reportes.sap.exceptions import SapAutomationError
+        raise SapAutomationError(self.source_note)
+
+
 CONFIG_GD20 = ConfigDescargaGD20()
 CONFIG_QUERY = ConfigDescargaQuery()
-CONFIG_CARTERA = CONFIG_QUERY
+CONFIG_CARTERA = ConfigDescargaCartera()
 
 
 @dataclass(slots=True)
@@ -131,6 +165,8 @@ class SapDownloadConfig:
     date_to: str | None = None
     period_low: str | int | None = None
     period_high: str | int | None = None
+    year_low: str | int | None = None
+    year_high: str | int | None = None
     layout_name: str | None = None
     layout_row: int | None = None
     export_filename: str = "EXPORT.xlsx"
@@ -143,6 +179,7 @@ class SapDownloadConfig:
         ledger: str = "VC",
         variant: str = "BOT_GD20",
         period: str | int | None = None,
+        year: str | int | None = None,
         layout_name: str | None = "//AVRILGD20",
         layout_row: int | None = None,
         export_filename: str = "GD20.xlsx",
@@ -154,6 +191,7 @@ class SapDownloadConfig:
             variant=variant,
             period_low=period,
             period_high=period,
+            year_low=year,
             layout_name=layout_name,
             layout_row=layout_row,
             export_filename=export_filename,

@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import json
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 if str(SRC) not in sys.path:
@@ -751,6 +756,495 @@ class TestEltPipeline(unittest.TestCase):
 
         self.assertTrue(hasattr(SapSessionManager, "return_to_main_menu"))
         self.assertTrue(callable(execute_download_all_sap))
+
+    def test_vectorized_hashing_matches_row_hash_exactly(self):
+        df = pd.DataFrame({
+            "src_str": [" ABC ", None, "XYZ"],
+            "src_flt": [12.34567, float("nan"), 0.0],
+            "der_int": [10, 20, None],
+        })
+        df_vec = add_hashes_to_df(df.copy(), ("src_str", "src_flt"), ("der_int",))
+        for i, row in df.iterrows():
+            self.assertEqual(df_vec["source_hash"].iloc[i], compute_row_hash(row, ("src_str", "src_flt")))
+            self.assertEqual(df_vec["derived_hash"].iloc[i], compute_row_hash(row, ("der_int",)))
+            self.assertEqual(df_vec["full_hash"].iloc[i], compute_row_hash(row, ("src_str", "src_flt", "der_int")))
+
+        empty_df = pd.DataFrame({"src_str": pd.Series([], dtype="object"), "der_int": pd.Series([], dtype="int64")})
+        empty_hashed = add_hashes_to_df(empty_df, ("src_str",), ("der_int",))
+        self.assertEqual(len(empty_hashed), 0)
+
+    def test_export_all_reports_parallel_reuses_in_memory_dfs(self):
+        from unittest.mock import patch
+        from itacamba_reportes.cli import export_all_reports_parallel
+
+        df_v = pd.DataFrame({"Nº documento": [1]})
+        df_d = pd.DataFrame({"Documento venta": [2]})
+
+        with patch("itacamba_reportes.outputs.ventas_bi.export.export_ventas_bi", return_value=(Path("V.xlsx"), df_v)) as mock_v, \
+             patch("itacamba_reportes.outputs.despacho_bi.export.export_despacho_bi", return_value=(Path("D.xlsx"), df_d)) as mock_d, \
+             patch("itacamba_reportes.outputs.despacho_mes.export.export_despacho_mes", return_value=Path("M.xlsx")) as mock_m, \
+             patch("itacamba_reportes.outputs.historial_ventas.export.export_historial_ventas", return_value=Path("H.xlsx")) as mock_h:
+            export_all_reports_parallel()
+
+            mock_v.assert_called_once_with(return_df=True)
+            mock_d.assert_called_once_with(return_df=True)
+            mock_m.assert_called_once_with()
+            mock_h.assert_called_once_with(df_ventas=df_v, df_despachos=df_d)
+
+    def test_bridge_steps_include_proyeccion_despacho_bi_and_mes(self):
+        from unittest.mock import patch
+        from itacamba_reportes.ui.bridge import BotBridge
+
+        bridge = BotBridge()
+        with patch("itacamba_reportes.inputs.referencias.pipeline.run_pipeline") as mock_ref, \
+             patch("itacamba_reportes.inputs.proyeccion.pipeline.run_pipeline") as mock_proy:
+            bridge._step_referencias()
+            mock_ref.assert_called_once_with()
+            mock_proy.assert_called_once_with()
+
+        with patch("itacamba_reportes.inputs.query.pipeline.run_pipeline") as mock_q, \
+             patch("itacamba_reportes.outputs.despacho_bi.pipeline.run_pipeline") as mock_dbi, \
+             patch("itacamba_reportes.outputs.despacho_mes.pipeline.run_pipeline") as mock_dmes:
+            bridge._step_query(is_fin_de_mes=True, corte_fecha="2026-10-31", incluir_hasta=True)
+            mock_q.assert_called_once_with(corte_fecha="2026-10-31", is_fin_de_mes=True, incluir_hasta=True)
+            mock_dbi.assert_called_once_with(do_export=False)
+            mock_dmes.assert_called_once_with(
+                corte_fecha="2026-10-31",
+                is_fin_de_mes=True,
+                incluir_hasta=True,
+                do_export=False,
+            )
+
+    def test_resolve_dia_corte_and_download_query_non_mutating(self):
+        from unittest.mock import patch
+        from itacamba_reportes.outputs.despacho_mes.transform import resolve_dia_corte
+        from itacamba_reportes.sap.config import CONFIG_QUERY
+        from itacamba_reportes.sap.actions.download_query_action import execute_download_query
+        from itacamba_reportes.sap.session import SapSessionManager
+
+        self.assertEqual(resolve_dia_corte(dia_corte=15), 15)
+        self.assertEqual(resolve_dia_corte(corte_fecha="2026-10-31", incluir_hasta=False, is_fin_de_mes=False), 31)
+        self.assertEqual(resolve_dia_corte(corte_fecha="2026-10-31", incluir_hasta=True, is_fin_de_mes=True), 32)
+        self.assertEqual(resolve_dia_corte(is_fin_de_mes=True), 32)
+
+        orig_variant = CONFIG_QUERY.variant
+        orig_soc = CONFIG_QUERY.sociedad
+        with patch("itacamba_reportes.sap.actions.download_query_action.execute_download_report", return_value=Path("Q.xlsx")):
+            execute_download_query(SapSessionManager(), variant="/CUSTOM", sociedad="9999")
+        self.assertEqual(CONFIG_QUERY.variant, orig_variant)
+        self.assertEqual(CONFIG_QUERY.sociedad, orig_soc)
+
+    def test_env_config_reload_updates_paths_and_settings(self):
+        import os
+        import tempfile
+        from itacamba_reportes.core.settings import EnvConfig
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env_path = Path(tmp) / ".env"
+            exp_dir = Path(tmp) / "exports"
+            exp_dir.mkdir()
+            env_path.write_text(f"EXPORT_PATH={exp_dir}\nSAP_SISTEMA=QAS\n", encoding="utf-8")
+            old_exp = os.environ.get("EXPORT_PATH")
+            old_sys = os.environ.get("SAP_SISTEMA")
+            try:
+                EnvConfig.reload(env_path)
+                self.assertEqual(EnvConfig.EXPORT_PATH, exp_dir)
+                self.assertEqual(EnvConfig.SAP_SISTEMA, "QAS")
+            finally:
+                if old_exp is not None:
+                    os.environ["EXPORT_PATH"] = old_exp
+                else:
+                    os.environ.pop("EXPORT_PATH", None)
+                if old_sys is not None:
+                    os.environ["SAP_SISTEMA"] = old_sys
+                else:
+                    os.environ.pop("SAP_SISTEMA", None)
+                EnvConfig.reload()
+
+    def test_transform_query_sql_placeholders(self):
+        from unittest.mock import MagicMock, patch
+        import itacamba_reportes.inputs.query.transform as qry_mod
+
+        executed_sql: list[str] = []
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = lambda stmt, *a, **kw: executed_sql.append(str(stmt)) or MagicMock(scalar=lambda: 5)
+        mock_eng = MagicMock()
+        mock_eng.begin.return_value.__enter__.return_value = mock_conn
+        mock_eng.connect.return_value.__enter__.return_value = mock_conn
+
+        with patch.object(qry_mod, "engine", mock_eng), \
+             patch("itacamba_reportes.core.db.schema.sync_table_columns"):
+            qry_mod.transform_query(target_month=(2026, 10), corte_fecha="2026-10-31", incluir_hasta=True)
+
+        full_sql = "\n".join(executed_sql)
+        self.assertIn("f_calc.fecha_efectiva < '2026-11-01'", full_sql)
+        self.assertIn("YEAR(f_calc.fecha_efectiva) = 2026 AND MONTH(f_calc.fecha_efectiva) = 10", full_sql)
+        self.assertNotIn("/* OUTER_CUTOFF_FILTER */", full_sql)
+        self.assertNotIn("/* MONTH_SELECTOR */", full_sql)
+
+    def test_cartera_sap_guard_and_ui_tasks(self):
+        from itacamba_reportes.sap.config import CONFIG_CARTERA
+        from itacamba_reportes.sap.exceptions import SapAutomationError
+        from itacamba_reportes.ui.bridge import BotBridge, SAP_TASKS_PATH
+
+        with self.assertRaises(SapAutomationError) as ctx:
+            CONFIG_CARTERA.to_download_config()
+        self.assertIn("CARTERA", str(ctx.exception))
+
+        bridge = BotBridge()
+        with patch.object(bridge, "test_sap_logon", side_effect=AssertionError("SAP GUI no debe abrirse para cartera")):
+            res = bridge.download_sap("cartera")
+        self.assertEqual(res.get("status"), "error")
+        self.assertIn("CARTERA.xlsx", res.get("message", ""))
+
+        default_ids = {item["id"] for item in bridge._default_sap_tasks()}
+        self.assertEqual(default_ids, {"gd20", "zbcs", "all"})
+        stored_tasks = json.loads(SAP_TASKS_PATH.read_text(encoding="utf-8"))
+        self.assertEqual({item["id"] for item in stored_tasks}, {"gd20", "zbcs", "all"})
+
+    def test_bridge_resolve_sap_period_from_config(self):
+        from itacamba_reportes.sap.config import CONFIG_QUERY
+        from itacamba_reportes.ui.bridge import BotBridge
+
+        bridge = BotBridge()
+        profiles = [
+            {
+                "id": "diaria",
+                "activa": True,
+                "mesEjecucion": "2026-11",
+                "fechaDesde": "2026-11-01",
+                "fechaHasta": "2026-11-25",
+            },
+            {
+                "id": "cierre",
+                "activa": False,
+                "mesEjecucion": "2026-10",
+                "fechaDesde": "2026-10-01",
+                "fechaHasta": "2026-10-31",
+            },
+            {
+                "id": "solo_mes",
+                "activa": False,
+                "mesEjecucion": "2026-09",
+                "fechaDesde": "",
+                "fechaHasta": "",
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prof_file = Path(tmp_dir) / "execution_profiles.json"
+            prof_file.write_text(json.dumps(profiles), encoding="utf-8")
+            with patch("itacamba_reportes.ui.bridge.PROFILES_PATH", prof_file):
+                self.assertEqual(
+                    bridge._resolve_sap_period_from_config(),
+                    ("11", "11", "25.11.2026"),
+                )
+                self.assertEqual(
+                    bridge._resolve_sap_period_from_config(profile_id="cierre:2026-11-01"),
+                    ("10", "10", "31.10.2026"),
+                )
+                self.assertEqual(
+                    bridge._resolve_sap_period_from_config(
+                        fecha_desde="2026-10-01",
+                        corte_fecha="2026-11-15",
+                    ),
+                    ("10", "11", "15.11.2026"),
+                )
+                self.assertEqual(
+                    bridge._resolve_sap_period_from_config(
+                        corte_fecha="2026-09-30",
+                        profile_id="solo_mes",
+                    ),
+                    ("9", "9", "30.09.2026"),
+                )
+
+        q_cfg = CONFIG_QUERY.to_download_config(date_to_override="2026-11-25")
+        self.assertEqual(q_cfg.date_from, "25.08.2026")
+        self.assertEqual(q_cfg.date_to, "25.11.2026")
+
+        from itacamba_reportes.sap.config import CONFIG_GD20
+
+        gd20_cfg = CONFIG_GD20.to_download_config(
+            period_override="10",
+            period_high_override="11",
+            year_override="2027",
+        )
+        self.assertEqual(gd20_cfg.period_low, "10")
+        self.assertEqual(gd20_cfg.period_high, "11")
+        self.assertEqual(gd20_cfg.year_low, "2027")
+        self.assertIsNone(gd20_cfg.year_high)
+        self.assertEqual(gd20_cfg.variant, "BOT_GD20")
+        self.assertEqual(gd20_cfg.layout_name, "//AVRILGD20")
+
+        gd20_cross = CONFIG_GD20.to_download_config(
+            period_override="12",
+            period_high_override="1",
+            year_override="2026",
+            year_high_override="2027",
+        )
+        self.assertEqual(gd20_cross.year_low, "2026")
+        self.assertEqual(gd20_cross.year_high, "2027")
+
+        self.assertEqual(
+            bridge._resolve_sap_config_dates(
+                fecha_desde="2026-12-01",
+                corte_fecha="2026-12-31",
+            ),
+            ("12", "12", "2026", "2026", "31.12.2026"),
+        )
+        self.assertEqual(
+            bridge._resolve_sap_config_dates(
+                fecha_desde="2027-01-01",
+                corte_fecha="2027-01-15",
+            ),
+            ("1", "1", "2027", "2027", "15.01.2027"),
+        )
+        self.assertEqual(
+            bridge._resolve_sap_config_dates(
+                fecha_desde="2026-12-01",
+                corte_fecha="2027-01-10",
+            ),
+            ("12", "1", "2026", "2027", "10.01.2027"),
+        )
+
+    def test_return_to_main_menu_avoids_logoff_confirm(self):
+        from itacamba_reportes.sap.session import SapSessionManager
+
+        def _build_mgr(active_wnd_name: str, window_title: str, tx: str):
+            pressed: list[str] = []
+            mgr = SapSessionManager()
+            session = MagicMock()
+            session.Info = SimpleNamespace(Transaction=tx)
+            session.ActiveWindow = SimpleNamespace(Name=active_wnd_name, Text=window_title)
+            mgr._session = session
+            mgr.maximize = MagicMock()
+
+            def fake_press(selector: str, timeout: float = 5.0):
+                pressed.append(selector)
+                if selector == "wnd[0]/tbar[0]/btn[15]":
+                    session.ActiveWindow = SimpleNamespace(
+                        Name="wnd[1]",
+                        Text="¿Desea salir del sistema SAP?",
+                    )
+                elif selector == "wnd[1]/usr/btnSPOP-OPTION2":
+                    session.Info.Transaction = "SESSION_MANAGER"
+                    session.ActiveWindow = SimpleNamespace(
+                        Name="wnd[0]",
+                        Text="SAP Easy Access",
+                    )
+
+            def fake_exists(selector: str, timeout: float = 1.0) -> bool:
+                wnd_name = session.ActiveWindow.Name
+                if wnd_name == "wnd[1]" and selector in (
+                    "wnd[1]/usr/btnSPOP-OPTION1",
+                    "wnd[1]/usr/btnSPOP-OPTION2",
+                ):
+                    return True
+                return selector == "wnd[0]/tbar[0]/okcd"
+
+            mgr.press_button = MagicMock(side_effect=fake_press)
+            mgr.element_exists = MagicMock(side_effect=fake_exists)
+            mgr.set_text = MagicMock()
+            mgr.send_vkey = MagicMock()
+            return mgr, pressed
+
+        # Caso A: popup de cierre de sesion ya abierto en wnd[1]
+        mgr_a, pressed_a = _build_mgr("wnd[1]", "Salir del sistema", "SESSION_MANAGER")
+        mgr_a.return_to_main_menu()
+        self.assertIn("wnd[1]/usr/btnSPOP-OPTION2", pressed_a)
+        self.assertNotIn("wnd[1]/usr/btnSPOP-OPTION1", pressed_a)
+
+        # Caso B: dentro de transaccion, btn[15] dispara confirmacion de logoff
+        mgr_b, pressed_b = _build_mgr("wnd[0]", "GD20", "GD20")
+        mgr_b.return_to_main_menu()
+        self.assertIn("wnd[0]/tbar[0]/btn[15]", pressed_b)
+        self.assertIn("wnd[1]/usr/btnSPOP-OPTION2", pressed_b)
+        self.assertNotIn("wnd[1]/usr/btnSPOP-OPTION1", pressed_b)
+
+        # Caso C: popup de salida de lista en ZVCSD381 SI debe confirmar SPOP-OPTION1
+        mgr_c = SapSessionManager()
+        pressed_c: list[str] = []
+        sess_c = MagicMock()
+        sess_c.Info = SimpleNamespace(Transaction="ZVCSD381")
+        sess_c.ActiveWindow = SimpleNamespace(Name="wnd[0]", Text="Lista ZVCSD381")
+        mgr_c._session = sess_c
+        mgr_c.maximize = MagicMock()
+        mgr_c.set_text = MagicMock()
+        mgr_c.send_vkey = MagicMock()
+
+        def press_c(selector: str, timeout: float = 5.0):
+            pressed_c.append(selector)
+            if selector == "wnd[0]/tbar[0]/btn[15]":
+                sess_c.ActiveWindow = SimpleNamespace(Name="wnd[1]", Text="Salir de la lista")
+            elif selector == "wnd[1]/usr/btnSPOP-OPTION1":
+                sess_c.Info.Transaction = "SESSION_MANAGER"
+                sess_c.ActiveWindow = SimpleNamespace(Name="wnd[0]", Text="SAP Easy Access")
+
+        mgr_c.press_button = MagicMock(side_effect=press_c)
+        mgr_c.element_exists = MagicMock(
+            side_effect=lambda s, timeout=1.0: sess_c.ActiveWindow.Name == "wnd[1]"
+            and s in ("wnd[1]/usr/btnSPOP-OPTION1", "wnd[1]/usr/btnSPOP-OPTION2")
+        )
+        mgr_c.return_to_main_menu()
+        self.assertIn("wnd[1]/usr/btnSPOP-OPTION1", pressed_c)
+
+    def test_execute_download_report_freshness_check(self):
+        from itacamba_reportes.sap.actions.download_action import execute_download_report
+        from itacamba_reportes.sap.config import SapDownloadConfig
+        from itacamba_reportes.sap.exceptions import SapExportError
+
+        def _make_mgr():
+            mgr = MagicMock()
+            mgr.session.ActiveWindow = SimpleNamespace(Name="wnd[0]", Text="SAP")
+            mgr.element_exists.return_value = False
+            return mgr
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_home = Path(tmp_dir) / "home"
+            sap_gui_dir = tmp_home / "Documents" / "SAP" / "SAP GUI"
+            sap_gui_dir.mkdir(parents=True, exist_ok=True)
+            target_dir = Path(tmp_dir) / "target"
+            target_dir.mkdir(parents=True, exist_ok=True)
+
+            exported_name = "TEST_FRESH_EXPORT_9129.xlsx"
+            exported_file = sap_gui_dir / exported_name
+            exported_file.write_bytes(b"stale-content")
+            os.utime(exported_file, (900.0, 900.0))
+
+            cfg = SapDownloadConfig(
+                transaction="gd20",
+                export_filename=exported_name,
+                target_dir=target_dir,
+            )
+
+            now_ts = {"val": 1000.0}
+
+            def fake_time() -> float:
+                return now_ts["val"]
+
+            def fake_sleep(seconds: float) -> None:
+                if seconds == 0.5:
+                    now_ts["val"] += 20.0
+
+            with patch("pathlib.Path.home", return_value=tmp_home), \
+                 patch("itacamba_reportes.sap.actions.download_action.time.sleep", side_effect=fake_sleep), \
+                 patch("itacamba_reportes.sap.actions.download_action.time.time", side_effect=fake_time):
+                with self.assertRaises(SapExportError):
+                    execute_download_report(_make_mgr(), cfg)
+
+            now_ts["val"] = 1000.0
+            os.utime(exported_file, (1001.0, 1001.0))
+            with patch("pathlib.Path.home", return_value=tmp_home), \
+                 patch("itacamba_reportes.sap.actions.download_action.time.sleep", side_effect=fake_sleep), \
+                 patch("itacamba_reportes.sap.actions.download_action.time.time", side_effect=fake_time):
+                out_path = execute_download_report(_make_mgr(), cfg)
+
+            self.assertEqual(out_path, target_dir / exported_name)
+            self.assertTrue(out_path.exists())
+            self.assertFalse(exported_file.exists())
+
+    def test_gd20_dynamic_fiscal_year_by_label(self):
+        from itacamba_reportes.sap.actions.download_action import execute_download_report
+        from itacamba_reportes.sap.config import SapDownloadConfig
+        from itacamba_reportes.sap.session import SapSessionManager
+
+        f_reg = SimpleNamespace(Type="GuiCTextField", Name="F9008005-LOW", text="0", Changeable=True, Top=80, Left=120)
+        f_year_low = SimpleNamespace(Type="GuiTextField", Name="F9008007-LOW", text="2026", Changeable=True, Top=120, Left=120)
+        f_year_high = SimpleNamespace(Type="GuiTextField", Name="F9008007-HIGH", text="", Changeable=True, Top=120, Left=240)
+        f_soc = SimpleNamespace(Type="GuiTextField", Name="F9008008-LOW", text="4253", Changeable=True, Top=140, Left=120)
+
+        usr_area = SimpleNamespace(
+            Children=[
+                SimpleNamespace(Type="GuiLabel", Name="%_F9008005_%_APP_%-TEXT", Text="Clase de registro:", Top=80, Left=10),
+                f_reg,
+                SimpleNamespace(Type="GuiLabel", Name="%_F9008007_%_APP_%-TEXT", Text="Ejercicio:", Top=120, Left=10),
+                f_year_low,
+                f_year_high,
+                SimpleNamespace(Type="GuiLabel", Name="%_F9008008_%_APP_%-TEXT", Text="Sociedad:", Top=140, Left=10),
+                f_soc,
+            ]
+        )
+
+        mgr = SapSessionManager()
+        mgr.find_element = MagicMock(return_value=usr_area)
+
+        ok = mgr.set_selection_field_by_label(("ejercicio", "fiscal year"), value_low="2027")
+        self.assertTrue(ok)
+        self.assertEqual(f_year_low.text, "2027")
+        self.assertEqual(f_year_high.text, "")
+        self.assertEqual(f_soc.text, "4253")
+        self.assertEqual(f_reg.text, "0")
+
+        # Cruce de anio seguido de retorno a anio unico limpia el campo HIGH
+        self.assertTrue(mgr.set_selection_field_by_label(("ejercicio",), value_low="2026", value_high="2027"))
+        self.assertEqual((f_year_low.text, f_year_high.text), ("2026", "2027"))
+        self.assertTrue(mgr.set_selection_field_by_label(("ejercicio",), value_low="2027", value_high=None))
+        self.assertEqual((f_year_low.text, f_year_high.text), ("2027", ""))
+
+        # Fallback por alineacion vertical (Top) sin nombre %-STEM-%
+        f_alt = SimpleNamespace(Type="GuiTextField", Name="TXT_ANIO-LOW", text="2025", Changeable=True, Top=200, Left=150)
+        usr_top = SimpleNamespace(
+            Children=[
+                SimpleNamespace(Type="GuiLabel", Name="LBL_EJ", Text="Ejercicio", Top=200, Left=20),
+                f_alt,
+            ]
+        )
+        mgr.find_element = MagicMock(return_value=usr_top)
+        self.assertTrue(mgr.set_selection_field_by_label(("ejercicio",), value_low="2027"))
+        self.assertEqual(f_alt.text, "2027")
+
+        # Si no existe el campo Ejercicio, devuelve False sin romper
+        mgr.find_element = MagicMock(return_value=SimpleNamespace(Children=[]))
+        self.assertFalse(mgr.set_selection_field_by_label(("ejercicio",), value_low="2027"))
+
+        # Verificar que execute_download_report invoca set_selection_field_by_label tras cargar variante y antes de F8
+        call_order: list[str] = []
+        fake_mgr = MagicMock()
+        fake_mgr.session.ActiveWindow = SimpleNamespace(Name="wnd[0]", Text="GD20")
+
+        def fake_exists(selector: str, timeout: float = 0.0) -> bool:
+            return selector in (
+                "wnd[0]/tbar[1]/btn[17]",
+                "wnd[0]/usr/ctxtF9008025-LOW",
+                "wnd[0]/usr/ctxtF9008025-HIGH",
+            )
+
+        def fake_press(selector: str, timeout: float = 5.0) -> None:
+            call_order.append(f"press:{selector}")
+
+        def fake_set_label(**kwargs) -> bool:
+            call_order.append(f"year:{kwargs.get('value_low')}")
+            return True
+
+        fake_mgr.element_exists.side_effect = fake_exists
+        fake_mgr.press_button.side_effect = fake_press
+        fake_mgr.set_selection_field_by_label.side_effect = fake_set_label
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_home = Path(tmp_dir) / "home"
+            sap_dir = tmp_home / "Documents" / "SAP" / "SAP GUI"
+            sap_dir.mkdir(parents=True, exist_ok=True)
+            target_dir = Path(tmp_dir) / "target"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            fname = "TEST_GD20_YEAR_9129.xlsx"
+            exported = sap_dir / fname
+            exported.write_bytes(b"ok")
+            os.utime(exported, (1001.0, 1001.0))
+
+            cfg = SapDownloadConfig.for_gd20(
+                period="1",
+                year="2027",
+                layout_name=None,
+                export_filename=fname,
+                target_dir=target_dir,
+            )
+            now_box = {"val": 1000.0}
+            with patch("pathlib.Path.home", return_value=tmp_home), \
+                 patch("itacamba_reportes.sap.actions.download_action.time.sleep", return_value=None), \
+                 patch("itacamba_reportes.sap.actions.download_action.time.time", side_effect=lambda: now_box["val"]):
+                execute_download_report(fake_mgr, cfg)
+
+        self.assertLess(call_order.index("press:wnd[0]/tbar[1]/btn[17]"), call_order.index("year:2027"))
+        self.assertLess(call_order.index("year:2027"), call_order.index("press:wnd[0]/tbar[1]/btn[8]"))
 
 
 if __name__ == "__main__":

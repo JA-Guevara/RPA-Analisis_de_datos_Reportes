@@ -32,9 +32,9 @@ def launch_gui(debug: bool = False) -> int:
         title="Itacamba Cemento S.A. · Consola de Control de Reportes & BI v3.8",
         url=str(html_path),
         js_api=bridge,
-        width=1340,
-        height=880,
-        min_size=(1024, 700),
+        width=1140,
+        height=820,
+        min_size=(820, 620),
         resizable=True,
     )
 

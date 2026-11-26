@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 from itacamba_reportes.sap.actions.download_action import execute_download_report
-from itacamba_reportes.sap.config import CONFIG_QUERY, SapDownloadConfig
+from itacamba_reportes.sap.config import ConfigDescargaQuery, SapDownloadConfig
 from itacamba_reportes.sap.selectors import SelectoresSAP
 from itacamba_reportes.sap.session import SapSessionManager
 
@@ -29,23 +29,24 @@ def execute_download_query(
     selectors: SelectoresSAP | None = None,
 ) -> Path:
     if config is None:
-        cfg_builder = CONFIG_QUERY
-        cfg_builder.transaction = transaction
-        cfg_builder.sociedad = sociedad
-        cfg_builder.variant = variant or "/IM"
-        cfg_builder.months_back = months_back
-        cfg_builder.export_filename = export_filename
+        cfg_builder = ConfigDescargaQuery(
+            transaction=transaction,
+            sociedad=sociedad,
+            variant=variant or "/IM",
+            months_back=months_back,
+            export_filename=export_filename,
+        )
         config = cfg_builder.to_download_config(
             target_dir=target_dir,
             date_from_override=date_from,
             date_to_override=date_to,
             period_override=period_low,
         )
+        if period_high is not None and str(period_high).strip():
+            config.period_high = str(period_high).strip()
         if ledger:
             config.ledger = ledger
         if layout_row is not None:
             config.layout_row = layout_row
-
-    return execute_download_report(session_manager, config, selectors=selectors)
 
     return execute_download_report(session_manager, config, selectors=selectors)

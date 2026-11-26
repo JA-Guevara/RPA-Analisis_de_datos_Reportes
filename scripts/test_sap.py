@@ -335,8 +335,9 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
         cfg = CONFIG_QUERY.to_download_config(target_dir=target_directory)
         titulo = "Despachos / Query (ZBCS)"
     elif key == "cartera":
-        cfg = CONFIG_CARTERA.to_download_config(target_dir=target_directory)
-        titulo = "Cartera de Clientes (ZSDI)"
+        print(f"[AVISO] {CONFIG_CARTERA.source_note}")
+        print("        No hay un script .vbs de SAP GUI para Cartera.")
+        return 1
     else:
         print(f"[ERROR] Tarea '{task_key}' no reconocida. Opciones válidas: gd20, zbcs, cartera")
         return 1
@@ -359,6 +360,9 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
         if v := _get_val("periodo"):
             cfg.period_low = v
             cfg.period_high = v
+        if v := _get_val("ejercicio"):
+            cfg.year_low = v
+            cfg.year_high = None
         if v := _get_val("layout_row"):
             try:
                 cfg.layout_row = int(v)
@@ -384,6 +388,7 @@ def test_download_task(task_key: str, out_dir: Path | None = None) -> int:
     print(f"    Transacción : {cfg.transaction}")
     print(f"    Ledger      : {cfg.ledger or '(N/A)'}")
     print(f"    Variante    : {cfg.variant or '(N/A)'}")
+    print(f"    Ejercicio   : {cfg.year_low or '(Variante)'}")
     print(f"    Período     : {cfg.period_low or '(N/A)'}")
     print(f"    Layout Fila : {cfg.layout_row or '(N/A)'}")
     print(f"    Archivo     : {cfg.export_filename}")

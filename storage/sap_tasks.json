@@ -3,12 +3,13 @@
     "id": "gd20",
     "tcode": "GD20",
     "titulo": "Ventas Contables (GD20)",
-    "ayuda": "Alimenta la tabla BASE PANEL y VENTAS BI en SQL Server.",
+    "ayuda": "Alimenta BASE PANEL y VENTAS BI en SQL Server (toma automáticamente el mes de ejecución si Período está vacío).",
     "destino": "GD20.xlsx",
     "ledger": "VC",
-    "variante": "Prueba_GD20",
-    "periodo": "10",
-    "layout_row": 16,
+    "variante": "BOT_GD20",
+    "layout": "//AVRILGD20",
+    "layout_name": "//AVRILGD20",
+    "periodoTipo": "mes_actual",
     "campos": [
       {
         "id": "ledger",
@@ -18,17 +19,26 @@
       {
         "id": "variante",
         "etiqueta": "Variante SAP",
-        "valor": "Prueba_GD20"
+        "valor": "BOT_GD20"
+      },
+      {
+        "id": "ejercicio",
+        "etiqueta": "Ejercicio / Año",
+        "valor": "",
+        "tipo": "number",
+        "nota": "Vacío = año automático del perfil"
       },
       {
         "id": "periodo",
         "etiqueta": "Período / Mes",
-        "valor": "10"
+        "valor": "",
+        "tipo": "number",
+        "nota": "Vacío = mes automático del perfil"
       },
       {
-        "id": "layout_row",
-        "etiqueta": "Fila Layout ALV",
-        "valor": 16
+        "id": "layout",
+        "etiqueta": "Layout ALV",
+        "valor": "//AVRILGD20"
       }
     ]
   },
@@ -36,12 +46,12 @@
     "id": "zbcs",
     "tcode": "ZVCSD381",
     "titulo": "Despachos Query (ZVCSD381)",
-    "ayuda": "Alimenta las tablas QUERY, DESPACHO BI y DESPACHO MES (Rango automático de 3 meses atrás).",
+    "ayuda": "Alimenta QUERY, DESPACHO BI y DESPACHO MES (3 meses móviles hacia atrás si fechas quedan vacías).",
     "destino": "QUERY.xlsx",
-    "ledger": "",
+    "ledger": "N/A",
     "variante": "/IM",
-    "periodo": "3 meses",
-    "layout_row": "",
+    "layout": "/IM",
+    "periodoTipo": "rango",
     "campos": [
       {
         "id": "sociedad",
@@ -49,48 +59,36 @@
         "valor": "4253"
       },
       {
+        "id": "desde",
+        "etiqueta": "Fecha Desde",
+        "valor": "",
+        "tipo": "date",
+        "nota": "Vacío = 3 meses atrás automático"
+      },
+      {
+        "id": "hasta",
+        "etiqueta": "Fecha Hasta",
+        "valor": "",
+        "tipo": "date",
+        "nota": "Vacío = fecha de hoy"
+      },
+      {
         "id": "variante",
         "etiqueta": "Disposición / Variante",
         "valor": "/IM"
-      },
-      {
-        "id": "periodo",
-        "etiqueta": "Ventana Histórica",
-        "valor": "3 meses atrás"
       }
     ]
   },
   {
-    "id": "cartera",
-    "tcode": "ZSDI",
-    "titulo": "Cartera de Clientes & Cadena",
-    "ayuda": "Maestro de clientes, líneas de crédito y sucursales.",
-    "destino": "CARTERA.xlsx",
-    "ledger": "",
-    "variante": "CAD_CLIENTE",
-    "periodo": "",
-    "layout_row": "",
-    "campos": [
-      {
-        "id": "ledger",
-        "etiqueta": "Ledger Contable",
-        "valor": ""
-      },
-      {
-        "id": "variante",
-        "etiqueta": "Variante SAP",
-        "valor": "CAD_CLIENTE"
-      },
-      {
-        "id": "periodo",
-        "etiqueta": "Período / Mes",
-        "valor": ""
-      },
-      {
-        "id": "layout_row",
-        "etiqueta": "Fila Layout ALV",
-        "valor": ""
-      }
-    ]
+    "id": "all",
+    "tcode": "LOTE",
+    "titulo": "Descarga Conjunta (GD20 + Query)",
+    "ayuda": "1 solo Login -> GD20 (mes actual) -> Easy Access -> Query (3 meses) -> Cierre seguro.",
+    "destino": "GD20.xlsx + QUERY.xlsx",
+    "ledger": "VC",
+    "variante": "BOT_GD20 + /IM",
+    "layout": "//AVRILGD20",
+    "periodoTipo": "mes_actual",
+    "campos": []
   }
 ]
