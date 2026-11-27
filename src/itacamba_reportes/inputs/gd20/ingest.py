@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from itacamba_reportes.core.db.bulk import bulk_insert_df
-from itacamba_reportes.core.io.reader import FastExcelReader, ExcelSourceSpec
+from itacamba_reportes.core.io.reader import FastExcelReader, ExcelSourceSpec, coerce_numeric_series
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.inputs.gd20.models import Gd20StgModel
 
@@ -88,23 +88,23 @@ def ingest_gd20() -> int:
     reader = FastExcelReader(GD20_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH)
     df = reader.read_raw()
 
-    # Coercion de identificadores SAP numericos (BigInteger)
+    # Coercion de identificadores SAP numericos (BigInteger) con alerta ante valores corruptos
     for col in (
         "cliente", "emisor_orden", "customer_bill_to", "customer_rebate",
         "numero_documento", "documento_comercial", "numero_doc_referencia",
         "numero_documento_2", "numero_cuenta", "material",
     ):
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype("int64")
+            df[col] = coerce_numeric_series(df[col], col, context="gd20", as_int=True, fill_zero=True)
 
     # numero_transporte opcional: preservar celdas vacias como NULL
     if "numero_transporte" in df.columns:
-        df["numero_transporte"] = pd.to_numeric(df["numero_transporte"], errors="coerce")
+        df["numero_transporte"] = coerce_numeric_series(df["numero_transporte"], "numero_transporte", context="gd20", as_int=False, fill_zero=False)
 
     # Coercion de importes monetarios y cantidades a float para Numeric(18, 4)
     for col in ("cantidad", "moneda_sociedad", "moneda_transaccion", "moneda_fuerte"):
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+            df[col] = coerce_numeric_series(df[col], col, context="gd20", as_int=False, fill_zero=True)
 
     # Limpieza de columnas enteras que Excel exporta como float (.0)
     int_str_cols = (

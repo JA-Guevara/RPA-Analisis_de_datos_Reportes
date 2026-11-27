@@ -207,7 +207,7 @@ class BotBridge:
                 fecha_desde=fecha_desde,
                 incluir_hasta=incluir_hoy,
             )),
-            (6, "Exportación Reportes BI en Paralelo", self._step_exportaciones),
+            (6, "Exportación Reportes BI en Paralelo", lambda: self._step_exportaciones(corte_fecha=corte_fecha)),
         ]
 
         try:
@@ -402,9 +402,12 @@ class BotBridge:
         )
         run_vbi(do_export=False)
 
-    def _step_exportaciones(self) -> None:
+    def _step_exportaciones(self, corte_fecha: str | None = None) -> None:
         from itacamba_reportes.cli import export_all_reports_parallel
-        export_all_reports_parallel()
+        if corte_fecha:
+            export_all_reports_parallel(corte_fecha=corte_fecha)
+        else:
+            export_all_reports_parallel()
 
     def stop_pipeline(self) -> dict[str, Any]:
         # Solicita la detención de la corrida actual.
@@ -1530,10 +1533,10 @@ class BotBridge:
             cats = [
                 ("sap", "SAP GUI & LOGON (SCRIPTING RPA)"),
                 ("db", "BASE DE DATOS SQL SERVER"),
-                ("rutas", "RUTAS DE ALMACENAMIENTO ONEDRIVE"),
-                ("mail", "CORREO Y NOTIFICACIONES SMTP"),
+                ("rutas", "RUTAS SEGMENTADAS (FIJOS, DINAMICOS, REPORTES)"),
                 ("api", "APIS Y SERVICIOS EXTERNOS"),
                 ("custom", "VARIABLES PERSONALIZADAS"),
+                ("obsoletas", "VARIABLES OBSOLETAS (OCR / CORREO)"),
             ]
 
             for cat_id, cat_title in cats:
@@ -1951,15 +1954,54 @@ class BotBridge:
                 })
         return result
 
-    @staticmethod
-    def _infer_category(clave: str, fallback: str) -> str:
+    OBSOLETE_ENV_KEYS = frozenset({
+        "MAIL_HOST",
+        "MAIL_PORT",
+        "MAIL_USER",
+        "MAIL_PASSWORD",
+        "MAIL_GENERAL",
+        "MAIL_SOPORTE",
+        "CLICK_CONFIDENCE",
+        "CLICK_TIMEOUT",
+        "CLICK_REGION_TIMEOUT",
+        "CLICK_RETRY_DELAY",
+        "SAP_PROCESS",
+        "SAP_PROCCESS",
+        "SAP_WINDOW_TITLE",
+        "PROCESSED_PATH",
+        "ARCHIVE_PATH",
+    })
+
+    def clean_obsolete_env_variables(self) -> dict[str, Any]:
+        items = self._read_env_file()
+        obsolete_items = [it for it in items if it.get("categoria") == "obsoletas"]
+        if not obsolete_items:
+            return {"status": "ok", "removed": 0, "message": "El archivo .env ya está limpio (sin variables obsoletas)."}
+
+        cleaned = [it for it in items if it.get("categoria") != "obsoletas"]
+        for it in obsolete_items:
+            os.environ.pop(str(it.get("clave") or "").strip().upper(), None)
+
+        res = self.save_env_variables(json.dumps(cleaned))
+        if res.get("status") != "ok":
+            return res
+        removed_keys = ", ".join(it["clave"] for it in obsolete_items)
+        logger.info("Variables obsoletas eliminadas de .env: %s", removed_keys)
+        return {
+            "status": "ok",
+            "removed": len(obsolete_items),
+            "message": f"Se eliminaron {len(obsolete_items)} variable(s) obsoleta(s) de OCR/Correo del archivo .env.",
+        }
+
+    @classmethod
+    def _infer_category(cls, clave: str, fallback: str) -> str:
         u = clave.upper()
+        if u in cls.OBSOLETE_ENV_KEYS or u.startswith("CLICK_") or u.startswith("MAIL_") or "SMTP" in u:
+            return "obsoletas"
         if u.startswith("SAP_"):
             return "sap"
         if u.startswith("DB_") or "DATABASE" in u:
             return "db"
         if u.startswith("PATH_") or "DIR" in u or "PATH" in u:
             return "rutas"
-        if u.startswith("MAIL_") or "SMTP" in u:
-            return "mail"
         return fallback

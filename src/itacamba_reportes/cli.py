@@ -25,7 +25,7 @@ from itacamba_reportes.outputs.historial_ventas.export import export_historial_v
 logger = setup_logging()
 
 
-def export_all_reports_parallel() -> None:
+def export_all_reports_parallel(corte_fecha: str | None = None) -> None:
     logger.info("--> Iniciando EXPORTACIONES en paralelo (reutilizando DataFrames en memoria)...")
     t_exp = perf_counter()
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -37,7 +37,7 @@ def export_all_reports_parallel() -> None:
     tasks = {
         "VENTAS BI": lambda: export_ventas_bi(return_df=True),
         "DESPACHO BI": lambda: export_despacho_bi(return_df=True),
-        "DESPACHO MES": lambda: export_despacho_mes(),
+        "DESPACHO MES": lambda: export_despacho_mes(corte_fecha=corte_fecha) if corte_fecha else export_despacho_mes(),
     }
 
     results: dict[str, object] = {}
@@ -76,7 +76,7 @@ def run_all(force_cartera: bool = False, is_fin_de_mes: bool = False, corte_fech
         ("VENTAS BI (Transformación BD)", lambda: run_ventas_bi(do_export=False)),
         ("DESPACHO BI (Transformación BD)", lambda: run_despacho_bi(do_export=False)),
         ("DESPACHO MES (Transformación BD)", lambda: run_despacho_mes(corte_fecha=corte_fecha, is_fin_de_mes=is_fin_de_mes, do_export=False)),
-        ("EXPORTACIONES (En Paralelo)", lambda: export_all_reports_parallel()),
+        ("EXPORTACIONES (En Paralelo)", lambda: export_all_reports_parallel(corte_fecha=corte_fecha) if corte_fecha else export_all_reports_parallel()),
     ]
 
     for name, func in steps:

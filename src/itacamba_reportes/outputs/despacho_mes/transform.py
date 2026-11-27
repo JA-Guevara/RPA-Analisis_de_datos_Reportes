@@ -54,6 +54,30 @@ def transform_despacho_mes(
 
     with engine.connect() as conn:
         rows = conn.execute(text("SELECT COUNT(*) FROM int_despacho_mes")).scalar() or 0
+        excluded_cement = conn.execute(text("""
+            SELECT COUNT(*) FROM (
+                SELECT DISTINCT material AS prod FROM int_query WHERE UPPER(material) LIKE '%CEMENTO%'
+                UNION
+                SELECT DISTINCT material AS prod FROM stg_proyeccion WHERE UPPER(material) LIKE '%CEMENTO%'
+            ) u
+            WHERE u.prod NOT IN (
+                'CEMENTO IM-40 (BIG-BAG )',
+                'CEMENTO IM-40 (BOLSAS 50KG.)',
+                'CEMENTO IM-40 (GRANEL TN.)',
+                'CEMENTO PORTLAND IF-30 50 KG',
+                'CEMENTO PORTLAND IF-30 BIG BAG',
+                'CEMENTO PORTLAND IF-30 GRANEL',
+                'CEMENTO PORTLAND IF-40 50 KG',
+                'CEMENTO PORTLAND IF-40 50 KG-MQL',
+                'CEMENTO PORTLAND IP-30 PRO 50 KG-MQL',
+                'CEMENTO PORTLAND TIPO CPII-C40 BIG BAG'
+            )
+        """)).scalar() or 0
+        if excluded_cement > 0:
+            logger.warning(
+                "DESPACHO MES: %d material(es) con 'CEMENTO' fuera de la lista oficial del filtro IN; revisar si ingresó un SKU nuevo.",
+                excluded_cement,
+            )
 
     logger.info("DESPACHO MES generado exitosamente (dia_corte=%d): %d filas agregadas", resolved_dia, rows)
     return rows

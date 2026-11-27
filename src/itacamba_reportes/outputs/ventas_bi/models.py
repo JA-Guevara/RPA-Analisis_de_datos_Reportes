@@ -20,6 +20,7 @@ class SalesBiIntModel(Base, TimestampsMixin):
         Index("ix_int_ventas_bi_doc_ejercicio", "documento_comercial", "ejercicio"),
         Index("ix_int_ventas_bi_fe_contabilizacion", "fe_contabilizacion"),
         Index("ix_int_ventas_bi_anio_mes", "anio", "mes"),
+        Index("ix_int_ventas_bi_is_current_periodo", "is_current", "ejercicio", "periodo_contable"),
         Index("ix_int_ventas_bi_pagador", "pagador"),
         Index("ix_int_ventas_bi_destinatario", "destinatario"),
         Index("ix_int_ventas_bi_vendedor_ok", "vendedor_ok"),

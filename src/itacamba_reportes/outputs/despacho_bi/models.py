@@ -20,6 +20,7 @@ class DispatchBiIntModel(Base, TimestampsMixin):
         Index("ix_int_despacho_bi_destinatario", "cod_destinatario"),
         Index("ix_int_despacho_bi_cliente", "codigo_cliente"),
         Index("ix_int_despacho_bi_fecha", "dia"),
+        Index("ix_int_despacho_bi_anio_mes", "anio", "mes"),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)

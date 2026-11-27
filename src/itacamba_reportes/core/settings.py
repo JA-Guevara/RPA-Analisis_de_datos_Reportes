@@ -83,9 +83,7 @@ class EnvConfig:
     DATA_PATH: Path = _resolve_data_path()
     FIXED_INPUTS_PATH: Path = _resolve_fixed_inputs_path(DATA_PATH)
     DYNAMIC_INPUTS_PATH: Path = _resolve_dynamic_inputs_path(DATA_PATH)
-    PROCESSED_PATH: Path = Path(_get_env("PROCESSED_PATH", default=str(_PROJECT_ROOT / "storage" / "processed")))
-    ARCHIVE_PATH: Path = Path(_get_env("ARCHIVE_PATH", default=str(_PROJECT_ROOT / "storage" / "archive")))
-    LOG_PATH: Path = Path(_get_env("LOG_PATH", default=str(LOG_PATH)))
+    LOG_PATH: Path = Path(_get_env("PATH_LOGS_STORAGE", default=_get_env("LOG_PATH", default=str(LOG_PATH))))
     EXPORT_PATH: Path = _resolve_export_path(DATA_PATH)
     REPORTS_OUTPUT_PATH: Path = EXPORT_PATH
 
@@ -100,8 +98,6 @@ class EnvConfig:
 
     # SAP GUI Scripting & RPA
     SAP_LOGON_PATH: str = str(_get_env("SAP_LOGON_PATH", default=_get_env("SAP_URL", default=r"C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe")))
-    SAP_PROCESS: str = str(_get_env("SAP_PROCESS", default=_get_env("SAP_PROCCESS", default="saplogon.exe")))
-    SAP_WINDOW_TITLE: str = str(_get_env("SAP_WINDOW_TITLE", default="SAP Logon 770"))
     SAP_AMBIENT: str = str(_get_env("SAP_AMBIENT", default="# -E05 - S4 RISE - Produção SSO"))
     SAP_SISTEMA: str = str(_get_env("SAP_SISTEMA", default=_get_env("SAP_SYSTEM", default="E05")))
     SAP_USER: str | None = _get_env("SAP_USER", default=_get_env("SAP_USUARIO"))
@@ -118,9 +114,7 @@ class EnvConfig:
         cls.DATA_PATH = _resolve_data_path()
         cls.FIXED_INPUTS_PATH = _resolve_fixed_inputs_path(cls.DATA_PATH)
         cls.DYNAMIC_INPUTS_PATH = _resolve_dynamic_inputs_path(cls.DATA_PATH)
-        cls.PROCESSED_PATH = Path(_get_env("PROCESSED_PATH", default=str(_PROJECT_ROOT / "storage" / "processed")))
-        cls.ARCHIVE_PATH = Path(_get_env("ARCHIVE_PATH", default=str(_PROJECT_ROOT / "storage" / "archive")))
-        cls.LOG_PATH = Path(_get_env("LOG_PATH", default=str(LOG_PATH)))
+        cls.LOG_PATH = Path(_get_env("PATH_LOGS_STORAGE", default=_get_env("LOG_PATH", default=str(LOG_PATH))))
         cls.EXPORT_PATH = _resolve_export_path(cls.DATA_PATH)
         cls.REPORTS_OUTPUT_PATH = cls.EXPORT_PATH
         cls.DATABASE_URL = _get_env("DATABASE_URL")
@@ -132,8 +126,6 @@ class EnvConfig:
         cls.DB_DRIVER = _get_env("DB_DRIVER", default="SQL Server")
         cls.DB_TRUST_CERT = _get_bool("DB_TRUST_CERT", default="yes")
         cls.SAP_LOGON_PATH = str(_get_env("SAP_LOGON_PATH", default=_get_env("SAP_URL", default=r"C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe")))
-        cls.SAP_PROCESS = str(_get_env("SAP_PROCESS", default=_get_env("SAP_PROCCESS", default="saplogon.exe")))
-        cls.SAP_WINDOW_TITLE = str(_get_env("SAP_WINDOW_TITLE", default="SAP Logon 770"))
         cls.SAP_AMBIENT = str(_get_env("SAP_AMBIENT", default="# -E05 - S4 RISE - Produção SSO"))
         cls.SAP_SISTEMA = str(_get_env("SAP_SISTEMA", default=_get_env("SAP_SYSTEM", default="E05")))
         cls.SAP_USER = _get_env("SAP_USER", default=_get_env("SAP_USUARIO"))

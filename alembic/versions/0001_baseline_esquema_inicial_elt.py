@@ -121,6 +121,7 @@ def upgrade() -> None:
     op.create_index('ix_int_despacho_bi_destinatario', 'int_despacho_bi', ['cod_destinatario'], unique=False)
     op.create_index('ix_int_despacho_bi_fecha', 'int_despacho_bi', ['dia'], unique=False)
     op.create_index('ix_int_despacho_bi_pedido', 'int_despacho_bi', ['nro_pedido'], unique=False)
+    op.create_index('ix_int_despacho_bi_anio_mes', 'int_despacho_bi', ['anio', 'mes'], unique=False)
     op.create_table('int_despacho_mes',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('gerencia', sa.String(length=150), nullable=True),
@@ -440,6 +441,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index('ix_int_ventas_bi_anio_mes', 'int_ventas_bi', ['anio', 'mes'], unique=False)
+    op.create_index('ix_int_ventas_bi_is_current_periodo', 'int_ventas_bi', ['is_current', 'ejercicio', 'periodo_contable'], unique=False)
     op.create_index('ix_int_ventas_bi_destinatario', 'int_ventas_bi', ['destinatario'], unique=False)
     op.create_index('ix_int_ventas_bi_doc_ejercicio', 'int_ventas_bi', ['documento_comercial', 'ejercicio'], unique=False)
     op.create_index('ix_int_ventas_bi_fe_contabilizacion', 'int_ventas_bi', ['fe_contabilizacion'], unique=False)
@@ -617,6 +619,7 @@ def downgrade() -> None:
     op.drop_index('ix_int_ventas_bi_fe_contabilizacion', table_name='int_ventas_bi')
     op.drop_index('ix_int_ventas_bi_doc_ejercicio', table_name='int_ventas_bi')
     op.drop_index('ix_int_ventas_bi_destinatario', table_name='int_ventas_bi')
+    op.drop_index('ix_int_ventas_bi_is_current_periodo', table_name='int_ventas_bi')
     op.drop_index('ix_int_ventas_bi_anio_mes', table_name='int_ventas_bi')
     op.drop_table('int_ventas_bi')
     op.drop_index(op.f('ix_int_ref_semana_dia'), table_name='int_ref_semana')
@@ -648,6 +651,7 @@ def downgrade() -> None:
     op.drop_index('ix_int_despacho_mes_fecha', table_name='int_despacho_mes')
     op.drop_index('ix_int_despacho_mes_cliente', table_name='int_despacho_mes')
     op.drop_table('int_despacho_mes')
+    op.drop_index('ix_int_despacho_bi_anio_mes', table_name='int_despacho_bi')
     op.drop_index('ix_int_despacho_bi_pedido', table_name='int_despacho_bi')
     op.drop_index('ix_int_despacho_bi_fecha', table_name='int_despacho_bi')
     op.drop_index('ix_int_despacho_bi_destinatario', table_name='int_despacho_bi')

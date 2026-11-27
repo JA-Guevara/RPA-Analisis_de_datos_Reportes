@@ -12,6 +12,36 @@ logger = logging.getLogger(__name__)
 NULL_TOKENS = frozenset({"", "#", "N/A", "NA", "nan", "NaN", "None", "null", "NULL", "00000000"})
 
 
+def coerce_numeric_series(
+    series: pd.Series,
+    col_name: str,
+    *,
+    context: str = "",
+    as_int: bool = False,
+    fill_zero: bool = True,
+) -> pd.Series:
+    parsed = pd.to_numeric(series, errors="coerce")
+    invalid_mask = series.notna() & parsed.isna()
+    if invalid_mask.any():
+        raw_bad = series[invalid_mask].astype(str).str.strip()
+        real_bad = raw_bad[~raw_bad.isin(NULL_TOKENS)]
+        if not real_bad.empty:
+            samples = real_bad.unique()[:5].tolist()
+            prefix = f"[{context}] " if context else ""
+            logger.warning(
+                "%sColumna '%s': %d valor(es) no numérico(s) convertido(s) a %s (ejemplos: %s)",
+                prefix,
+                col_name,
+                len(real_bad),
+                "0" if fill_zero else "NULL",
+                samples,
+            )
+    if fill_zero:
+        parsed = parsed.fillna(0)
+        return parsed.astype("int64") if as_int else parsed.astype(float)
+    return parsed
+
+
 class ExcelReaderError(Exception):
     pass
 
@@ -80,16 +110,9 @@ class FastExcelReader:
         path = self.resolve_path()
         logger.info("Leyendo Excel crudo %s (hoja=%s, fila=%d)", path.name, self.spec.sheet, self.spec.header_row)
 
-        # Paso 1: Validacion estricta de existencia de hoja solicitada
-        if isinstance(self.spec.sheet, str):
-            sheet_names = self.get_sheet_names(path)
-            if sheet_names and self.spec.sheet not in sheet_names:
-                raise SheetNotFoundError(
-                    f"La hoja requerida '{self.spec.sheet}' no existe en el archivo '{path.name}'. "
-                    f"Hojas encontradas en el libro: {sheet_names}"
-                )
-
+        # Paso 1: Lectura directa de una sola pasada (inspeccionar hojas solo si falla)
         df = None
+        last_exc: Exception | None = None
         for engine in ("calamine", "openpyxl"):
             try:
                 df = pd.read_excel(
@@ -99,11 +122,19 @@ class FastExcelReader:
                     engine=engine,
                 )
                 break
-            except Exception:
+            except Exception as exc:
+                last_exc = exc
                 continue
 
         if df is None:
-            raise ValueError(f"No se pudo leer la hoja '{self.spec.sheet}' del archivo Excel {path.name}")
+            if isinstance(self.spec.sheet, str):
+                sheet_names = self.get_sheet_names(path)
+                if sheet_names and self.spec.sheet not in sheet_names:
+                    raise SheetNotFoundError(
+                        f"La hoja requerida '{self.spec.sheet}' no existe en el archivo '{path.name}'. "
+                        f"Hojas encontradas en el libro: {sheet_names}"
+                    )
+            raise ValueError(f"No se pudo leer la hoja '{self.spec.sheet}' del archivo Excel {path.name}: {last_exc}")
 
         # Paso 2: Normalizacion de nombres de columnas y renombrado
         if self.spec.column_renames:

@@ -1847,6 +1847,212 @@ class TestEltPipeline(unittest.TestCase):
                     gd20_pl.run_pipeline(corte_fecha="2026-11-28")
                     self.assertEqual(m_ing_g2.call_count, 1)
 
+    def test_exports_no_timestamp_and_atomic_replace(self):
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.pool import StaticPool
+        import itacamba_reportes.core.db.connection as conn_mod
+        from itacamba_reportes.core.db.base import Base
+        from itacamba_reportes.core.settings import EnvConfig
+        import itacamba_reportes.outputs.ventas_bi.export as v_exp
+        import itacamba_reportes.outputs.despacho_bi.export as d_exp
+        import itacamba_reportes.outputs.despacho_mes.export as m_exp
+
+        mem_eng = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(mem_eng)
+        orig_eng = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+
+        try:
+            with mem_eng.begin() as conn:
+                conn.execute(text("INSERT INTO int_ventas_bi (ejercicio, documento_comercial, numero_documento, material, version, is_current, valid_from, cd_status) VALUES (2026, 1, 1, 1, 1, 1, '2026-11-01 00:00:00', 'PENDING')"))
+                conn.execute(text("INSERT INTO int_despacho_bi (nro_pedido, cod_destinatario, codigo_cliente, dia, mes, anio) VALUES (1, 1, 1, 15, 11, 2026)"))
+                conn.execute(text("INSERT INTO int_despacho_mes (dia, codigo_cliente, despacho_t, rf, rf_ajustado_im, proyeccion) VALUES (15, 1, 10.0, 5.0, 5.0, 10.0)"))
+
+            with tempfile.TemporaryDirectory() as tmp:
+                rep_dir = Path(tmp) / "reports"
+                rep_dir.mkdir()
+                with patch.object(EnvConfig, "REPORTS_OUTPUT_PATH", rep_dir), \
+                     patch.object(EnvConfig, "EXPORT_PATH", rep_dir), \
+                     patch.object(v_exp, "engine", mem_eng), \
+                     patch.object(d_exp, "engine", mem_eng), \
+                     patch.object(m_exp, "engine", mem_eng):
+                    p_v = v_exp.export_ventas_bi()
+                    p_d = d_exp.export_despacho_bi()
+                    p_m = m_exp.export_despacho_mes(corte_fecha="2026-11-27")
+                    # Segunda corrida debe sobrescribir exactamente los mismos nombres sin marca de fecha
+                    p_v2 = v_exp.export_ventas_bi()
+
+                    self.assertEqual(p_v.name, "VENTAS_BI.xlsx")
+                    self.assertEqual(p_v2, p_v)
+                    self.assertEqual(p_d.name, "DESPACHO_BI.xlsx")
+                    self.assertEqual(p_m.name, "DESPACHO_MES.xlsx")
+                    self.assertEqual(sorted(f.name for f in rep_dir.iterdir()), ["DESPACHO_BI.xlsx", "DESPACHO_MES.xlsx", "VENTAS_BI.xlsx"])
+        finally:
+            conn_mod.set_engine(orig_eng)
+
+    def test_scd2_multi_line_document_no_collision_and_atomic_tx(self):
+        from datetime import datetime, timedelta
+        from sqlalchemy import create_engine, text
+        import itacamba_reportes.core.db.connection as conn_mod
+        from itacamba_reportes.core.db.base import Base
+        import itacamba_reportes.outputs.ventas_bi.transform as v_tr
+
+        mem_eng = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(mem_eng)
+        orig_eng = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+
+        try:
+            with mem_eng.begin() as conn:
+                conn.execute(text("""
+                    INSERT INTO int_gd20 (ejercicio, periodo_contable, documento_comercial, numero_documento, material, numero_cuenta, destinatario, cantidad)
+                    VALUES
+                        (2026, 11, 1001, 5001, 20001, 33111010, 7001, -10.0),
+                        (2026, 11, 1001, 5001, 20001, 33111020, 7001, -2.0)
+                """))
+
+            with patch.object(v_tr, "engine", mem_eng):
+                inserted = v_tr.upsert_ventas_bi_scd2()
+                self.assertEqual(inserted, 2)
+
+                yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")
+                with mem_eng.begin() as conn:
+                    conn.execute(text(f"UPDATE int_ventas_bi SET valid_from = '{yesterday}'"))
+                    conn.execute(text("UPDATE int_gd20 SET cantidad = -12.0 WHERE numero_cuenta = 33111010"))
+
+                # Atomicidad ante fallo de insercion: si falla bulk_insert_df, NO debe quedar expirada la fila vieja
+                with patch.object(v_tr, "bulk_insert_df", side_effect=RuntimeError("Fallo simulado VPN")):
+                    with self.assertRaises(RuntimeError):
+                        v_tr.upsert_ventas_bi_scd2()
+                with mem_eng.connect() as conn:
+                    live_before = conn.execute(text("SELECT COUNT(*) FROM int_ventas_bi WHERE is_current = 1")).scalar()
+                    self.assertEqual(live_before, 2)
+
+                updated = v_tr.upsert_ventas_bi_scd2()
+                self.assertEqual(updated, 1)
+
+            with mem_eng.connect() as conn:
+                active_rows = conn.execute(text(
+                    "SELECT numero_cuenta, cantidad, version FROM int_ventas_bi WHERE is_current = 1 ORDER BY numero_cuenta"
+                )).fetchall()
+                self.assertEqual(len(active_rows), 2)
+                self.assertEqual((active_rows[0][0], float(active_rows[0][1]), active_rows[0][2]), (33111010, -12.0, 2))
+                self.assertEqual((active_rows[1][0], float(active_rows[1][1]), active_rows[1][2]), (33111020, -2.0, 1))
+        finally:
+            conn_mod.set_engine(orig_eng)
+
+    def test_coerce_numeric_warns_and_sync_table_indexes(self):
+        import logging
+        from sqlalchemy import create_engine, inspect
+        from itacamba_reportes.core.db.base import Base
+        import itacamba_reportes.core.db.connection as conn_mod
+        from itacamba_reportes.core.db.schema import sync_table_indexes
+        from itacamba_reportes.core.io.reader import coerce_numeric_series
+
+        s = pd.Series(["10.5", "#", "", "1.250,50", "texto_malo"])
+        with self.assertLogs("itacamba_reportes.core.io.reader", level=logging.WARNING) as cm:
+            out = coerce_numeric_series(s, "cantidad", context="gd20", fill_zero=True)
+        self.assertEqual(float(out.iloc[0]), 10.5)
+        self.assertEqual(float(out.iloc[1]), 0.0)
+        self.assertEqual(float(out.iloc[3]), 0.0)
+        self.assertIn("2 valor(es) no numérico(s)", "\n".join(cm.output))
+
+        mem_eng = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(mem_eng)
+        orig_eng = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+        try:
+            with mem_eng.begin() as conn:
+                conn.exec_driver_sql("DROP INDEX IF EXISTS ix_int_ventas_bi_is_current_periodo")
+                conn.exec_driver_sql("DROP INDEX IF EXISTS ix_int_despacho_bi_anio_mes")
+            sync_table_indexes()
+            insp = inspect(mem_eng)
+            v_idx = {ix["name"] for ix in insp.get_indexes("int_ventas_bi")}
+            d_idx = {ix["name"] for ix in insp.get_indexes("int_despacho_bi")}
+            self.assertIn("ix_int_ventas_bi_is_current_periodo", v_idx)
+            self.assertIn("ix_int_despacho_bi_anio_mes", d_idx)
+        finally:
+            conn_mod.set_engine(orig_eng)
+
+    def test_bridge_obsolete_env_classification_and_cleanup(self):
+        from itacamba_reportes.ui.bridge import BotBridge
+        from itacamba_reportes.core.settings import EnvConfig
+
+        bridge = BotBridge()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            env_file = root / ".env"
+            env_file.write_text(
+                "\n".join([
+                    "SAP_AMBIENT=PRD",
+                    "SAP_USER=bot_sap",
+                    "MAIL_HOST=smtp.office365.com",
+                    "MAIL_PASSWORD=old_mail_pwd",
+                    "CLICK_CONFIDENCE=0.8",
+                    "CLICK_TIMEOUT=10",
+                    "SAP_PROCESS=saplogon.exe",
+                    "SAP_WINDOW_TITLE=SAP Logon 770",
+                    f"PATH_INSUMOS_FIJOS={root}",
+                ]),
+                encoding="utf-8",
+            )
+            try:
+                with patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_file), \
+                     patch("itacamba_reportes.core.db.connection.set_engine"):
+                    items = bridge._read_env_file()
+                    obs = [it["clave"] for it in items if it["categoria"] == "obsoletas"]
+                    self.assertEqual(set(obs), {"MAIL_HOST", "MAIL_PASSWORD", "CLICK_CONFIDENCE", "CLICK_TIMEOUT", "SAP_PROCESS", "SAP_WINDOW_TITLE"})
+
+                    clean_res = bridge.clean_obsolete_env_variables()
+                    self.assertEqual(clean_res["status"], "ok")
+                    self.assertEqual(clean_res["removed"], 6)
+
+                    saved_txt = env_file.read_text(encoding="utf-8")
+                    self.assertIn("SAP_AMBIENT=PRD", saved_txt)
+                    self.assertIn("SAP_USER=bot_sap", saved_txt)
+                    self.assertNotIn("CLICK_CONFIDENCE", saved_txt)
+                    self.assertNotIn("MAIL_HOST", saved_txt)
+            finally:
+                EnvConfig.reload()
+
+    def test_bulk_insert_mssql_fast_executemany_direct(self):
+        from unittest.mock import MagicMock
+        import numpy as np
+        from itacamba_reportes.core.db.bulk import bulk_insert_df
+        from itacamba_reportes.inputs.query.models import QueryStgModel
+
+        captured = {}
+        fake_cursor = MagicMock()
+        fake_cursor.fast_executemany = False
+        fake_cursor.executemany.side_effect = lambda sql, params: captured.update({"sql": sql, "params": params, "fast": fake_cursor.fast_executemany})
+        fake_driver = MagicMock()
+        fake_driver.cursor.return_value = fake_cursor
+        fake_raw = MagicMock()
+        fake_raw.driver_connection = fake_driver
+        fake_conn = MagicMock()
+        fake_conn.connection = fake_raw
+        fake_eng = MagicMock()
+        fake_eng.dialect.name = "mssql"
+        fake_conn.engine = fake_eng
+
+        df = pd.DataFrame({
+            "nro_pedido": [101, 102],
+            "material": ["CEMENTO", "CLINKER"],
+            "cantidad_ton": [10.5, np.nan],
+            "fecha_salida": [pd.Timestamp("2026-11-27"), pd.NaT],
+        })
+        rows = bulk_insert_df(QueryStgModel, df, truncate_first=False, engine=fake_eng, conn=fake_conn)
+        self.assertEqual(rows, 2)
+        self.assertTrue(captured["fast"])
+        self.assertIn("INSERT INTO [stg_query]", captured["sql"])
+        self.assertIsNone(captured["params"][1][2])
+        self.assertIsNone(captured["params"][1][3])
+        fake_cursor.close.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

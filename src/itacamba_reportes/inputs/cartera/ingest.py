@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from itacamba_reportes.core.db.bulk import bulk_insert_df
-from itacamba_reportes.core.io.reader import FastExcelReader, ExcelSourceSpec
+from itacamba_reportes.core.io.reader import FastExcelReader, ExcelSourceSpec, coerce_numeric_series
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.inputs.cartera.models import CustomerStgModel
 
@@ -57,7 +57,7 @@ def ingest_cartera() -> int:
 
     # Columna cliente: normalizacion a entero de 64 bits seguro
     if "cliente" in df.columns:
-        df["cliente"] = pd.to_numeric(df["cliente"], errors="coerce").fillna(0).astype("int64")
+        df["cliente"] = coerce_numeric_series(df["cliente"], "cliente", context="cartera", as_int=True, fill_zero=True)
 
     # Columna orden_origen: preserva la secuencia original de filas del extracto
     df["orden_origen"] = range(1, len(df) + 1)

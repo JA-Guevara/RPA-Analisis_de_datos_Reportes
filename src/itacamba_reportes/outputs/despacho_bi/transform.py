@@ -28,7 +28,23 @@ def transform_despacho_bi() -> int:
                 conn.execute(text(cleaned))
 
     with engine.connect() as conn:
-        rows = conn.execute(text("SELECT COUNT(*) FROM int_despacho_bi")).scalar() or 0
+        row = conn.execute(text("""
+            SELECT COUNT(*),
+                   COALESCE(SUM(despacho_t), 0),
+                   COALESCE(SUM(traslados_t), 0),
+                   SUM(CASE WHEN canal = 'OTROS' OR vendedor = 'OTROS' OR equipo = 'OTROS' THEN 1 ELSE 0 END)
+            FROM int_despacho_bi
+        """)).fetchone()
+        rows = int(row[0]) if row and row[0] else 0
+        tot_desp = float(row[1]) if row and row[1] else 0.0
+        tot_tras = float(row[2]) if row and row[2] else 0.0
+        otros_cnt = int(row[3]) if row and row[3] else 0
 
-    logger.info("DESPACHO BI acumulado con exito: %d filas totales", rows)
+    logger.info(
+        "DESPACHO BI acumulado con exito: %d filas | despacho_t=%.2f | traslados_t=%.2f | sin_homologar(OTROS)=%d",
+        rows,
+        tot_desp,
+        tot_tras,
+        otros_cnt,
+    )
     return rows

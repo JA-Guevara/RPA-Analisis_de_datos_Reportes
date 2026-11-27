@@ -71,6 +71,24 @@ def sync_table_columns() -> None:
                     conn.execute(text(stmt))
 
 
+def sync_table_indexes() -> None:
+    from sqlalchemy import inspect
+
+    eng = get_engine()
+    insp = inspect(eng)
+    for table_name, model_cls in (
+        ("int_ventas_bi", SalesBiIntModel),
+        ("int_despacho_bi", DispatchBiIntModel),
+    ):
+        if not insp.has_table(table_name):
+            continue
+        existing = {idx["name"].lower() for idx in insp.get_indexes(table_name) if idx.get("name")}
+        for idx in model_cls.__table__.indexes:
+            if idx.name and idx.name.lower() not in existing:
+                logger.info("Creando indice de rendimiento '%s' en tabla %s...", idx.name, table_name)
+                idx.create(bind=eng, checkfirst=True)
+
+
 def ensure_all_tables_exist() -> None:
     from sqlalchemy import inspect
     eng = get_engine()
@@ -81,6 +99,7 @@ def ensure_all_tables_exist() -> None:
         Base.metadata.create_all(eng, checkfirst=True)
         logger.info("Tablas creadas exitosamente.")
     sync_table_columns()
+    sync_table_indexes()
 
 
 def upgrade_db(reset_alembic: bool = False) -> None:

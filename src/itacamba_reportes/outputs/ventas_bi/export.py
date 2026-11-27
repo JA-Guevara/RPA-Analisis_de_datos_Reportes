@@ -52,11 +52,11 @@ def get_ventas_bi_dataframe() -> pd.DataFrame:
     return mapped
 
 
-def export_ventas_bi(return_df: bool = False) -> Path | tuple[Path, pd.DataFrame]:
+def export_ventas_bi(return_df: bool = False, timestamped: bool = False) -> Path | tuple[Path, pd.DataFrame]:
     logger.info("Exportando VENTAS BI a Excel...")
     df = get_ventas_bi_dataframe()
-    exporter = ExcelReportExporter(EnvConfig.EXPORT_PATH)
-    path = exporter.export(df, "VENTAS_BI")
+    exporter = ExcelReportExporter(EnvConfig.REPORTS_OUTPUT_PATH)
+    path = exporter.export(df, "VENTAS_BI", timestamped=timestamped)
     if return_df:
         return path, df
     return path

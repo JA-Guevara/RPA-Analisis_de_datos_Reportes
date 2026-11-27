@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from itacamba_reportes.core.db.bulk import bulk_insert_df
-from itacamba_reportes.core.io.reader import FastExcelReader, ExcelSourceSpec
+from itacamba_reportes.core.io.reader import FastExcelReader, ExcelSourceSpec, coerce_numeric_series
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.inputs.query.models import QueryStgModel
 
@@ -65,15 +65,15 @@ def ingest_query() -> int:
         if col in df.columns:
             df[col] = df[col].astype(str).str.replace("#", "0").str.strip()
 
-    # Identificadores numericos SAP (BigInteger)
+    # Identificadores numericos SAP (BigInteger) con alerta ante valores corruptos
     for col in ("nro_pedido", "cod_material", "cod_destinatario", "cod_pagador"):
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype("int64")
+            df[col] = coerce_numeric_series(df[col], col, context="query", as_int=True, fill_zero=True)
 
     # Metricas decimales (Numeric(18, 4))
     for col in ("cantidad_ton", "precio_pedido"):
         if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+            df[col] = coerce_numeric_series(df[col], col, context="query", as_int=False, fill_zero=True)
 
     model_cols = [c.name for c in QueryStgModel.__table__.columns if c.name not in ("id", "created_at", "updated_at")]
     valid_cols = [c for c in model_cols if c in df.columns]

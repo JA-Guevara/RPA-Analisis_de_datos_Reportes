@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter
+from uuid import uuid4
 
 import pandas as pd
 
@@ -26,6 +28,30 @@ TECHNICAL_COLUMNS = frozenset({
 })
 
 
+def _atomic_write_target(target: Path, write_fn) -> None:
+    tmp_target = target.with_name(f".~tmp_{uuid4().hex[:8]}_{target.name}")
+    try:
+        try:
+            write_fn(tmp_target, "xlsxwriter")
+        except Exception:
+            if tmp_target.exists():
+                tmp_target.unlink(missing_ok=True)
+            write_fn(tmp_target, "openpyxl")
+
+        try:
+            os.replace(tmp_target, target)
+        except PermissionError as exc:
+            raise PermissionError(
+                f"No se pudo actualizar '{target.name}' porque está abierto o bloqueado (Excel/Power BI). Ciérralo e intenta nuevamente."
+            ) from exc
+    finally:
+        if tmp_target.exists():
+            try:
+                tmp_target.unlink()
+            except Exception:
+                pass
+
+
 class ExcelReportExporter:
     def __init__(self, output_dir: Path) -> None:
         self.output_dir = Path(output_dir)
@@ -36,20 +62,24 @@ class ExcelReportExporter:
         report_name: str,
         control_info: dict | None = None,
         include_control_sheet: bool = False,
+        timestamped: bool = False,
     ) -> Path:
         t0 = perf_counter()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
-        target = self.output_dir / f"{report_name}_{timestamp}.xlsx"
+        if timestamped:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+            target = self.output_dir / f"{report_name}_{timestamp}.xlsx"
+        else:
+            target = self.output_dir / f"{report_name}.xlsx"
 
         # Paso 1: Filtrar columnas tecnicas de auditoria interna para entrega limpia a negocio
         business_cols = [c for c in df.columns if c not in TECHNICAL_COLUMNS]
         clean_df = df[business_cols]
 
-        try:
-            self._write(clean_df, target, control_info, include_control_sheet=include_control_sheet, engine="xlsxwriter")
-        except Exception:
-            self._write(clean_df, target, control_info, include_control_sheet=include_control_sheet, engine="openpyxl")
+        _atomic_write_target(
+            target,
+            lambda dest, eng: self._write(clean_df, dest, control_info, include_control_sheet=include_control_sheet, engine=eng),
+        )
 
         logger.info("Export Excel exitoso: %s (%d filas, %d columnas, %.2fs)", target.name, len(clean_df), len(clean_df.columns), perf_counter() - t0)
         return target
@@ -74,10 +104,10 @@ class ExcelReportExporter:
             business_cols = [c for c in df.columns if c not in TECHNICAL_COLUMNS]
             clean_sheets[sname] = df[business_cols]
 
-        try:
-            self._write_multi(clean_sheets, target, engine="xlsxwriter")
-        except Exception:
-            self._write_multi(clean_sheets, target, engine="openpyxl")
+        _atomic_write_target(
+            target,
+            lambda dest, eng: self._write_multi(clean_sheets, dest, engine=eng),
+        )
 
         summary = ", ".join(f"{k}: {len(v)} filas" for k, v in clean_sheets.items())
         logger.info("Export Multi-Sheet Excel exitoso: %s (%s, %.2fs)", target.name, summary, perf_counter() - t0)

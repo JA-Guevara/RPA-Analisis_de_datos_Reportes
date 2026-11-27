@@ -1318,6 +1318,14 @@
           </div>
         </div>
 
+        <div class="banner warn" x-show="variablesDe('obsoletas').length > 0" x-cloak>
+          <span x-html="icono('alert')"></span>
+          <div style="flex:1">
+            <b>Se detectaron <span x-text="variablesDe('obsoletas').length"></span> variable(s) obsoleta(s) de OCR/Correo</b> que el motor SAP GUI Scripting ya no utiliza (`CLICK_*`, `MAIL_*`, etc.).
+          </div>
+          <button type="button" class="btn btn-sm btn-danger" @click="limpiarVariablesObsoletas()">Limpiar obsoletas del .env</button>
+        </div>
+
         <template x-for="g in gruposEnv" :key="g.id">
           <details class="card env-group" open x-show="variablesDe(g.id).length > 0">
             <summary>
@@ -1354,7 +1362,7 @@
                   <label class="switch" :title="v.activa ? 'Desactivar variable' : 'Activar variable'">
                     <input type="checkbox" x-model="v.activa" :aria-label="'Activar ' + v.clave"><span></span>
                   </label>
-                  <button type="button" class="btn btn-ghost btn-sm icon-btn" x-show="v.nueva || v.categoria === 'custom'"
+                  <button type="button" class="btn btn-ghost btn-sm icon-btn" x-show="v.nueva || v.categoria === 'custom' || v.categoria === 'obsoletas'"
                           @click="quitarVariable(v)" :aria-label="'Eliminar ' + v.clave" title="Eliminar variable">
                     <span x-html="icono('trash')"></span>
                   </button>
@@ -2030,9 +2038,9 @@ const DEMO = {
     { nombre: 'CARTERA.xlsx', tamano: '9.61 MB', modificado: haceDias(3), hojas: ['Q_VCBO_ZSDI_I03_CAD_CLIENTE_000'] },
   ],
   archivos_reportes: [
-    { nombre: 'VENTAS_BI_2026-10-26_0612.xlsx', tamano: '1.21 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
-    { nombre: 'DESPACHO_BI_2026-10-26_0612.xlsx', tamano: '0.88 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
-    { nombre: 'DESPACHO_MES_2026-10-26_0612.xlsx', tamano: '0.74 MB', modificado: haceDias(0), hojas: ['Data', 'CONTROL'] },
+    { nombre: 'VENTAS_BI.xlsx', tamano: '1.21 MB', modificado: haceDias(0), hojas: ['Data'] },
+    { nombre: 'DESPACHO_BI.xlsx', tamano: '0.88 MB', modificado: haceDias(0), hojas: ['Data'] },
+    { nombre: 'DESPACHO_MES.xlsx', tamano: '0.74 MB', modificado: haceDias(0), hojas: ['Data'] },
   ],
   env_vars: [
     { clave: 'SAP_LOGON_PATH', valor: 'C:\\Program Files (x86)\\SAP\\FrontEnd\\SAPgui\\saplogon.exe', descripcion: 'Ruta al ejecutable SAP Logon', categoria: 'sap', esSecreto: false, activa: true },
@@ -2265,9 +2273,9 @@ document.addEventListener('alpine:init', () => {
     gruposEnv: [
       { id: 'sap', titulo: 'SAP GUI & Scripting', prueba: 'sap' },
       { id: 'db', titulo: 'Base de Datos SQL Server', prueba: 'sql' },
-      { id: 'rutas', titulo: 'Rutas OneDrive & Almacenamiento' },
-      { id: 'mail', titulo: 'Correo y Notificaciones' },
+      { id: 'rutas', titulo: 'Rutas Segmentadas (Fijos / Dinámicos / Reportes)' },
       { id: 'custom', titulo: 'Otras Variables' },
+      { id: 'obsoletas', titulo: 'Variables obsoletas sin uso (OCR / Correo)' },
     ],
     dialogo: null,
     borrador: {},
@@ -4571,6 +4579,25 @@ document.addEventListener('alpine:init', () => {
         this.recargar();
       } else {
         this.avisar((r && r.message) || 'Error al guardar configuración', 'error');
+      }
+    },
+
+    async limpiarVariablesObsoletas() {
+      const obsCount = this.variablesDe('obsoletas').length;
+      if (!obsCount) return;
+      if (!this.api) {
+        this.env = this.env.filter(v => v.categoria !== 'obsoletas');
+        return this.avisar(`Se limpiaron ${obsCount} variable(s) obsoleta(s) (modo demo).`, 'success');
+      }
+      this.guardando = true;
+      const r = await this.llamar('clean_obsolete_env_variables');
+      this.guardando = false;
+      if (r && r.status === 'ok') {
+        this.eliminadas = 0;
+        this.avisar(r.message || 'Variables obsoletas eliminadas.', 'success');
+        this.recargar();
+      } else {
+        this.avisar((r && r.message) || 'No se pudieron eliminar las variables obsoletas.', 'error');
       }
     },
 
