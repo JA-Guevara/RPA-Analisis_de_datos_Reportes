@@ -456,6 +456,12 @@ def action_validate_config() -> int:
     for item in report.get("checks", []):
         st = {"ok": "[OK]", "warn": "[AVISO]", "error": "[ERROR]"}.get(item.get("status"), "[INFO]")
         print(f"  {st:<8} {item.get('label')}: {item.get('detail')}")
+    routes = report.get("routes_summary", [])
+    if routes:
+        print("----------------------------------------------------------------------")
+        print("  Rutas segmentadas activas:")
+        for rt in routes:
+            print(f"    - {rt.get('key'):<22}: {rt.get('path')} [{rt.get('origin')}]")
     print("----------------------------------------------------------------------")
     sap_res = report.get("sap_resolved", {})
     if sap_res:

@@ -873,7 +873,12 @@
               <h2>Ejecutar una configuración</h2>
               <p>Elige un perfil guardado. Sus días, periodo y horario ya están preparados.</p>
             </div>
-            <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
+            <div class="row" style="gap:8px; align-items:center">
+              <button type="button" class="btn btn-sm" @click="validarConfiguracion()" :disabled="validandoConfig" title="Validar rutas segmentadas, .env, SQL Server, SAP GUI y parámetros del perfil">
+                <span x-html="icono('check')"></span> <span x-text="validandoConfig ? 'Validando…' : 'Validar antes'"></span>
+              </button>
+              <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
+            </div>
           </div>
           <div class="card-b stack">
             <div class="home-profile-select">
@@ -1196,8 +1201,8 @@
 
                 <!-- Footer de la Card -->
                 <div class="card-b" style="padding-top:0">
-                  <div class="row between" style="border-top:1px solid var(--line-soft); padding-top:12px">
-                    <span class="hint mono" x-text="'Ruta: dinamicos/' + t.destino"></span>
+                  <div class="row between" style="border-top:1px solid var(--line-soft); padding-top:12px; gap:8px">
+                    <span class="hint mono" style="word-break:break-all" x-text="'Ruta: ' + (rutas.PATH_INSUMOS_DINAMICOS ? rutas.PATH_INSUMOS_DINAMICOS.replace(/[\\/]+$/, '') + '\\' : 'dinamicos/') + t.destino"></span>
                     <button type="button" class="btn btn-primary btn-sm" @click="descargarSap(t)" :disabled="descargaSapInvalida(t)">
                       <span x-html="icono('download')"></span> Descargar
                     </button>
@@ -1836,6 +1841,34 @@
             </div>
           </template>
         </div>
+
+        <template x-if="(validacionConfig?.routes_summary || []).length">
+          <div class="card" style="box-shadow:none">
+            <div class="card-h">
+              <div>
+                <h2 style="font-size:13px">Segmentación de rutas activas</h2>
+                <p>Control independiente para insumos fijos, descargas dinámicas y entrega de reportes.</p>
+              </div>
+            </div>
+            <div class="list">
+              <template x-for="rt in validacionConfig.routes_summary" :key="rt.key">
+                <div class="item">
+                  <div style="min-width:0; flex:1">
+                    <div class="row" style="gap:6px; align-items:center; flex-wrap:wrap">
+                      <span class="name" x-text="rt.label"></span>
+                      <span class="chip mono" style="font-size:11px" x-text="rt.key"></span>
+                      <span class="chip" style="font-size:11px" x-text="rt.origin"></span>
+                    </div>
+                    <div class="meta mono" style="word-break:break-all; margin-top:3px" x-text="rt.path || 'Sin ruta definida'"></div>
+                    <div class="meta" style="margin-top:2px" x-text="rt.detail"></div>
+                  </div>
+                  <span class="badge" :class="rt.status === 'ok' ? 'b-ok' : (rt.status === 'warn' ? 'b-warn' : 'b-err')"
+                        x-text="rt.status === 'ok' ? 'OK' : (rt.status === 'warn' ? 'Aviso' : 'Error')"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
 
         <template x-if="validacionConfig?.sap_resolved">
           <div class="card" style="box-shadow:none">
@@ -3990,6 +4023,11 @@ document.addEventListener('alpine:init', () => {
             checks: [
               { id: 'env', label: 'Archivo .env', status: 'ok', detail: 'Simulado en modo demostración' },
             ],
+            routes_summary: [
+              { key: 'PATH_INSUMOS_FIJOS', label: 'Insumos Fijos (fijos/)', path: this.rutas.PATH_INSUMOS_FIJOS || '', origin: 'segmentada (.env)', status: 'ok', detail: 'Modo demostración' },
+              { key: 'PATH_INSUMOS_DINAMICOS', label: 'Insumos Dinámicos (dinamicos/)', path: this.rutas.PATH_INSUMOS_DINAMICOS || '', origin: 'segmentada (.env)', status: 'ok', detail: 'Modo demostración' },
+              { key: 'PATH_REPORTES_SALIDA', label: 'Entrega de Reportes (reports/)', path: this.rutas.PATH_REPORTES_SALIDA || '', origin: 'segmentada (.env)', status: 'ok', detail: 'Modo demostración' },
+            ],
             sap_resolved: {
               profile_name: cfg?.nombre || 'Demo',
               gd20_year: (cfg?.fechaHasta || hoyISO()).slice(0, 4),
@@ -4012,6 +4050,11 @@ document.addEventListener('alpine:init', () => {
           return;
         }
         this.validacionConfig = r;
+        if (Array.isArray(r.routes_summary)) {
+          for (const rt of r.routes_summary) {
+            if (rt.key && rt.path) this.rutas[rt.key] = rt.path;
+          }
+        }
         const sqlCheck = (r.checks || []).find(c => c.id === 'sql_conn');
         const sapCheck = (r.checks || []).find(c => c.id === 'sap_gui');
         if (sqlCheck) {

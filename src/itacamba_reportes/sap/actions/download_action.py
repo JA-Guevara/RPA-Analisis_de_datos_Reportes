@@ -367,7 +367,7 @@ def execute_download_all_sap(
     # 1. Asegurar conexion y login una sola vez
     mgr.ensure_connected_and_ready(auto_launch=True)
 
-    dest_dir = Path(target_dir) if target_dir else getattr(EnvConfig, "DATA_PATH", EnvConfig.PROJECT_ROOT / "storage" / "raw") / "dinamicos"
+    dest_dir = Path(target_dir) if target_dir else EnvConfig.DYNAMIC_INPUTS_PATH
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     results: dict[str, Path] = {}

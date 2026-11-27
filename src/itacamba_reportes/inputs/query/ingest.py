@@ -57,7 +57,7 @@ QUERY_SPEC = ExcelSourceSpec(
 
 
 def ingest_query() -> int:
-    reader = FastExcelReader(QUERY_SPEC, EnvConfig.DATA_PATH)
+    reader = FastExcelReader(QUERY_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH)
     df = reader.read_raw()
 
     # Columnas centro_origen / centro_destino: normalizacion de centros SAP

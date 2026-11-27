@@ -50,9 +50,23 @@ def _resolve_data_path() -> Path:
     return Path(found)
 
 
+def _resolve_fixed_inputs_path(data_path: Path) -> Path:
+    env_fixed = (os.getenv("PATH_INSUMOS_FIJOS") or "").strip()
+    if env_fixed:
+        return Path(env_fixed)
+    return data_path / "fijos"
+
+
+def _resolve_dynamic_inputs_path(data_path: Path) -> Path:
+    env_dyn = (os.getenv("PATH_INSUMOS_DINAMICOS") or "").strip()
+    if env_dyn:
+        return Path(env_dyn)
+    return data_path / "dinamicos"
+
+
 def _resolve_export_path(data_path: Path) -> Path:
     default_export = data_path / "reports" if (data_path / "reports").exists() else _PROJECT_ROOT / "storage" / "exports"
-    env_export = os.getenv("EXPORT_PATH") or os.getenv("PATH_REPORTES_SALIDA")
+    env_export = (os.getenv("PATH_REPORTES_SALIDA") or os.getenv("EXPORT_PATH") or "").strip() or None
     if env_export:
         try:
             p = Path(env_export)
@@ -67,10 +81,13 @@ class EnvConfig:
     PROJECT_ROOT: Path = _PROJECT_ROOT
 
     DATA_PATH: Path = _resolve_data_path()
+    FIXED_INPUTS_PATH: Path = _resolve_fixed_inputs_path(DATA_PATH)
+    DYNAMIC_INPUTS_PATH: Path = _resolve_dynamic_inputs_path(DATA_PATH)
     PROCESSED_PATH: Path = Path(_get_env("PROCESSED_PATH", default=str(_PROJECT_ROOT / "storage" / "processed")))
     ARCHIVE_PATH: Path = Path(_get_env("ARCHIVE_PATH", default=str(_PROJECT_ROOT / "storage" / "archive")))
     LOG_PATH: Path = Path(_get_env("LOG_PATH", default=str(LOG_PATH)))
     EXPORT_PATH: Path = _resolve_export_path(DATA_PATH)
+    REPORTS_OUTPUT_PATH: Path = EXPORT_PATH
 
     DATABASE_URL: str | None = _get_env("DATABASE_URL")
     DB_SERVER: str | None = _get_env("DB_SERVER")
@@ -99,10 +116,13 @@ class EnvConfig:
         else:
             load_dotenv(override=True)
         cls.DATA_PATH = _resolve_data_path()
+        cls.FIXED_INPUTS_PATH = _resolve_fixed_inputs_path(cls.DATA_PATH)
+        cls.DYNAMIC_INPUTS_PATH = _resolve_dynamic_inputs_path(cls.DATA_PATH)
         cls.PROCESSED_PATH = Path(_get_env("PROCESSED_PATH", default=str(_PROJECT_ROOT / "storage" / "processed")))
         cls.ARCHIVE_PATH = Path(_get_env("ARCHIVE_PATH", default=str(_PROJECT_ROOT / "storage" / "archive")))
         cls.LOG_PATH = Path(_get_env("LOG_PATH", default=str(LOG_PATH)))
         cls.EXPORT_PATH = _resolve_export_path(cls.DATA_PATH)
+        cls.REPORTS_OUTPUT_PATH = cls.EXPORT_PATH
         cls.DATABASE_URL = _get_env("DATABASE_URL")
         cls.DB_SERVER = _get_env("DB_SERVER")
         cls.DB_PORT = _get_env("DB_PORT", default=1433, cast=int)

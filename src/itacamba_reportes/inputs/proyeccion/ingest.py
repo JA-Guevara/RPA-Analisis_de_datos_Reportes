@@ -16,18 +16,22 @@ logger = logging.getLogger(__name__)
 
 def resolve_proyeccion_path() -> Path:
     candidates = [
+        EnvConfig.FIXED_INPUTS_PATH / "PROYECCION-SEMANAL.xlsx",
         EnvConfig.DATA_PATH / "fijos" / "PROYECCION-SEMANAL.xlsx",
         EnvConfig.DATA_PATH / "PROYECCION-SEMANAL.xlsx",
-        Path(r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos ITACAMBA\PROYECCION-SEMANAL.xlsx"),
         EnvConfig.PROJECT_ROOT / "storage" / "input" / "PROYECCION-SEMANAL.xlsx",
     ]
     for p in candidates:
         if p.exists():
             return p
-    matches = list(EnvConfig.DATA_PATH.glob("*PROYECCION*SEMANAL*.xlsx")) if EnvConfig.DATA_PATH.exists() else []
-    if matches:
-        return matches[0]
-    raise FileNotFoundError("No se encontró PROYECCION-SEMANAL.xlsx en las rutas configuradas")
+    for search_dir in (EnvConfig.FIXED_INPUTS_PATH, EnvConfig.DATA_PATH):
+        if search_dir.exists():
+            matches = sorted(search_dir.glob("*PROYECCION*SEMANAL*.xlsx"))
+            if matches:
+                return max(matches, key=lambda p: p.stat().st_mtime)
+    raise FileNotFoundError(
+        f"No se encontró PROYECCION-SEMANAL.xlsx en {EnvConfig.FIXED_INPUTS_PATH} ni en rutas configuradas"
+    )
 
 
 def find_target_sheet(path: Path) -> str:

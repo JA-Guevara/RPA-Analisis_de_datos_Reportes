@@ -99,27 +99,11 @@ class BotBridge:
         from itacamba_reportes.core.settings import EnvConfig
 
         EnvConfig.reload(ENV_FILE_PATH if ENV_FILE_PATH.exists() else None)
-        data_env = (os.getenv("DATA_PATH") or "").strip()
-        fijos_env = (os.getenv("PATH_INSUMOS_FIJOS") or "").strip()
-        din_env = (os.getenv("PATH_INSUMOS_DINAMICOS") or "").strip()
-        exp_env = (os.getenv("EXPORT_PATH") or "").strip()
-        rep_env = (os.getenv("PATH_REPORTES_SALIDA") or "").strip()
-        logs_env = (os.getenv("PATH_LOGS_STORAGE") or "").strip()
-
-        if data_env:
-            base_data = Path(data_env)
-        elif din_env:
-            base_data = Path(din_env).parent
-        elif fijos_env:
-            base_data = Path(fijos_env).parent
-        else:
-            base_data = EnvConfig.DATA_PATH
-
         return {
-            "PATH_INSUMOS_FIJOS": fijos_env or str(base_data / "fijos"),
-            "PATH_INSUMOS_DINAMICOS": din_env or str(base_data / "dinamicos"),
-            "PATH_REPORTES_SALIDA": rep_env or exp_env or str(EnvConfig.EXPORT_PATH),
-            "PATH_LOGS_STORAGE": logs_env or str(EnvConfig.LOG_PATH),
+            "PATH_INSUMOS_FIJOS": str(EnvConfig.FIXED_INPUTS_PATH),
+            "PATH_INSUMOS_DINAMICOS": str(EnvConfig.DYNAMIC_INPUTS_PATH),
+            "PATH_REPORTES_SALIDA": str(EnvConfig.REPORTS_OUTPUT_PATH),
+            "PATH_LOGS_STORAGE": str(EnvConfig.LOG_PATH),
         }
 
     def get_initial_state(self) -> dict[str, Any]:
@@ -1225,40 +1209,164 @@ class BotBridge:
             "detail": str(sql_res.get("message") or ""),
         })
 
-        # 4. Carpetas e insumos físicos esperados (acepta PATH_INSUMOS_* o DATA_PATH / EXPORT_PATH)
+        # 4. Segmentación e integridad de las 3 rutas independientes (Fijos, Dinámicos, Entrega de Reportes)
         resolved_paths = self._resolve_storage_paths()
-        fijos_str = resolved_paths["PATH_INSUMOS_FIJOS"]
-        din_str = resolved_paths["PATH_INSUMOS_DINAMICOS"]
-        rep_str = resolved_paths["PATH_REPORTES_SALIDA"]
-        for key_lbl, folder_val, required_patterns in (
-            ("Insumos Fijos (fijos/)", fijos_str, ("REFERENCIAS", "PROYECCION")),
-            ("Insumos Dinámicos (dinamicos/)", din_str, ("CARTERA", "GD20", "QUERY")),
-            ("Reportes Salida (reports/)", rep_str, ()),
-        ):
+        route_specs = (
+            ("PATH_INSUMOS_FIJOS", "Insumos Fijos (fijos/)", ("REFERENCIAS", "PROYECCION"), False),
+            ("PATH_INSUMOS_DINAMICOS", "Insumos Dinámicos (dinamicos/)", ("CARTERA", "GD20", "QUERY"), True),
+            ("PATH_REPORTES_SALIDA", "Entrega de Reportes (reports/)", (), True),
+        )
+
+        unsegmented_keys = [
+            env_key for env_key, _lbl, _pats, _rw in route_specs if not (os.getenv(env_key) or "").strip()
+        ]
+        if unsegmented_keys:
+            checks.append({
+                "id": "routes_segmentation",
+                "label": "Segmentación de rutas (.env)",
+                "status": "warn",
+                "detail": (
+                    f"Usando respaldo/predeterminado para: {', '.join(unsegmented_keys)}. "
+                    "Define PATH_INSUMOS_FIJOS, PATH_INSUMOS_DINAMICOS y PATH_REPORTES_SALIDA en Configuración (.env) para control independiente."
+                ),
+            })
+        else:
+            checks.append({
+                "id": "routes_segmentation",
+                "label": "Segmentación de rutas (.env)",
+                "status": "ok",
+                "detail": "Las 3 rutas (Fijos, Dinámicos y Entrega de Reportes) están segmentadas explícitamente en .env.",
+            })
+
+        resolved_norms: dict[str, list[str]] = {}
+        for env_key, _lbl, _pats, _rw in route_specs:
+            val = resolved_paths.get(env_key, "").strip()
+            if val:
+                norm = str(Path(val).resolve()).lower()
+                resolved_norms.setdefault(norm, []).append(env_key)
+        collisions = [keys for keys in resolved_norms.values() if len(keys) > 1]
+        if collisions:
+            collided_str = "; ".join(" y ".join(grp) for grp in collisions)
+            checks.append({
+                "id": "routes_collision",
+                "label": "Separación de carpetas",
+                "status": "error",
+                "detail": f"Colisión detectada ({collided_str}) apuntando al mismo directorio. Deben ser 3 carpetas independientes.",
+            })
+
+        routes_summary: list[dict[str, Any]] = []
+        for env_key, key_lbl, required_patterns, requires_write in route_specs:
+            folder_val = resolved_paths.get(env_key, "").strip()
+            explicit_val = (os.getenv(env_key) or "").strip()
+            if explicit_val:
+                origin = "segmentada (.env)"
+                is_segmented = True
+            elif env_key == "PATH_REPORTES_SALIDA" and (os.getenv("EXPORT_PATH") or "").strip():
+                origin = "respaldo (EXPORT_PATH)"
+                is_segmented = False
+            elif env_key != "PATH_REPORTES_SALIDA" and (os.getenv("DATA_PATH") or "").strip():
+                origin = "respaldo (DATA_PATH)"
+                is_segmented = False
+            else:
+                origin = "predeterminada (storage/)"
+                is_segmented = False
+
             if not folder_val:
-                checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": "error", "detail": "Ruta no definida en .env."})
+                msg = "Ruta no definida en .env."
+                checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": "error", "detail": msg})
+                routes_summary.append({
+                    "key": env_key,
+                    "label": key_lbl,
+                    "path": "",
+                    "origin": origin,
+                    "segmented": is_segmented,
+                    "exists": False,
+                    "writable": False if requires_write else None,
+                    "xlsx_count": 0,
+                    "status": "error",
+                    "detail": msg,
+                })
                 continue
+
             p_dir = Path(folder_val)
             if not p_dir.exists():
-                checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": "error", "detail": f"La carpeta no existe: {p_dir}"})
+                msg = f"[{origin}] La carpeta no existe: {p_dir}"
+                checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": "error", "detail": msg})
+                routes_summary.append({
+                    "key": env_key,
+                    "label": key_lbl,
+                    "path": str(p_dir),
+                    "origin": origin,
+                    "segmented": is_segmented,
+                    "exists": False,
+                    "writable": False if requires_write else None,
+                    "xlsx_count": 0,
+                    "status": "error",
+                    "detail": msg,
+                })
                 continue
+
+            writable_ok = True
+            write_err = ""
+            if requires_write:
+                probe = p_dir / f".itacamba_write_{os.getpid()}_{threading.get_ident()}.tmp"
+                try:
+                    probe.write_bytes(b"")
+                except Exception as exc:
+                    writable_ok = False
+                    write_err = str(exc)
+                finally:
+                    try:
+                        if probe.exists():
+                            probe.unlink()
+                    except Exception:
+                        pass
+
+            if not writable_ok:
+                msg = f"[{origin}] Sin permiso de escritura en {p_dir}: {write_err}"
+                checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": "error", "detail": msg})
+                routes_summary.append({
+                    "key": env_key,
+                    "label": key_lbl,
+                    "path": str(p_dir),
+                    "origin": origin,
+                    "segmented": is_segmented,
+                    "exists": True,
+                    "writable": False,
+                    "xlsx_count": 0,
+                    "status": "error",
+                    "detail": msg,
+                })
+                continue
+
             xlsx_names = [f.name.upper() for f in p_dir.glob("*.xlsx") if not f.name.startswith("~$")]
             missing_files = [pat for pat in required_patterns if not any(n.startswith(pat) for n in xlsx_names)]
             if missing_files:
-                status_lvl = "warn" if key_lbl.startswith("Insumos Dinámicos") else "error"
-                checks.append({
-                    "id": f"path_{key_lbl}",
-                    "label": key_lbl,
-                    "status": status_lvl,
-                    "detail": f"{p_dir} ({len(xlsx_names)} .xlsx). Faltan: {', '.join(missing_files)} (se actualizarán al descargar).",
-                })
+                status_lvl = "warn" if env_key == "PATH_INSUMOS_DINAMICOS" else "error"
+                msg = (
+                    f"[{origin}] {p_dir} ({len(xlsx_names)} .xlsx). "
+                    f"Faltan: {', '.join(missing_files)} (se actualizarán al descargar)."
+                )
+            elif requires_write:
+                status_lvl = "ok"
+                msg = f"[{origin}] {p_dir} (escritura OK, {len(xlsx_names)} .xlsx listos)."
             else:
-                checks.append({
-                    "id": f"path_{key_lbl}",
-                    "label": key_lbl,
-                    "status": "ok",
-                    "detail": f"{p_dir} ({len(xlsx_names)} .xlsx listos).",
-                })
+                status_lvl = "ok"
+                msg = f"[{origin}] {p_dir} ({len(xlsx_names)} .xlsx listos)."
+
+            checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": status_lvl, "detail": msg})
+            routes_summary.append({
+                "key": env_key,
+                "label": key_lbl,
+                "path": str(p_dir),
+                "origin": origin,
+                "segmented": is_segmented,
+                "exists": True,
+                "writable": True if requires_write else None,
+                "xlsx_count": len(xlsx_names),
+                "status": status_lvl,
+                "detail": msg,
+            })
 
         # 5. Coherencia del perfil activo y parámetros resueltos para GD20 y Query
         prof_obj: dict[str, Any] = {}
@@ -1320,6 +1428,7 @@ class BotBridge:
             "errors": err_count,
             "warnings": warn_count,
             "checks": checks,
+            "routes_summary": routes_summary,
             "sap_resolved": {
                 "profile_name": prof_obj.get("nombre") or "Perfil activo",
                 "mes_ejecucion": prof_obj.get("mesEjecucion") or "",
@@ -1400,6 +1509,13 @@ class BotBridge:
                     else:
                         lines.append(f"# [DESACTIVADA] {clave}={valor}")
                 lines.append("")
+
+            for item in vars_list:
+                k = str(item.get("clave") or "").strip().upper()
+                val = str(item.get("valor") or "").strip()
+                act = item.get("activa", True)
+                if k and (not act or not val):
+                    os.environ.pop(k, None)
 
             with open(ENV_FILE_PATH, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines).strip() + "\n")
@@ -1710,57 +1826,82 @@ class BotBridge:
 
     def _read_env_file(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
-        if not ENV_FILE_PATH.exists():
-            return result
+        if ENV_FILE_PATH.exists():
+            current_category = "custom"
+            current_comment = ""
 
-        current_category = "custom"
-        current_comment = ""
+            with open(ENV_FILE_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    sline = line.strip()
+                    if not sline:
+                        continue
 
-        with open(ENV_FILE_PATH, "r", encoding="utf-8") as f:
-            for line in f:
-                sline = line.strip()
-                if not sline:
-                    continue
+                    if "SAP" in sline.upper() and sline.startswith("#"):
+                        current_category = "sap"
+                        continue
+                    elif any(k in sline.upper() for k in ("DATABASE", "SQL", "DB")) and sline.startswith("#"):
+                        current_category = "db"
+                        continue
+                    elif any(k in sline.upper() for k in ("PATH", "ONEDRIVE", "RUTA")) and sline.startswith("#"):
+                        current_category = "rutas"
+                        continue
+                    elif any(k in sline.upper() for k in ("MAIL", "SMTP", "CORREO")) and sline.startswith("#"):
+                        current_category = "mail"
+                        continue
 
-                if "SAP" in sline.upper() and sline.startswith("#"):
-                    current_category = "sap"
-                    continue
-                elif any(k in sline.upper() for k in ("DATABASE", "SQL", "DB")) and sline.startswith("#"):
-                    current_category = "db"
-                    continue
-                elif any(k in sline.upper() for k in ("PATH", "ONEDRIVE", "RUTA")) and sline.startswith("#"):
-                    current_category = "rutas"
-                    continue
-                elif any(k in sline.upper() for k in ("MAIL", "SMTP", "CORREO")) and sline.startswith("#"):
-                    current_category = "mail"
-                    continue
+                    if sline.startswith("#") and not sline.startswith("# [DESACTIVADA]"):
+                        current_comment = sline.lstrip("# ").strip()
+                        continue
 
-                if sline.startswith("#") and not sline.startswith("# [DESACTIVADA]"):
-                    current_comment = sline.lstrip("# ").strip()
-                    continue
+                    activa = True
+                    raw_pair = sline
+                    if sline.startswith("# [DESACTIVADA]"):
+                        activa = False
+                        raw_pair = sline.replace("# [DESACTIVADA]", "").strip()
 
-                activa = True
-                raw_pair = sline
-                if sline.startswith("# [DESACTIVADA]"):
-                    activa = False
-                    raw_pair = sline.replace("# [DESACTIVADA]", "").strip()
+                    if "=" in raw_pair:
+                        clave, valor = raw_pair.split("=", 1)
+                        clave = clave.strip()
+                        valor = valor.strip()
+                        es_secreto = any(k in clave.upper() for k in ("PASS", "SECRET", "KEY", "TOKEN"))
 
-                if "=" in raw_pair:
-                    clave, valor = raw_pair.split("=", 1)
-                    clave = clave.strip()
-                    valor = valor.strip()
-                    es_secreto = any(k in clave.upper() for k in ("PASS", "SECRET", "KEY", "TOKEN"))
+                        result.append({
+                            "clave": clave,
+                            "valor": valor,
+                            "descripcion": current_comment or f"Parámetro {clave}",
+                            "categoria": self._infer_category(clave, current_category),
+                            "esSecreto": es_secreto,
+                            "activa": activa,
+                            "revelado": False,
+                        })
+                        current_comment = ""
 
-                    result.append({
-                        "clave": clave,
-                        "valor": valor,
-                        "descripcion": current_comment or f"Parámetro {clave}",
-                        "categoria": self._infer_category(clave, current_category),
-                        "esSecreto": es_secreto,
-                        "activa": activa,
-                        "revelado": False,
-                    })
-                    current_comment = ""
+        existing_keys = {item["clave"].upper() for item in result}
+        default_route_vars = (
+            (
+                "PATH_INSUMOS_FIJOS",
+                "Ruta de archivos fijos (REFERENCIAS.xlsx, PROYECCION-SEMANAL.xlsx)",
+            ),
+            (
+                "PATH_INSUMOS_DINAMICOS",
+                "Ruta de insumos dinámicos (descargas SAP GD20/QUERY y CARTERA.xlsx)",
+            ),
+            (
+                "PATH_REPORTES_SALIDA",
+                "Ruta de entrega de reportes BI generados (VENTAS_BI, DESPACHO_BI, HISTORIAL)",
+            ),
+        )
+        for key_name, desc_text in default_route_vars:
+            if key_name not in existing_keys:
+                result.append({
+                    "clave": key_name,
+                    "valor": "",
+                    "descripcion": desc_text,
+                    "categoria": "rutas",
+                    "esSecreto": False,
+                    "activa": True,
+                    "revelado": False,
+                })
         return result
 
     @staticmethod

@@ -81,15 +81,21 @@ SHEET_CONFIG = (
 
 def resolve_referencias_path() -> Path:
     candidates = [
+        EnvConfig.FIXED_INPUTS_PATH / "REFERENCIAS.xlsx",
         EnvConfig.DATA_PATH / "fijos" / "REFERENCIAS.xlsx",
         EnvConfig.DATA_PATH / "REFERENCIAS.xlsx",
-        Path(r"C:\Users\joseg_iog5jdg\OneDrive - Tecorp\Documentos\Archivos\fijos\REFERENCIAS.xlsx"),
         EnvConfig.PROJECT_ROOT / "storage" / "input" / "REFERENCIAS.xlsx",
     ]
     for p in candidates:
         if p.exists():
             return p
-    raise FileNotFoundError("No se encontró REFERENCIAS.xlsx en ninguna ruta configurada")
+    if EnvConfig.FIXED_INPUTS_PATH.exists():
+        matches = sorted(EnvConfig.FIXED_INPUTS_PATH.glob("*REFERENCIAS*.xlsx"))
+        if matches:
+            return max(matches, key=lambda p: p.stat().st_mtime)
+    raise FileNotFoundError(
+        f"No se encontró REFERENCIAS.xlsx en {EnvConfig.FIXED_INPUTS_PATH} ni en rutas configuradas"
+    )
 
 
 def ingest_referencias() -> dict[str, int]:

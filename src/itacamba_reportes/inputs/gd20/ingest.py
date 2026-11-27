@@ -85,7 +85,7 @@ GD20_SPEC = ExcelSourceSpec(
 
 
 def ingest_gd20() -> int:
-    reader = FastExcelReader(GD20_SPEC, EnvConfig.DATA_PATH)
+    reader = FastExcelReader(GD20_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH)
     df = reader.read_raw()
 
     # Coercion de identificadores SAP numericos (BigInteger)

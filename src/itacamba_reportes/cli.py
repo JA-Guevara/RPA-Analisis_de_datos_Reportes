@@ -200,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
             return launch_gui()
 
         if args.command == "download-sap":
+            from itacamba_reportes.core.settings import EnvConfig
             from itacamba_reportes.sap import SapDownloadConfig, SapSessionManager, CONFIG_CARTERA, CONFIG_GD20, CONFIG_QUERY
             from itacamba_reportes.sap.actions import (
                 execute_download_all_sap,
@@ -210,15 +211,16 @@ def main(argv: list[str] | None = None) -> int:
             session_mgr = SapSessionManager()
             tx = (args.transaction or "").strip().lower()
             close_at_end = not bool(args.keep_open)
+            resolved_target_dir = args.target_dir or EnvConfig.DYNAMIC_INPUTS_PATH
 
             if tx == "cartera":
-                CONFIG_CARTERA.to_download_config(target_dir=args.target_dir)
+                CONFIG_CARTERA.to_download_config(target_dir=resolved_target_dir)
                 return 1
 
             if tx in ("all", "batch", "todos"):
                 execute_download_all_sap(
                     session_manager=session_mgr,
-                    target_dir=args.target_dir,
+                    target_dir=resolved_target_dir,
                     period_gd20=args.period_low,
                     period_high_gd20=args.period_high,
                     year_gd20=args.year,
@@ -230,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
 
             if tx in ("zvcsd381", "zbcs", "query"):
                 cfg = CONFIG_QUERY.to_download_config(
-                    target_dir=args.target_dir,
+                    target_dir=resolved_target_dir,
                     date_from_override=args.date_from,
                     date_to_override=args.date_to,
                     period_override=args.period_low,
@@ -243,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
                     cfg.export_filename = args.filename
             elif tx == "gd20":
                 cfg = CONFIG_GD20.to_download_config(
-                    target_dir=args.target_dir,
+                    target_dir=resolved_target_dir,
                     period_override=args.period_low,
                     period_high_override=args.period_high,
                     year_override=args.year,
@@ -271,7 +273,7 @@ def main(argv: list[str] | None = None) -> int:
                     layout_name=args.layout,
                     layout_row=args.layout_row,
                     export_filename=args.filename,
-                    target_dir=args.target_dir,
+                    target_dir=resolved_target_dir,
                 )
 
             session_mgr.ensure_connected_and_ready(auto_launch=True)

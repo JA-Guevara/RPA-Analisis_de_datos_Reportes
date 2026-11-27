@@ -29,7 +29,7 @@ def export_historial_ventas(
     else:
         logger.info("Reutilizando DataFrame de DESPACHO BI en memoria (0 consultas duplicadas a BD)")
 
-    out_dir = target_dir or EnvConfig.EXPORT_PATH
+    out_dir = target_dir or EnvConfig.REPORTS_OUTPUT_PATH
     exporter = ExcelReportExporter(out_dir)
     target = exporter.export_multi_sheet(
         sheets={
@@ -40,8 +40,8 @@ def export_historial_ventas(
         timestamped=False,
     )
 
-    # Si existe una carpeta de fijos en DATA_PATH, actualizar tambien alli para mantener Power BI conectado
-    fijos_dir = EnvConfig.DATA_PATH / "fijos"
+    # Sincronizar copia en la ruta configurada de archivos fijos (PATH_INSUMOS_FIJOS)
+    fijos_dir = EnvConfig.FIXED_INPUTS_PATH
     if fijos_dir.exists():
         fijos_target = fijos_dir / file_name
         try:

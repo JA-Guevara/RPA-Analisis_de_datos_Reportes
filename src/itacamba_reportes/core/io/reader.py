@@ -42,20 +42,26 @@ class FastExcelReader:
         self.base_path = Path(base_path)
 
     def resolve_path(self) -> Path:
-        search_dir = self.base_path
+        candidates_dirs: list[Path] = []
         if self.spec.subdir:
-            search_dir = search_dir / self.spec.subdir
+            sub_dir = self.base_path / self.spec.subdir
+            if sub_dir.exists() and self.base_path.name.lower() != self.spec.subdir.lower():
+                candidates_dirs.append(sub_dir)
+        candidates_dirs.append(self.base_path)
 
-        matches = sorted(search_dir.glob(self.spec.file_pattern)) if search_dir.exists() else []
+        for search_dir in candidates_dirs:
+            matches = sorted(search_dir.glob(self.spec.file_pattern)) if search_dir.exists() else []
+            if matches:
+                return max(matches, key=lambda p: p.stat().st_mtime)
 
-        if not matches and self.base_path.exists():
+        if self.base_path.exists():
             matches = sorted(self.base_path.glob(f"**/{self.spec.file_pattern}"))
+            if matches:
+                return max(matches, key=lambda p: p.stat().st_mtime)
 
-        if not matches:
-            raise FileNotFoundError(
-                f"No se encontró archivo '{self.spec.file_pattern}' en {search_dir} ni en {self.base_path}"
-            )
-        return max(matches, key=lambda p: p.stat().st_mtime)
+        raise FileNotFoundError(
+            f"No se encontró archivo '{self.spec.file_pattern}' en {self.base_path}"
+        )
 
     def get_sheet_names(self, path: Path) -> list[str]:
         try:

@@ -844,21 +844,24 @@ class TestEltPipeline(unittest.TestCase):
             exp_dir = Path(tmp) / "exports"
             exp_dir.mkdir()
             env_path.write_text(f"EXPORT_PATH={exp_dir}\nSAP_SISTEMA=QAS\n", encoding="utf-8")
-            old_exp = os.environ.get("EXPORT_PATH")
-            old_sys = os.environ.get("SAP_SISTEMA")
+            env_clean = {
+                k: v for k, v in os.environ.items()
+                if k not in (
+                    "PATH_INSUMOS_FIJOS",
+                    "PATH_INSUMOS_DINAMICOS",
+                    "PATH_REPORTES_SALIDA",
+                    "EXPORT_PATH",
+                    "DATA_PATH",
+                    "SAP_SISTEMA",
+                )
+            }
             try:
-                EnvConfig.reload(env_path)
-                self.assertEqual(EnvConfig.EXPORT_PATH, exp_dir)
-                self.assertEqual(EnvConfig.SAP_SISTEMA, "QAS")
+                with patch.dict(os.environ, env_clean, clear=True):
+                    EnvConfig.reload(env_path)
+                    self.assertEqual(EnvConfig.EXPORT_PATH, exp_dir)
+                    self.assertEqual(EnvConfig.REPORTS_OUTPUT_PATH, exp_dir)
+                    self.assertEqual(EnvConfig.SAP_SISTEMA, "QAS")
             finally:
-                if old_exp is not None:
-                    os.environ["EXPORT_PATH"] = old_exp
-                else:
-                    os.environ.pop("EXPORT_PATH", None)
-                if old_sys is not None:
-                    os.environ["SAP_SISTEMA"] = old_sys
-                else:
-                    os.environ.pop("SAP_SISTEMA", None)
                 EnvConfig.reload()
 
     def test_transform_query_sql_placeholders(self):
@@ -1575,6 +1578,146 @@ class TestEltPipeline(unittest.TestCase):
         self.assertEqual(closed_gd, 1)
         wb_gd20.Close.assert_called_once_with(SaveChanges=False)
         app_only.Quit.assert_called_once()
+
+    def test_segmented_routes_env_reader_and_io_resolution(self):
+        from itacamba_reportes.core.io.reader import FastExcelReader
+        from itacamba_reportes.core.settings import EnvConfig
+        from itacamba_reportes.inputs.cartera.ingest import CARTERA_SPEC
+        from itacamba_reportes.inputs.gd20.ingest import GD20_SPEC
+        from itacamba_reportes.inputs.proyeccion.ingest import resolve_proyeccion_path
+        from itacamba_reportes.inputs.query.ingest import QUERY_SPEC
+        from itacamba_reportes.inputs.referencias.ingest import resolve_referencias_path
+        from itacamba_reportes.outputs.historial_ventas.export import export_historial_ventas
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fijos_dir = root / "custom_fixed_area"
+            din_dir = root / "custom_daily_sap"
+            rep_dir = root / "custom_bi_delivery"
+            for d in (fijos_dir, din_dir, rep_dir):
+                d.mkdir(parents=True, exist_ok=True)
+
+            (fijos_dir / "REFERENCIAS.xlsx").write_bytes(b"ref")
+            (fijos_dir / "PROYECCION-SEMANAL.xlsx").write_bytes(b"proy")
+            (din_dir / "GD20.xlsx").write_bytes(b"gd20")
+            (din_dir / "QUERY.xlsx").write_bytes(b"query")
+            (din_dir / "CARTERA.xlsx").write_bytes(b"cartera")
+
+            env_path = root / ".env"
+            env_path.write_text(
+                "\n".join([
+                    f"PATH_INSUMOS_FIJOS={fijos_dir}",
+                    f"PATH_INSUMOS_DINAMICOS={din_dir}",
+                    f"PATH_REPORTES_SALIDA={rep_dir}",
+                ]),
+                encoding="utf-8",
+            )
+            env_clean = {
+                k: v for k, v in os.environ.items()
+                if k not in ("PATH_INSUMOS_FIJOS", "PATH_INSUMOS_DINAMICOS", "PATH_REPORTES_SALIDA", "DATA_PATH", "EXPORT_PATH")
+            }
+            try:
+                with patch.dict(os.environ, env_clean, clear=True):
+                    EnvConfig.reload(env_path)
+                    self.assertEqual(EnvConfig.FIXED_INPUTS_PATH, fijos_dir)
+                    self.assertEqual(EnvConfig.DYNAMIC_INPUTS_PATH, din_dir)
+                    self.assertEqual(EnvConfig.REPORTS_OUTPUT_PATH, rep_dir)
+                    self.assertEqual(EnvConfig.EXPORT_PATH, rep_dir)
+
+                    self.assertEqual(resolve_referencias_path(), fijos_dir / "REFERENCIAS.xlsx")
+                    self.assertEqual(resolve_proyeccion_path(), fijos_dir / "PROYECCION-SEMANAL.xlsx")
+                    self.assertEqual(FastExcelReader(GD20_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH).resolve_path(), din_dir / "GD20.xlsx")
+                    self.assertEqual(FastExcelReader(QUERY_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH).resolve_path(), din_dir / "QUERY.xlsx")
+                    self.assertEqual(FastExcelReader(CARTERA_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH).resolve_path(), din_dir / "CARTERA.xlsx")
+
+                    # Validar que exportar historial escribe en REPORTS_OUTPUT_PATH y sincroniza en FIXED_INPUTS_PATH
+                    import pandas as pd
+                    df_dummy = pd.DataFrame([{"col": 1}])
+                    out_hist = export_historial_ventas(df_ventas=df_dummy, df_despachos=df_dummy)
+                    self.assertIsNotNone(out_hist)
+                    self.assertEqual(out_hist.parent, rep_dir)
+                    self.assertTrue(out_hist.exists())
+                    self.assertTrue((fijos_dir / "HISTORIAL VENTAS.xlsx").exists())
+            finally:
+                EnvConfig.reload()
+
+    def test_bridge_segmented_routes_save_seed_and_validation(self):
+        from itacamba_reportes.ui.bridge import BotBridge
+        from itacamba_reportes.core.settings import EnvConfig
+
+        bridge = BotBridge()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fijos_dir = root / "fijos_seg"
+            din_dir = root / "din_seg"
+            rep_dir = root / "rep_seg"
+            for d in (fijos_dir, din_dir, rep_dir):
+                d.mkdir(parents=True, exist_ok=True)
+            (fijos_dir / "REFERENCIAS.xlsx").write_bytes(b"ok")
+            (fijos_dir / "PROYECCION-SEMANAL.xlsx").write_bytes(b"ok")
+            sap_exe = root / "saplogon.exe"
+            sap_exe.write_bytes(b"exe")
+
+            env_file = root / ".env"
+            env_file.write_text("SAP_AMBIENT=PRD\n", encoding="utf-8")
+
+            env_clean = {
+                k: v for k, v in os.environ.items()
+                if k not in ("PATH_INSUMOS_FIJOS", "PATH_INSUMOS_DINAMICOS", "PATH_REPORTES_SALIDA", "DATA_PATH", "EXPORT_PATH")
+            }
+            try:
+                with patch.dict(os.environ, env_clean, clear=True), \
+                     patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_file), \
+                     patch("itacamba_reportes.core.db.connection.set_engine"):
+                    # 1. _read_env_file expone las 3 rutas aunque aun no esten escritas en .env
+                    items = bridge._read_env_file()
+                    keys = [it["clave"] for it in items]
+                    for expected_key in ("PATH_INSUMOS_FIJOS", "PATH_INSUMOS_DINAMICOS", "PATH_REPORTES_SALIDA"):
+                        self.assertIn(expected_key, keys)
+
+                    # 2. Guardar variables segmentadas desde UI y verificar resumen de rutas
+                    vars_payload = [
+                        {"clave": "SAP_LOGON_PATH", "valor": str(sap_exe), "categoria": "sap", "activa": True},
+                        {"clave": "SAP_AMBIENT", "valor": "PRD", "categoria": "sap", "activa": True},
+                        {"clave": "SAP_USER", "valor": "bot", "categoria": "sap", "activa": True},
+                        {"clave": "SAP_PASSWORD", "valor": "secret", "categoria": "sap", "activa": True},
+                        {"clave": "DATABASE_URL", "valor": "mssql+pyodbc://sa:x@localhost/db", "categoria": "db", "activa": True},
+                        {"clave": "PATH_INSUMOS_FIJOS", "valor": str(fijos_dir), "categoria": "rutas", "activa": True},
+                        {"clave": "PATH_INSUMOS_DINAMICOS", "valor": str(din_dir), "categoria": "rutas", "activa": True},
+                        {"clave": "PATH_REPORTES_SALIDA", "valor": str(rep_dir), "categoria": "rutas", "activa": True},
+                    ]
+                    save_res = bridge.save_env_variables(json.dumps(vars_payload))
+                    self.assertEqual(save_res["status"], "ok")
+
+                    with patch.object(bridge, "test_sql_connection", return_value={"ok": True, "message": "SQL OK"}), \
+                         patch.object(bridge, "test_sap_logon", return_value={"ok": True, "message": "SAP OK"}):
+                        val_res = bridge.validate_web_configuration(profile_json=json.dumps({
+                            "id": "diaria",
+                            "nombre": "Diaria",
+                            "fechaDesde": "2026-11-01",
+                            "fechaHasta": "2026-11-26",
+                        }))
+
+                    self.assertTrue(val_res["ok"], val_res["checks"])
+                    self.assertEqual(len(val_res["routes_summary"]), 3)
+                    seg_check = next(c for c in val_res["checks"] if c["id"] == "routes_segmentation")
+                    self.assertEqual(seg_check["status"], "ok")
+
+                    # 3. Colision entre rutas debe reportar error
+                    vars_payload[-1]["valor"] = str(din_dir)
+                    bridge.save_env_variables(json.dumps(vars_payload))
+                    with patch.object(bridge, "test_sql_connection", return_value={"ok": True, "message": "SQL OK"}), \
+                         patch.object(bridge, "test_sap_logon", return_value={"ok": True, "message": "SAP OK"}):
+                        coll_res = bridge.validate_web_configuration(profile_json=json.dumps({
+                            "id": "diaria",
+                            "nombre": "Diaria",
+                            "fechaDesde": "2026-11-01",
+                            "fechaHasta": "2026-11-26",
+                        }))
+                    self.assertFalse(coll_res["ok"])
+                    self.assertTrue(any(c["id"] == "routes_collision" and c["status"] == "error" for c in coll_res["checks"]))
+            finally:
+                EnvConfig.reload()
 
 
 if __name__ == "__main__":
