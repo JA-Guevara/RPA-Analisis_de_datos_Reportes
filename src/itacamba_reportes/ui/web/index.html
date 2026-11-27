@@ -880,7 +880,22 @@
               <span class="badge" :class="badgeEjecucion().clase" x-text="badgeEjecucion().texto"></span>
             </div>
           </div>
-          <div class="card-b stack">
+          <div class="card-b stack" x-show="configuraciones.length === 0" x-cloak>
+            <div class="banner info">
+              <span x-html="icono('info')"></span>
+              <div>
+                <b>Todavía no hay perfiles configurados en esta máquina.</b>
+                <div class="hint" style="margin-top:4px">Primero valida tus rutas y conexiones arriba o ve a <b>Programador</b> para crear tu perfil mensual con los días y la hora de ejecución.</div>
+              </div>
+            </div>
+            <div class="home-execution-actions">
+              <button type="button" class="btn btn-primary btn-lg" @click="ir('programador'); $nextTick(() => abrirModalConfiguracion(null))">
+                <span x-html="icono('plus')"></span> Crear primera configuración en Programador
+              </button>
+            </div>
+          </div>
+
+          <div class="card-b stack" x-show="configuraciones.length > 0">
             <div class="home-profile-select">
               <div class="field">
                 <label for="home-profile">Perfil de ejecución</label>
@@ -905,19 +920,28 @@
 
             <label class="calendar-include-day" style="margin-top:-4px">
               <input type="checkbox" x-model="descargarSapAntes" :disabled="ejecutando || cronogramaActivo">
-              <span>Descargar insumos actualizados desde SAP (GD20 + Query) antes de procesar</span>
+              <span>Descargar insumos actualizados desde SAP (GD20 + Query) antes de procesar cada ciclo</span>
             </label>
 
             <div class="home-execution-actions">
-              <button type="button" class="btn btn-primary btn-lg" :disabled="ejecutando || cronogramaActivo || deteniendo || !configuracionActiva().id || perfilMesEsFuturo()" @click="ejecutar()">
-                <span x-html="icono('play')"></span> Ejecutar ahora
-              </button>
-              <button type="button" class="btn btn-lg" :class="cronogramaActivo ? 'btn-danger' : 'btn-ghost'" :disabled="ejecutando || iniciandoCronograma || deteniendoCronograma || (!cronogramaActivo && (configuracionActiva().frecuencia === 'manual' || !tieneDiasCalendarioActivo()))" @click="cronogramaActivo ? detenerCronograma() : iniciarCronograma()">
-                <span x-html="icono(cronogramaActivo ? 'stop' : 'clock')"></span>
-                <span x-text="cronogramaActivo ? 'Detener programación' : (configuracionActiva().frecuencia === 'manual' ? 'Perfil solo manual' : (iniciandoCronograma ? 'Preparando…' : 'Iniciar programación'))"></span>
+              <template x-if="configuracionActiva().frecuencia !== 'manual'">
+                <button type="button" class="btn btn-lg"
+                        :class="cronogramaActivo ? 'btn-danger' : 'btn-primary'"
+                        :disabled="iniciandoCronograma || deteniendoCronograma || (!cronogramaActivo && (ejecutando || !tieneDiasCalendarioActivo()))"
+                        @click="cronogramaActivo ? detenerCronograma() : iniciarCronograma()">
+                  <span x-html="icono(cronogramaActivo ? 'stop' : 'clock')"></span>
+                  <span x-text="cronogramaActivo ? (deteniendoCronograma ? 'Deteniendo programación…' : 'Detener programación') : (iniciandoCronograma ? 'Preparando…' : 'Iniciar programación')"></span>
+                </button>
+              </template>
+              <button type="button" class="btn btn-lg"
+                      :class="(ejecutando && !cronogramaActivo) ? 'btn-danger' : (configuracionActiva().frecuencia === 'manual' ? 'btn-primary' : 'btn-ghost')"
+                      :disabled="(ejecutando && !cronogramaActivo) ? deteniendo : (ejecutando || cronogramaActivo || !configuracionActiva().id || perfilMesEsFuturo())"
+                      @click="(ejecutando && !cronogramaActivo) ? detener() : ejecutar()">
+                <span x-html="icono((ejecutando && !cronogramaActivo) ? 'stop' : 'play')"></span>
+                <span x-text="(ejecutando && !cronogramaActivo) ? (deteniendo ? 'Deteniendo…' : 'Detener ejecución') : (configuracionActiva().frecuencia === 'manual' ? 'Ejecutar ahora' : 'Ejecutar 1 ciclo ahora')"></span>
               </button>
             </div>
-            <p class="hint" x-show="configuracionActiva().frecuencia === 'manual'">Este perfil solo se ejecuta cuando presionas “Ejecutar ahora”.</p>
+            <p class="hint" x-show="configuracionActiva().frecuencia === 'manual'">Este perfil es solo manual: el botón inicia la corrida actual y cambia a “Detener” mientras esté en curso.</p>
             <p class="hint" x-show="configuracionActiva().frecuencia !== 'manual' && !tieneDiasCalendarioActivo()">Este perfil no tiene fechas próximas asignadas para el mes elegido. Edítalo en Programador antes de iniciar la programación.</p>
             <p class="hint" x-show="perfilMesEsFuturo()">Este perfil está preparado para un mes futuro. Puedes iniciar la programación; la ejecución inmediata estará disponible cuando empiece ese mes.</p>
 
@@ -926,12 +950,13 @@
               <div>
                 <b x-text="cronogramaActivo ? 'Programación activa · ' + (estadoCronograma.profile_name || configuracionActiva().nombre) : cronogramaMensaje"></b>
                 <small x-show="proximaEjecucion" x-text="'Próxima ejecución: ' + fechaHoraCronograma(proximaEjecucion)"></small>
-                <small x-show="cronogramaActivo && estadoCronograma.pending > 0" x-text="estadoCronograma.pending + ' ejecución(es) restante(s)'"></small>
+                <small x-show="cronogramaActivo && estadoCronograma.pending > 0" x-text="estadoCronograma.pending + ' ciclo(s) restante(s) · ' + (estadoCronograma.completed || 0) + ' completado(s)'"></small>
+                <small x-show="cronogramaActivo && estadoCronograma.last_run_at" x-text="'Último ciclo (' + estadoCronograma.last_run_at + '): ' + (estadoCronograma.last_run_status === 'error' ? 'con error (seguirá con el próximo horario)' : 'exitoso')"></small>
                 <small x-show="cronogramaActivo && estadoCronograma.skipped > 0" x-text="estadoCronograma.skipped + ' horario(s) pasado(s) omitido(s) al iniciar'"></small>
                 <small x-show="estadoCronograma.current_run" x-text="'En curso: ' + estadoCronograma.current_run"></small>
               </div>
             </div>
-            <p class="hint" style="margin:0">La programación automática funciona mientras la aplicación esté abierta y el equipo despierto.</p>
+            <p class="hint" style="margin:0">La programación automática se mantiene activa entre ciclos hasta completar todos los días del mes o presionar “Detener programación”.</p>
 
             <div class="banner err" x-show="estado.has_error && !ejecutando" x-cloak role="alert">
               <span x-html="icono('alert')"></span>
@@ -979,7 +1004,14 @@
             <button type="button" class="btn btn-primary btn-sm" @click="abrirModalConfiguracion(null)" :disabled="cronogramaActivo"><span x-html="icono('plus')"></span> Nuevo perfil</button>
           </div>
           <div class="card-b">
-            <div class="profile-manager-grid">
+            <div class="banner info" x-show="configuraciones.length === 0" x-cloak>
+              <span x-html="icono('info')"></span>
+              <div>
+                <b>Todavía no hay perfiles creados en esta máquina.</b>
+                <div class="hint" style="margin-top:4px">Presiona <b>+ Nuevo perfil</b> para definir el mes, los días, el horario único y si debe descargar insumos desde SAP en cada ciclo.</div>
+              </div>
+            </div>
+            <div class="profile-manager-grid" x-show="configuraciones.length > 0">
               <template x-for="perfil in configuraciones" :key="perfil.id">
                 <article class="profile-manager-card" :class="{ active: perfil.id === configuracionActivaId }">
                   <div class="row between" style="align-items:flex-start">
@@ -998,7 +1030,7 @@
                   <div class="profile-manager-actions">
                     <button type="button" class="btn btn-sm btn-primary" @click="abrirModalConfiguracion(perfil)" :disabled="cronogramaActivo"><span x-html="icono('settings')"></span> Editar programación</button>
                     <span class="spacer"></span>
-                    <button type="button" class="btn btn-sm btn-ghost" @click="pedirConfirmarEliminarCfg(perfil)" :disabled="cronogramaActivo || configuraciones.length <= 1" :aria-label="'Eliminar ' + perfil.nombre" x-html="icono('trash')"></button>
+                    <button type="button" class="btn btn-sm btn-ghost" @click="pedirConfirmarEliminarCfg(perfil)" :disabled="cronogramaActivo" :aria-label="'Eliminar ' + perfil.nombre" x-html="icono('trash')"></button>
                   </div>
                 </article>
               </template>
@@ -1444,20 +1476,28 @@
               <span x-text="tipoDiaEdicion() === 'rango' ? 'Incluir la fecha final del rango' : 'Incluir la fecha de ejecución en los datos'"></span>
             </label>
             <div class="profile-selected-fields" x-show="tipoDiaEdicion()">
-              <div class="field">
-                <label for="cfg-dia-hora" x-text="frecuenciaDiaEdicion() === 'intervalo' ? 'Primera ejecución de esta fecha' : 'Hora de esta fecha'"></label>
-                <input id="cfg-dia-hora" class="input mono" type="time" :value="horaDiaEdicion()" @change="actualizarHoraDiaEdicion($event.target.value)">
+              <div class="field" style="gap:8px; grid-column:1 / -1">
+                <div class="row between" style="gap:8px; flex-wrap:wrap">
+                  <span class="chip mono" x-text="'Horario del perfil: ' + resumenHorarioDiaEdicion()"></span>
+                  <label class="calendar-include-day" style="margin:0; font-size:12.5px">
+                    <input type="checkbox" :checked="horaPersonalizadaDiaEdicion()" @change="alternarHoraPersonalizadaDiaEdicion($event.target.checked)">
+                    <span>Usar hora especial solo este día</span>
+                  </label>
+                </div>
+                <div class="row" style="gap:8px; align-items:center" x-show="horaPersonalizadaDiaEdicion()">
+                  <label for="cfg-dia-hora" style="margin:0" x-text="frecuenciaDiaEdicion() === 'intervalo' ? 'Primera ejecución de esta fecha:' : 'Hora especial de esta fecha:'"></label>
+                  <input id="cfg-dia-hora" class="input mono" style="max-width:160px" type="time" :value="horaDiaEdicion()" @change="actualizarHoraDiaEdicion($event.target.value)">
+                </div>
               </div>
               <div class="calendar-range" x-show="tipoDiaEdicion() === 'rango'">
                 <div class="field"><label for="cfg-rango-desde">Rango desde</label><input id="cfg-rango-desde" class="input" type="date" x-model="editCalendar.fechaDesdeManual" @change="actualizarRangoPerfilEdicion()"></div>
                 <div class="field"><label for="cfg-rango-hasta">Rango hasta</label><input id="cfg-rango-hasta" class="input" type="date" x-model="editCalendar.fechaHastaManual" @change="actualizarRangoPerfilEdicion()"></div>
               </div>
             </div>
-            <div class="calendar-include-day" x-show="tipoDiaEdicion()"><span class="calendar-time-mark" aria-hidden="true">◷</span><span x-text="resumenHorarioDiaEdicion()"></span></div>
             <div class="profile-calendar-footer">
-              <span class="hint">Puedes cambiar la hora de esta fecha o aplicar aquí el horario que corresponde a su tipo.</span>
+              <span class="hint">La hora general se configura abajo en “2 · Programación”. Activa “Usar hora especial solo este día” únicamente si esta fecha puntual debe correr a otra hora.</span>
               <button type="button" class="btn btn-sm btn-ghost" x-show="tipoDiaEdicion()" @click="seleccionarTipoCalendarioPerfil('libre'); seleccionarDiaCalendarioPerfil(editCalendar.fechaActiva)">Dejar este día libre</button>
-              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarHorarioGeneralPerfil()" :disabled="cantidadDiasAsignadosEdicion() === 0">Aplicar horario del perfil a todos</button>
+              <button type="button" class="btn btn-sm btn-ghost" @click="aplicarHorarioGeneralPerfil()" :disabled="cantidadDiasAsignadosEdicion() === 0">Restablecer hora del perfil en todos</button>
             </div>
           </div>
         </section>
@@ -1502,10 +1542,15 @@
         <div class="profile-builder-heading compact">
           <div>
             <span class="eyebrow">2 · PROGRAMACIÓN</span>
-            <h4 id="profile-schedule-title">¿Cuándo se ejecuta en los días marcados?</h4>
-          <p>Elige una sola regla para el perfil: el mismo horario para todos o uno propio para cada tipo de periodo.</p>
+            <h4 id="profile-schedule-title">¿A qué hora y con qué frecuencia se ejecuta en los días marcados?</h4>
+          <p>Define aquí el horario principal para todos los días marcados arriba (o uno propio por tipo de periodo).</p>
           </div>
         </div>
+
+        <label class="calendar-include-day" style="margin-bottom:8px">
+          <input type="checkbox" x-model="editCfg.descargarSap">
+          <span>Descargar insumos actualizados desde SAP (GD20 + ZVCSD381) antes de procesar cada ciclo</span>
+        </label>
 
         <div class="field">
           <label>Horario del perfil</label>
@@ -2295,40 +2340,41 @@ document.addEventListener('alpine:init', () => {
         nuevoSecreto: '',
         nueva: false,
       }));
-      if (r.execution_profiles && r.execution_profiles.length) {
-        this.configuraciones = r.execution_profiles.map(p => {
-          const perfil = {
-            ...p,
-            frecuencia: p.frecuencia || 'diaria',
-            horaFija: p.horaFija || '06:00',
-            intervaloHoras: Number(p.intervaloHoras) || 4,
-            horaInicioVentana: p.horaInicioVentana || '08:00',
-            horaFinVentana: p.horaFinVentana || '18:00',
-            incluirHoy: p.incluirHoy !== undefined ? !!p.incluirHoy : p.modo === 'cierre',
-            periodoDatos: p.periodoDatos || (p.modo === 'rango' ? 'rango' : (p.modo === 'cierre' ? 'mes_anterior' : 'mes_actual')),
-            mesEjecucion: p.mesEjecucion || (p.fechaHasta || hoyISO()).slice(0, 7),
-            diasMes: Array.isArray(p.diasMes) ? p.diasMes : null,
-            diasSemana: Array.isArray(p.diasSemana) ? p.diasSemana : [],
-            fechaDesde: p.fechaDesde || hoyISO(-30),
-            fechaHasta: p.fechaHasta || hoyISO(),
-          };
-          if (!p.mesEjecucion && p.modo !== 'rango') this.actualizarPeriodoPerfil(perfil);
-          return perfil;
-        });
-      }
+      this.configuraciones = Array.isArray(r.execution_profiles)
+        ? r.execution_profiles.map(p => {
+            const perfil = {
+              ...p,
+              frecuencia: p.frecuencia || 'diaria',
+              horaFija: p.horaFija || '06:00',
+              intervaloHoras: Number(p.intervaloHoras) || 4,
+              horaInicioVentana: p.horaInicioVentana || '08:00',
+              horaFinVentana: p.horaFinVentana || '18:00',
+              incluirHoy: p.incluirHoy !== undefined ? !!p.incluirHoy : p.modo === 'cierre',
+              descargarSap: p.descargarSap !== undefined ? !!p.descargarSap : (p.frecuencia !== 'manual'),
+              periodoDatos: p.periodoDatos || (p.modo === 'rango' ? 'rango' : (p.modo === 'cierre' ? 'mes_anterior' : 'mes_actual')),
+              mesEjecucion: p.mesEjecucion || (p.fechaHasta || hoyISO()).slice(0, 7),
+              diasMes: Array.isArray(p.diasMes) ? p.diasMes : null,
+              diasSemana: Array.isArray(p.diasSemana) ? p.diasSemana : [],
+              fechaDesde: p.fechaDesde || hoyISO(-30),
+              fechaHasta: p.fechaHasta || hoyISO(),
+            };
+            if (!p.mesEjecucion && p.modo !== 'rango') this.actualizarPeriodoPerfil(perfil);
+            return perfil;
+          })
+        : [];
       try {
         const perfilGuardado = localStorage.getItem('perfilEjecucionId');
         this.configuracionActivaId = this.configuraciones.some(p => String(p.id) === perfilGuardado)
           ? this.configuraciones.find(p => String(p.id) === perfilGuardado).id
-          : (this.configuraciones[0]?.id || 'diaria');
+          : (this.configuraciones[0]?.id || '');
       } catch (e) {
-        this.configuracionActivaId = this.configuraciones[0]?.id || 'diaria';
+        this.configuracionActivaId = this.configuraciones[0]?.id || '';
       }
       const calendarioGuardado = r.execution_calendar || {};
       const calendariosGuardados = calendarioGuardado.perfiles && typeof calendarioGuardado.perfiles === 'object'
         ? { ...calendarioGuardado.perfiles }
         : {};
-      if (calendarioGuardado.asignaciones && !calendariosGuardados[this.configuracionActivaId]) {
+      if (calendarioGuardado.asignaciones && this.configuracionActivaId && !calendariosGuardados[this.configuracionActivaId]) {
         calendariosGuardados[this.configuracionActivaId] = calendarioGuardado;
       }
       this.calendariosPerfiles = {};
@@ -2340,7 +2386,16 @@ document.addEventListener('alpine:init', () => {
         this.calendariosPerfiles[perfil.id] = this.normalizarCalendario(base, perfil);
       });
       this.perfilCalendarioActivoId = this.configuracionActivaId;
-      this.calendario = this.clonarCalendario(this.calendariosPerfiles[this.configuracionActivaId] || this.crearCalendarioDesdePerfil(this.configuracionActiva()));
+      this.calendario = this.configuracionActivaId
+        ? this.clonarCalendario(this.calendariosPerfiles[this.configuracionActivaId] || this.crearCalendarioDesdePerfil(this.configuracionActiva()))
+        : null;
+      if (!this.yaCargoInicial) {
+        const activo = this.configuracionActiva();
+        this.descargarSapAntes = activo && activo.id
+          ? (activo.descargarSap !== undefined ? !!activo.descargarSap : (activo.frecuencia !== 'manual'))
+          : true;
+        this.yaCargoInicial = true;
+      }
       if (r.sap_tasks && r.sap_tasks.length) {
         this.tareasSap = r.sap_tasks;
       }
@@ -2461,6 +2516,8 @@ document.addEventListener('alpine:init', () => {
           return;
         }
         if (!await this.guardarCalendarioEjecucion()) return;
+        perfil.descargarSap = !!this.descargarSapAntes;
+        await this.guardarPerfilesEjecucion();
         const perfilProgramado = { ...perfil, descargarSap: !!this.descargarSapAntes };
         const result = await this.llamar('start_profile_schedule', JSON.stringify(perfilProgramado), JSON.stringify(this.calendario));
         if (!result || result.status === 'error') {
@@ -3036,7 +3093,7 @@ document.addEventListener('alpine:init', () => {
     },
 
     rangoParaFecha(fecha, tipo, incluirDia) {
-      const [year, month] = fecha.split('-').map(Number);
+      const [year, month, day] = fecha.split('-').map(Number);
       if (tipo === 'rango') {
         const assignment = this.calendario.asignaciones?.[fecha];
         return {
@@ -3046,7 +3103,8 @@ document.addEventListener('alpine:init', () => {
         };
       }
       const fechaInicioMes = `${year}-${String(month).padStart(2, '0')}-01`;
-      const fechaDesde = tipo === 'mes_anterior'
+      const usarMesAnterior = tipo === 'mes_anterior' || (tipo === 'mes_actual' && !incluirDia && day === 1);
+      const fechaDesde = usarMesAnterior
         ? `${new Date(year, month - 2, 1).getFullYear()}-${String(new Date(year, month - 2, 1).getMonth() + 1).padStart(2, '0')}-01`
         : fechaInicioMes;
       const fechaHasta = fecha;
@@ -3145,14 +3203,20 @@ document.addEventListener('alpine:init', () => {
     seleccionarConfiguracion(id) {
       const previousId = this.perfilCalendarioActivoId;
       if (this.calendario && previousId) this.calendariosPerfiles[previousId] = this.clonarCalendario(this.calendario);
-      this.configuracionActivaId = id;
+      this.configuracionActivaId = id || '';
       const c = this.configuracionActiva();
-      this.perfilCalendarioActivoId = c.id || id;
+      if (!c || !c.id) {
+        this.perfilCalendarioActivoId = '';
+        this.calendario = null;
+        return null;
+      }
+      this.perfilCalendarioActivoId = c.id;
       const storedCalendar = this.calendariosPerfiles[this.perfilCalendarioActivoId]
         || this.crearCalendarioDesdePerfil(c);
       this.calendario = this.clonarCalendario(this.normalizarCalendario(storedCalendar, c));
       this.calendariosPerfiles[this.perfilCalendarioActivoId] = this.clonarCalendario(this.calendario);
-      try { localStorage.setItem('perfilEjecucionId', String(c.id || id)); } catch (e) {}
+      this.descargarSapAntes = c.descargarSap !== undefined ? !!c.descargarSap : (c.frecuencia !== 'manual');
+      try { localStorage.setItem('perfilEjecucionId', String(c.id)); } catch (e) {}
       return c;
     },
 
@@ -3189,6 +3253,7 @@ document.addEventListener('alpine:init', () => {
         this.editCfg.periodoDatos = this.editCfg.periodoDatos || (this.editCfg.modo === 'rango' ? 'rango' : (this.editCfg.modo === 'cierre' ? 'mes_anterior' : 'mes_actual'));
         this.editCfg.mesEjecucion = this.editCfg.mesEjecucion || (this.editCfg.fechaHasta || hoyISO()).slice(0, 7);
         this.editCfg.diasMes = Array.isArray(this.editCfg.diasMes) ? this.editCfg.diasMes : Array.from({ length: 31 }, (_, i) => i + 1);
+        this.editCfg.descargarSap = this.editCfg.descargarSap !== undefined ? !!this.editCfg.descargarSap : (this.editCfg.frecuencia !== 'manual');
         this.editCfg.esNueva = false;
       } else {
         this.editCfg = {
@@ -3197,6 +3262,7 @@ document.addEventListener('alpine:init', () => {
           descripcion: 'Rutina mensual de reportes.',
           modo: 'diaria',
           incluirHoy: false,
+          descargarSap: true,
           frecuencia: 'diaria',
           horaFija: '06:00',
           horaInicioVentana: '08:00',
@@ -3294,6 +3360,25 @@ document.addEventListener('alpine:init', () => {
       const raw = this.editCalendar?.asignaciones?.[fecha];
       if (raw && typeof raw === 'object' && raw.horaPersonalizada && raw.hora) return raw.hora;
       return this.horaGeneralEdicionPerfil(this.tipoDiaEdicion(fecha));
+    },
+
+    horaPersonalizadaDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      return !!(raw && typeof raw === 'object' && raw.horaPersonalizada);
+    },
+
+    alternarHoraPersonalizadaDiaEdicion(habilitar) {
+      const fecha = this.editCalendar?.fechaActiva;
+      const raw = this.editCalendar?.asignaciones?.[fecha];
+      const tipo = this.tipoDiaEdicion(fecha);
+      if (!tipo) return;
+      const horaBase = this.horaGeneralEdicionPerfil(tipo);
+      this.editCalendar.asignaciones[fecha] = {
+        ...(typeof raw === 'object' ? raw : {}),
+        tipo,
+        hora: habilitar ? this.horaDiaEdicion(fecha) : horaBase,
+        horaPersonalizada: !!habilitar,
+      };
     },
 
     frecuenciaDiaEdicion(fecha = this.editCalendar?.fechaActiva) {
@@ -3478,9 +3563,11 @@ document.addEventListener('alpine:init', () => {
       if (tipo === 'rango') {
         return { fechaDesde: assignment.fechaDesde || this.editCalendar.fechaDesdeManual, fechaHasta: assignment.fechaHasta || this.editCalendar.fechaHastaManual };
       }
-      const [year, month] = fecha.split('-').map(Number);
+      const [year, month, day] = fecha.split('-').map(Number);
       const first = new Date(year, month - 1, 1);
-      const from = tipo === 'mes_anterior' ? new Date(year, month - 2, 1) : first;
+      const include = this.incluirDiaEdicion(fecha);
+      const usarMesAnterior = tipo === 'mes_anterior' || (tipo === 'mes_actual' && !include && day === 1);
+      const from = usarMesAnterior ? new Date(year, month - 2, 1) : first;
       return { fechaDesde: `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-01`, fechaHasta: fecha };
     },
 
@@ -3726,6 +3813,7 @@ document.addEventListener('alpine:init', () => {
       else if (this.configuracionActivaId === this.editCfg.id) {
         this.perfilCalendarioActivoId = this.editCfg.id;
         this.calendario = this.clonarCalendario(this.editCalendar);
+        this.descargarSapAntes = !!this.editCfg.descargarSap;
       }
       this.dialogo = null;
       this.avisar('Perfil y programación guardados. Puedes revisarlo en Inicio antes de ejecutarlo.', 'success');
@@ -3738,10 +3826,6 @@ document.addEventListener('alpine:init', () => {
     },
 
     pedirConfirmarEliminarCfg(c) {
-      if (this.configuraciones.length <= 1) {
-        this.avisar('No puedes eliminar el único perfil de ejecución configurado', 'warn');
-        return;
-      }
       this.eliminarCfgId = c.id;
       this.eliminarCfgNombre = c.nombre;
       this.dialogo = 'confirmar_eliminar_cfg';
@@ -3768,10 +3852,13 @@ document.addEventListener('alpine:init', () => {
         this.avisar('No se pudo eliminar el perfil. Inténtalo nuevamente.', 'error');
         return;
       }
-      if (eliminarActivo) this.seleccionarConfiguracion(this.configuraciones[0].id);
+      if (eliminarActivo) this.seleccionarConfiguracion(this.configuraciones[0]?.id || '');
       delete this.calendariosPerfiles[deletedId];
-      const calendarioGuardado = await this.guardarCalendarioEjecucion();
-      try { localStorage.setItem('perfilEjecucionId', String(this.configuracionActivaId)); } catch (e) {}
+      const calendarioGuardado = await this.guardarMapaCalendarios();
+      try {
+        if (this.configuracionActivaId) localStorage.setItem('perfilEjecucionId', String(this.configuracionActivaId));
+        else localStorage.removeItem('perfilEjecucionId');
+      } catch (e) {}
       this.dialogo = null;
       this.avisar(calendarioGuardado
         ? `Perfil "${this.eliminarCfgNombre}" eliminado`

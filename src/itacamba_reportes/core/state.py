@@ -28,10 +28,30 @@ def compute_file_signature(path: Path) -> dict[str, Any]:
         quick_hash = ""
 
     return {
+        "path": str(path),
         "size": stat.st_size,
         "mtime": stat.st_mtime,
         "hash": quick_hash,
     }
+
+
+def cached_table_rows_if_unchanged(
+    key: str,
+    file_path: Path | None,
+    table_name: str,
+    engine_obj: Any,
+    force: bool = False,
+) -> int | None:
+    if force or file_path is None or has_file_changed(key, file_path):
+        return None
+    from sqlalchemy import text
+
+    try:
+        with engine_obj.connect() as conn:
+            count = conn.execute(text(f"SELECT COUNT(*) FROM [{table_name}]")).scalar() or 0
+        return int(count) if count > 0 else None
+    except Exception:
+        return None
 
 
 def load_pipeline_state() -> dict[str, Any]:

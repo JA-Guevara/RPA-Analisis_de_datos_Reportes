@@ -177,6 +177,9 @@ class BotBridge:
 
     def _run_pipeline_worker(self, params: dict[str, Any]) -> None:
         # Trabajador que ejecuta secuencialmente las 6 etapas reales del bot.
+        from itacamba_reportes.core.settings import EnvConfig
+
+        EnvConfig.reload(ENV_FILE_PATH if ENV_FILE_PATH.exists() else None)
         modo = params.get("modo", "diaria")
         corte_fecha = params.get("fechaHasta")
         fecha_desde = params.get("fechaDesde")
@@ -298,13 +301,20 @@ class BotBridge:
         return p_low, p_high, date_to_sap
 
     def _step_db_verify(self) -> None:
-        from itacamba_reportes.core.db.connection import get_engine
+        from itacamba_reportes.core.db.connection import get_engine, set_engine
         from itacamba_reportes.core.db.schema import ensure_schema_current
         from sqlalchemy import text
 
-        eng = get_engine()
-        with eng.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        try:
+            eng = get_engine()
+            with eng.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception as first_exc:
+            logger.warning("Conexión SQL en caché expiró (%s). Reiniciando pool y reintentando...", first_exc)
+            set_engine(None)
+            eng = get_engine()
+            with eng.connect() as conn:
+                conn.execute(text("SELECT 1"))
         ensure_schema_current()
 
     def _step_db_and_optional_sap(
@@ -585,7 +595,8 @@ class BotBridge:
                 fecha_hasta = assignment.get("fechaHasta") or calendar.get("fechaHastaManual") or profile.get("fechaHasta")
             else:
                 month_start = run_date.replace(day=1)
-                if tipo == "mes_anterior":
+                include_day_flag = bool(assignment.get("incluirDia", tipo in {"mes_anterior", "cierre"}))
+                if tipo == "mes_anterior" or (tipo == "mes_actual" and not include_day_flag and run_date.day == 1):
                     fecha_desde = (month_start - timedelta(days=1)).replace(day=1).isoformat()
                 else:
                     fecha_desde = month_start.isoformat()
@@ -696,8 +707,12 @@ class BotBridge:
                 "started_at": now.strftime("%Y-%m-%d %H:%M:%S"),
                 "next_run": jobs[0]["run_at"].strftime("%Y-%m-%d %H:%M"),
                 "current_run": None,
+                "last_run_at": None,
+                "last_run_status": None,
+                "last_error": None,
                 "pending": len(jobs),
                 "completed": 0,
+                "failed": 0,
                 "total": len(jobs),
                 "skipped": skipped,
                 "message": "Programación en marcha",
@@ -724,6 +739,7 @@ class BotBridge:
             "next_run": next_run,
             "pending": len(jobs),
             "completed": 0,
+            "failed": 0,
             "total": len(jobs),
             "skipped": skipped,
             "message": (
@@ -738,6 +754,10 @@ class BotBridge:
         next_index = 0
         current_job: dict[str, Any] | None = None
         stopped = False
+        failed_runs = 0
+        last_run_at: str | None = None
+        last_run_status: str | None = None
+        last_error: str | None = None
 
         try:
             while not self._schedule_stop.is_set():
@@ -747,10 +767,19 @@ class BotBridge:
                     next_index += 1
 
                 if current_job is not None and not self._is_running:
+                    had_err = bool(self._execution_state.get("has_error"))
+                    err_msg = self._execution_state.get("error_message")
+                    last_run_at = f'{current_job["fecha"]} {current_job["hora"]}'
+                    last_run_status = "error" if had_err else "ok"
+                    last_error = str(err_msg) if had_err and err_msg else None
+                    if had_err:
+                        failed_runs += 1
                     logger.info(
-                        "Ejecución programada del %s (%s) finalizada.",
+                        "Ejecución programada del %s (%s) finalizada (%s). Quedan pendientes: %d.",
                         current_job["fecha"],
                         current_job["hora"],
+                        last_run_status.upper(),
+                        len(pending) + (len(jobs) - next_index),
                     )
                     current_job = None
 
@@ -785,8 +814,12 @@ class BotBridge:
                             if current_job is not None
                             else None
                         ),
+                        "last_run_at": last_run_at,
+                        "last_run_status": last_run_status,
+                        "last_error": last_error,
                         "pending": remaining,
                         "completed": len(jobs) - remaining,
+                        "failed": failed_runs,
                         "total": len(jobs),
                         "message": "Cronograma en marcha",
                     })
@@ -807,11 +840,15 @@ class BotBridge:
                         if current_job is not None and self._is_running
                         else None
                     ),
+                    "last_run_at": last_run_at,
+                    "last_run_status": last_run_status,
+                    "last_error": last_error,
                     "pending": remaining,
                     "completed": len(jobs) - remaining,
+                    "failed": failed_runs,
                     "total": len(jobs),
                     "message": (
-                        "Cronograma detenido; la corrida activa terminará."
+                        "Cronograma detenido; deteniendo ciclo en curso."
                         if stopped and self._is_running
                         else ("Cronograma detenido" if stopped else "Cronograma completado")
                     ),
@@ -826,11 +863,13 @@ class BotBridge:
             self._schedule_status["active"] = False
             self._schedule_status["message"] = "Deteniendo cronograma…"
             self._schedule_stop.set()
+            if self._is_running:
+                self._stop_requested = True
         logger.info("Solicitud de detención del cronograma recibida.")
         return {
             "status": "ok",
             "active": False,
-            "message": "Se detuvieron las próximas ejecuciones. Si hay una corrida en curso, terminará normalmente.",
+            "message": "Programación detenida. Si hay una etapa en curso, se detendrá de forma segura al concluir.",
         }
 
     def download_sap(self, task_id: str, params_json: str = "{}") -> dict[str, Any]:
@@ -1386,7 +1425,14 @@ class BotBridge:
         fecha_desde = prof_obj.get("fechaDesde")
         fecha_hasta = prof_obj.get("fechaHasta")
         current_month_start = datetime.now().replace(day=1).strftime("%Y-%m-%d")
-        if fecha_desde and fecha_hasta and str(fecha_desde) > str(fecha_hasta):
+        if not prof_obj:
+            checks.append({
+                "id": "profile",
+                "label": "Perfil activo",
+                "status": "warn",
+                "detail": "Aún no hay un perfil configurado en Programador. Crea tu perfil antes de iniciar la programación automática (SAP usará el mes actual como referencia).",
+            })
+        elif fecha_desde and fecha_hasta and str(fecha_desde) > str(fecha_hasta):
             checks.append({
                 "id": "profile",
                 "label": "Perfil activo",
@@ -1533,14 +1579,15 @@ class BotBridge:
     # 6. GESTIÓN DE PERFILES DE EJECUCIÓN Y TAREAS SAP (PERSISTENCIA EN DISCO)
     # -------------------------------------------------------------------------
     def get_execution_profiles(self) -> list[dict[str, Any]]:
-        # Carga los perfiles de ejecución configurados o retorna los predeterminados.
+        # Carga los perfiles de ejecución configurados en disco; si aún no existen, retorna lista vacía.
         if PROFILES_PATH.exists():
             try:
                 with open(PROFILES_PATH, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    data = json.load(f)
+                return data if isinstance(data, list) else []
             except Exception as exc:
                 logger.warning("Error leyendo %s: %s", PROFILES_PATH, exc)
-        return self._default_execution_profiles()
+        return []
 
     def save_execution_profiles(self, profiles_json: str) -> dict[str, Any]:
         # Persiste en disco los perfiles de ejecución editados por el usuario.

@@ -38,6 +38,8 @@ htmlcov/
 
 storage/input/
 storage/output/
+storage/exports/
+storage/raw/
 storage/logs/
 storage/cache/
 storage/data/
@@ -47,6 +49,8 @@ storage/state/
 storage/backups/
 storage/calibracion/
 storage/sin_bd/
+storage/execution_profiles.json
+storage/execution_calendar.json
 
 *.db
 *.sqlite

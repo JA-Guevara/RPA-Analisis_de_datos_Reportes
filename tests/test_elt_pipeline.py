@@ -1719,6 +1719,134 @@ class TestEltPipeline(unittest.TestCase):
             finally:
                 EnvConfig.reload()
 
+    def test_blank_profiles_and_monthly_day1_schedule_lifecycle(self):
+        from itacamba_reportes.ui.bridge import BotBridge
+
+        bridge = BotBridge()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            missing_profiles = root / "missing_profiles.json"
+            with patch("itacamba_reportes.ui.bridge.PROFILES_PATH", missing_profiles):
+                self.assertEqual(bridge.get_execution_profiles(), [])
+
+            # Schedule de 30 dias incluyendo dia 1 con mes_actual (hasta ayer) y descargarSap activo
+            perfil = {
+                "id": "mensual_real",
+                "nombre": "Rutina Mensual 30 Ciclos",
+                "frecuencia": "diaria",
+                "horaFija": "06:00",
+                "mesEjecucion": "2027-01",
+                "descargarSap": True,
+            }
+            asignaciones = {
+                f"2027-01-{day:02d}": {"tipo": "mes_actual", "incluirDia": False, "hora": "06:00"}
+                for day in range(1, 31)
+            }
+            cal = {"id": "mensual_real", "mes": "2027-01", "asignaciones": asignaciones}
+
+            with patch.object(bridge, "_activate_schedule_jobs", return_value={"status": "started", "total": 30}) as mock_act:
+                res = bridge.start_profile_schedule(perfil, cal)
+            self.assertEqual(res["status"], "started")
+            jobs_arg = mock_act.call_args[0][0]
+            self.assertEqual(len(jobs_arg), 30)
+            self.assertEqual(jobs_arg[0]["fecha"], "2027-01-01")
+            self.assertEqual(jobs_arg[0]["params"]["fechaDesde"], "2026-12-01")
+            self.assertTrue(jobs_arg[0]["params"]["descargarSap"])
+
+            # Al detener programacion mientras una corrida esta en curso, tambien solicita parada cooperativa
+            bridge._scheduler_active = True
+            bridge._is_running = True
+            bridge._stop_requested = False
+            stop_res = bridge.stop_schedule()
+            self.assertEqual(stop_res["status"], "ok")
+            self.assertFalse(stop_res["active"])
+            self.assertTrue(bridge._stop_requested)
+            bridge._is_running = False
+            bridge._stop_requested = False
+
+    def test_cached_file_change_detection_and_cartera_dynamic_path(self):
+        from unittest.mock import MagicMock
+        from itacamba_reportes.core import state
+        from itacamba_reportes.core.settings import EnvConfig
+        import itacamba_reportes.inputs.cartera.pipeline as cartera_pl
+        import itacamba_reportes.inputs.gd20.pipeline as gd20_pl
+        import itacamba_reportes.inputs.proyeccion.pipeline as proy_pl
+        import itacamba_reportes.inputs.query.pipeline as query_pl
+        import itacamba_reportes.inputs.referencias.pipeline as ref_pl
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fijos_dir = root / "fijos"
+            din_dir = root / "dinamicos"
+            data_legacy = root / "legacy"
+            fijos_dir.mkdir()
+            din_dir.mkdir()
+            data_legacy.mkdir()
+
+            (fijos_dir / "REFERENCIAS.xlsx").write_bytes(b"ref_v1")
+            (fijos_dir / "PROYECCION-SEMANAL.xlsx").write_bytes(b"proy_v1")
+            (din_dir / "CARTERA.xlsx").write_bytes(b"cart_v1")
+            (din_dir / "QUERY.xlsx").write_bytes(b"qry_v1")
+            (din_dir / "GD20.xlsx").write_bytes(b"gd20_v1")
+
+            state_file = root / "state.json"
+            mock_conn = MagicMock()
+            mock_conn.execute.return_value.scalar.return_value = 10
+            mock_eng = MagicMock()
+            mock_eng.connect.return_value.__enter__.return_value = mock_conn
+
+            with patch.object(state, "STATE_PATH", state_file), \
+                 patch.object(EnvConfig, "FIXED_INPUTS_PATH", fijos_dir), \
+                 patch.object(EnvConfig, "DYNAMIC_INPUTS_PATH", din_dir), \
+                 patch.object(EnvConfig, "DATA_PATH", data_legacy), \
+                 patch.object(cartera_pl, "engine", mock_eng), \
+                 patch.object(ref_pl, "engine", mock_eng), \
+                 patch.object(proy_pl, "engine", mock_eng), \
+                 patch.object(query_pl, "engine", mock_eng), \
+                 patch.object(gd20_pl, "engine", mock_eng), \
+                 patch("itacamba_reportes.core.audit.tracker.record_execution"):
+
+                # 1. CARTERA usa DYNAMIC_INPUTS_PATH y omite segunda pasada si no cambio
+                with patch.object(cartera_pl, "ingest_cartera", return_value=10) as m_ing_c, \
+                     patch.object(cartera_pl, "transform_cartera", return_value=10) as m_trn_c:
+                    cartera_pl.run_pipeline()
+                    cartera_pl.run_pipeline()
+                    self.assertEqual(m_ing_c.call_count, 1)
+                    self.assertEqual(m_trn_c.call_count, 1)
+
+                # 2. REFERENCIAS y PROYECCION omiten re-ingesta si el archivo no cambio
+                with patch.object(ref_pl, "ingest_referencias", return_value={"int_ref_material": 5}) as m_ing_r:
+                    ref_pl.run_pipeline()
+                    ref_pl.run_pipeline()
+                    self.assertEqual(m_ing_r.call_count, 1)
+
+                with patch.object(proy_pl, "ingest_proyeccion", return_value=8) as m_ing_p:
+                    proy_pl.run_pipeline()
+                    proy_pl.run_pipeline()
+                    self.assertEqual(m_ing_p.call_count, 1)
+
+                # 3. QUERY y GD20 omiten lectura Excel si no cambio, pero SIEMPRE ejecutan transformacion SQL
+                with patch.object(query_pl, "ingest_query", return_value=20) as m_ing_q, \
+                     patch.object(query_pl, "transform_query", return_value=15) as m_trn_q:
+                    query_pl.run_pipeline(corte_fecha="2026-11-26")
+                    query_pl.run_pipeline(corte_fecha="2026-11-27")
+                    self.assertEqual(m_ing_q.call_count, 1)
+                    self.assertEqual(m_trn_q.call_count, 2)
+
+                with patch.object(gd20_pl, "ingest_gd20", return_value=30) as m_ing_g, \
+                     patch.object(gd20_pl, "transform_gd20", return_value=25) as m_trn_g:
+                    gd20_pl.run_pipeline(corte_fecha="2026-11-26")
+                    gd20_pl.run_pipeline(corte_fecha="2026-11-27")
+                    self.assertEqual(m_ing_g.call_count, 1)
+                    self.assertEqual(m_trn_g.call_count, 2)
+
+                # Al cambiar GD20.xlsx (nueva descarga SAP), vuelve a ingestar
+                (din_dir / "GD20.xlsx").write_bytes(b"gd20_v2_updated_by_sap")
+                with patch.object(gd20_pl, "ingest_gd20", return_value=32) as m_ing_g2, \
+                     patch.object(gd20_pl, "transform_gd20", return_value=27):
+                    gd20_pl.run_pipeline(corte_fecha="2026-11-28")
+                    self.assertEqual(m_ing_g2.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
