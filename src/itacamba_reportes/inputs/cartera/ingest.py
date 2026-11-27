@@ -52,7 +52,7 @@ CARTERA_SPEC = ExcelSourceSpec(
 
 
 def ingest_cartera() -> int:
-    reader = FastExcelReader(CARTERA_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH)
+    reader = FastExcelReader(CARTERA_SPEC, EnvConfig.require_dynamic_inputs_path())
     df = reader.read_raw()
 
     # Columna cliente: normalizacion a entero de 64 bits seguro

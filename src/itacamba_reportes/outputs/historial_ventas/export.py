@@ -29,7 +29,7 @@ def export_historial_ventas(
     else:
         logger.info("Reutilizando DataFrame de DESPACHO BI en memoria (0 consultas duplicadas a BD)")
 
-    out_dir = target_dir or EnvConfig.REPORTS_OUTPUT_PATH
+    out_dir = target_dir or EnvConfig.require_reports_output_path()
     exporter = ExcelReportExporter(out_dir)
     target = exporter.export_multi_sheet(
         sheets={
@@ -42,7 +42,7 @@ def export_historial_ventas(
 
     # Sincronizar copia en la ruta configurada de archivos fijos (PATH_INSUMOS_FIJOS)
     fijos_dir = EnvConfig.FIXED_INPUTS_PATH
-    if fijos_dir.exists():
+    if fijos_dir is not None and fijos_dir.exists():
         fijos_target = fijos_dir / file_name
         try:
             if fijos_target.resolve() != target.resolve():

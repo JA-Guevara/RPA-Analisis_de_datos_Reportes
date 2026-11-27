@@ -5,10 +5,20 @@ from time import perf_counter
 
 from itacamba_reportes.core.audit.tracker import record_execution
 from itacamba_reportes.core.db.connection import engine
-from itacamba_reportes.core.state import cached_table_rows_if_unchanged, save_file_signature
+from itacamba_reportes.core.state import cached_tables_if_unchanged, save_file_signature
 from itacamba_reportes.inputs.referencias.ingest import ingest_referencias, resolve_referencias_path
 
 logger = logging.getLogger(__name__)
+
+REFERENCIAS_TABLES: tuple[str, ...] = (
+    "int_ref_almacen",
+    "int_ref_centro",
+    "int_ref_material",
+    "int_ref_equipo",
+    "int_ref_localidad",
+    "int_ref_semana",
+    "int_ref_ruta",
+)
 
 
 def run_pipeline(force: bool = False) -> dict[str, int]:
@@ -20,12 +30,13 @@ def run_pipeline(force: bool = False) -> dict[str, int]:
         except FileNotFoundError:
             file_path = None
 
-        cached_count = cached_table_rows_if_unchanged("referencias", file_path, "int_ref_material", engine, force=force)
-        if cached_count is not None and file_path is not None:
+        cached_counts = cached_tables_if_unchanged("referencias", file_path, REFERENCIAS_TABLES, engine, force=force)
+        if cached_counts is not None and file_path is not None:
             duration = perf_counter() - t0
+            total_cached = sum(cached_counts.values())
             logger.info("REFERENCIAS sin cambios detectados (%s). Omitiendo re-ingesta.", file_path.name)
-            record_execution("referencias", "SUCCESS", cached_count, duration, f"skipped_cache=True, rows={cached_count}")
-            return {"int_ref_material": cached_count}
+            record_execution("referencias", "SUCCESS", total_cached, duration, f"skipped_cache=True, rows={total_cached}")
+            return cached_counts
 
         results = ingest_referencias()
         if file_path is not None:

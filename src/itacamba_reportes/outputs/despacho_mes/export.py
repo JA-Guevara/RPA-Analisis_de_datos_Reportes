@@ -81,5 +81,5 @@ def export_despacho_mes(
     df = map_export_columns(df, DESPACHO_MES_MAPPING)
     logger.info("DESPACHO MES generado para exportación con %d columnas (esperadas: %d)", len(df.columns), len(DESPACHO_MES_MAPPING))
 
-    exporter = ExcelReportExporter(EnvConfig.REPORTS_OUTPUT_PATH)
+    exporter = ExcelReportExporter(EnvConfig.require_reports_output_path())
     return exporter.export(df, "DESPACHO_MES", timestamped=timestamped)

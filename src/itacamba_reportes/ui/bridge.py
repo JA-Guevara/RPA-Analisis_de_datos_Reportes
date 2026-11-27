@@ -98,11 +98,14 @@ class BotBridge:
     def _resolve_storage_paths(self) -> dict[str, str]:
         from itacamba_reportes.core.settings import EnvConfig
 
-        EnvConfig.reload(ENV_FILE_PATH if ENV_FILE_PATH.exists() else None)
+        if ENV_FILE_PATH.exists():
+            EnvConfig.sync_from_env_file(ENV_FILE_PATH)
+        else:
+            EnvConfig.reload(None)
         return {
-            "PATH_INSUMOS_FIJOS": str(EnvConfig.FIXED_INPUTS_PATH),
-            "PATH_INSUMOS_DINAMICOS": str(EnvConfig.DYNAMIC_INPUTS_PATH),
-            "PATH_REPORTES_SALIDA": str(EnvConfig.REPORTS_OUTPUT_PATH),
+            "PATH_INSUMOS_FIJOS": str(EnvConfig.FIXED_INPUTS_PATH) if EnvConfig.FIXED_INPUTS_PATH else "",
+            "PATH_INSUMOS_DINAMICOS": str(EnvConfig.DYNAMIC_INPUTS_PATH) if EnvConfig.DYNAMIC_INPUTS_PATH else "",
+            "PATH_REPORTES_SALIDA": str(EnvConfig.REPORTS_OUTPUT_PATH) if EnvConfig.REPORTS_OUTPUT_PATH else "",
             "PATH_LOGS_STORAGE": str(EnvConfig.LOG_PATH),
         }
 
@@ -179,7 +182,10 @@ class BotBridge:
         # Trabajador que ejecuta secuencialmente las 6 etapas reales del bot.
         from itacamba_reportes.core.settings import EnvConfig
 
-        EnvConfig.reload(ENV_FILE_PATH if ENV_FILE_PATH.exists() else None)
+        if ENV_FILE_PATH.exists():
+            EnvConfig.sync_from_env_file(ENV_FILE_PATH)
+        else:
+            EnvConfig.reload(None)
         modo = params.get("modo", "diaria")
         corte_fecha = params.get("fechaHasta")
         fecha_desde = params.get("fechaDesde")
@@ -187,8 +193,9 @@ class BotBridge:
         descargar_sap = bool(params.get("descargarSap", False))
         is_fin_de_mes = (modo == "cierre")
 
+        step1_label = "Verificación SQL y Descarga SAP" if descargar_sap else "Verificación SQL Server y Esquema"
         steps = [
-            (1, "Verificación SQL Server y Esquema", lambda: self._step_db_and_optional_sap(
+            (1, step1_label, lambda: self._step_db_and_optional_sap(
                 descargar_sap=descargar_sap,
                 fecha_desde=fecha_desde,
                 corte_fecha=corte_fecha,
@@ -237,6 +244,20 @@ class BotBridge:
                     self._execution_state["has_error"] = True
                     self._execution_state["error_message"] = f"Error en Paso {step_num} ({step_name}): {exc}"
                     logger.error("✕ FALLO CRÍTICO EN PASO %d (%s): %s", step_num, step_name, exc, exc_info=True)
+                    try:
+                        from itacamba_reportes.core.notifications import notify_error_alert_from_env
+                        notify_error_alert_from_env(
+                            stage=f"Paso {step_num}: {step_name}",
+                            error_message=str(exc),
+                            profile_name=str(params.get("configuracionId") or params.get("modo") or ""),
+                            extra={
+                                "Modo": modo,
+                                "Fecha Desde": fecha_desde or "N/D",
+                                "Corte": corte_fecha or "N/D",
+                            },
+                        )
+                    except Exception as mail_exc:
+                        logger.warning("No se pudo despachar alerta de error por Webhook: %s", mail_exc)
                     # Detener el flujo inmediatamente: no avanzar a los siguientes pasos falsamente
                     break
 
@@ -341,8 +362,17 @@ class BotBridge:
                 p_high,
                 date_to_query,
             )
-            dinamicos_dir = Path(self._resolve_storage_paths()["PATH_INSUMOS_DINAMICOS"])
-            dinamicos_dir.mkdir(parents=True, exist_ok=True)
+            from itacamba_reportes.core.settings import EnvConfig
+
+            self._resolve_storage_paths()
+            dinamicos_dir = EnvConfig.require_dynamic_inputs_path()
+            try:
+                dinamicos_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as exc:
+                raise PermissionError(
+                    f"SQL Server respondió bien, pero no se pudo acceder o crear la carpeta PATH_INSUMOS_DINAMICOS ('{dinamicos_dir}') para descargar SAP: {exc}. "
+                    "Verifica en Configuración (.env) que la ruta pertenezca al usuario actual de Windows y que OneDrive esté conectado."
+                ) from exc
             execute_download_all_sap(
                 target_dir=dinamicos_dir,
                 period_gd20=p_low,
@@ -800,11 +830,21 @@ class BotBridge:
                     elif result.get("status") == "busy":
                         pending.insert(0, candidate)
                     else:
+                        msg_err = result.get("message", "error desconocido")
                         logger.error(
                             "No se pudo iniciar la ejecución programada del %s: %s",
                             candidate["fecha"],
-                            result.get("message", "error desconocido"),
+                            msg_err,
                         )
+                        try:
+                            from itacamba_reportes.core.notifications import notify_error_alert_from_env
+                            notify_error_alert_from_env(
+                                stage=f"Programador ({candidate['fecha']} {candidate['hora']})",
+                                error_message=str(msg_err),
+                                profile_name=schedule_name,
+                            )
+                        except Exception:
+                            pass
 
                 next_job = pending[0] if pending else (jobs[next_index] if next_index < len(jobs) else None)
                 remaining = len(pending) + (len(jobs) - next_index) + (1 if current_job is not None else 0)
@@ -927,8 +967,11 @@ class BotBridge:
 
             mgr = SapSessionManager()
             connected = False
+            from itacamba_reportes.core.settings import EnvConfig
+
             try:
-                target_dir = Path(self._resolve_storage_paths()["PATH_INSUMOS_DINAMICOS"])
+                self._resolve_storage_paths()
+                target_dir = EnvConfig.require_dynamic_inputs_path()
                 target_dir.mkdir(parents=True, exist_ok=True)
 
                 mgr.ensure_connected_and_ready(auto_launch=True)
@@ -1155,14 +1198,19 @@ class BotBridge:
     # -------------------------------------------------------------------------
     def test_sap_logon(self) -> dict[str, Any]:
         # Prueba de SAP Logon verificando el ejecutable, credenciales configuradas y sesión COM.
-        sap_path = os.getenv("SAP_LOGON_PATH", r"C:\Program Files (x86)\SAP\FrontEnd\SAPgui\saplogon.exe")
+        sap_path = (os.getenv("SAP_LOGON_PATH") or os.getenv("SAP_URL") or "").strip()
         ambient = os.getenv("SAP_AMBIENT", "").strip()
         mandante = os.getenv("SAP_MANDANTE", "300").strip()
         system_id = os.getenv("SAP_SYSTEM", os.getenv("SAP_SISTEMA", "E05")).strip()
         sap_user = (os.getenv("SAP_USER") or os.getenv("SAP_USUARIO") or "").strip()
         sap_password = (os.getenv("SAP_PASSWORD") or "").strip()
 
-        if not Path(sap_path).exists():
+        if not sap_path:
+            return {
+                "ok": False,
+                "message": "La variable SAP_LOGON_PATH no está configurada en .env.",
+            }
+        if not Path(sap_path).is_file():
             return {
                 "ok": False,
                 "message": f"saplogon.exe no existe en la ruta: {sap_path}",
@@ -1200,8 +1248,13 @@ class BotBridge:
         profile_id: str | None = None,
         profile_json: str | None = None,
     ) -> dict[str, Any]:
-        load_dotenv(ENV_FILE_PATH, override=True)
+        from itacamba_reportes.core.settings import EnvConfig
         from itacamba_reportes.sap.config import CONFIG_GD20, CONFIG_QUERY
+
+        if ENV_FILE_PATH.exists():
+            EnvConfig.sync_from_env_file(ENV_FILE_PATH)
+        else:
+            EnvConfig.reload(None)
 
         checks: list[dict[str, str]] = []
 
@@ -1266,10 +1319,10 @@ class BotBridge:
             checks.append({
                 "id": "routes_segmentation",
                 "label": "Segmentación de rutas (.env)",
-                "status": "warn",
+                "status": "error",
                 "detail": (
-                    f"Usando respaldo/predeterminado para: {', '.join(unsegmented_keys)}. "
-                    "Define PATH_INSUMOS_FIJOS, PATH_INSUMOS_DINAMICOS y PATH_REPORTES_SALIDA en Configuración (.env) para control independiente."
+                    f"Faltan rutas obligatorias en .env: {', '.join(unsegmented_keys)}. "
+                    "Define PATH_INSUMOS_FIJOS, PATH_INSUMOS_DINAMICOS y PATH_REPORTES_SALIDA en Configuración (.env) (no se usan rutas fijas)."
                 ),
             })
         else:
@@ -1299,19 +1352,8 @@ class BotBridge:
         routes_summary: list[dict[str, Any]] = []
         for env_key, key_lbl, required_patterns, requires_write in route_specs:
             folder_val = resolved_paths.get(env_key, "").strip()
-            explicit_val = (os.getenv(env_key) or "").strip()
-            if explicit_val:
-                origin = "segmentada (.env)"
-                is_segmented = True
-            elif env_key == "PATH_REPORTES_SALIDA" and (os.getenv("EXPORT_PATH") or "").strip():
-                origin = "respaldo (EXPORT_PATH)"
-                is_segmented = False
-            elif env_key != "PATH_REPORTES_SALIDA" and (os.getenv("DATA_PATH") or "").strip():
-                origin = "respaldo (DATA_PATH)"
-                is_segmented = False
-            else:
-                origin = "predeterminada (storage/)"
-                is_segmented = False
+            origin = "segmentada (.env)" if folder_val else "no configurada"
+            is_segmented = bool(folder_val)
 
             if not folder_val:
                 msg = "Ruta no definida en .env."
@@ -1381,20 +1423,22 @@ class BotBridge:
                 })
                 continue
 
-            xlsx_names = [f.name.upper() for f in p_dir.glob("*.xlsx") if not f.name.startswith("~$")]
+            from itacamba_reportes.core.io.reader import is_excel_file
+
+            xlsx_names = [f.name.upper() for f in p_dir.iterdir() if is_excel_file(f)]
             missing_files = [pat for pat in required_patterns if not any(n.startswith(pat) for n in xlsx_names)]
             if missing_files:
                 status_lvl = "warn" if env_key == "PATH_INSUMOS_DINAMICOS" else "error"
                 msg = (
-                    f"[{origin}] {p_dir} ({len(xlsx_names)} .xlsx). "
+                    f"[{origin}] {p_dir} ({len(xlsx_names)} Excel). "
                     f"Faltan: {', '.join(missing_files)} (se actualizarán al descargar)."
                 )
             elif requires_write:
                 status_lvl = "ok"
-                msg = f"[{origin}] {p_dir} (escritura OK, {len(xlsx_names)} .xlsx listos)."
+                msg = f"[{origin}] {p_dir} (escritura OK, {len(xlsx_names)} Excel listos)."
             else:
                 status_lvl = "ok"
-                msg = f"[{origin}] {p_dir} ({len(xlsx_names)} .xlsx listos)."
+                msg = f"[{origin}] {p_dir} ({len(xlsx_names)} Excel listos)."
 
             checks.append({"id": f"path_{key_lbl}", "label": key_lbl, "status": status_lvl, "detail": msg})
             routes_summary.append({
@@ -1470,6 +1514,25 @@ class BotBridge:
         )
         cfg_query = CONFIG_QUERY.to_download_config(date_to_override=date_to_sap)
 
+        # 6. Estado de alertas por Webhook Power Automate (no bloqueante)
+        wh_url = (os.getenv("MAIL_WEBHOOK_URL") or "").strip()
+        wh_key = (os.getenv("MAIL_WEBHOOK_KEY") or "").strip()
+        wh_to = (os.getenv("MAIL_SOPORTE") or os.getenv("MAIL_GENERAL") or "").strip()
+        if wh_url and wh_key and wh_to:
+            checks.append({
+                "id": "mail_webhook",
+                "label": "Alertas por correo (Webhook)",
+                "status": "ok",
+                "detail": f"Webhook Power Automate listo -> destinatarios: {wh_to}",
+            })
+        else:
+            checks.append({
+                "id": "mail_webhook",
+                "label": "Alertas por correo (Webhook)",
+                "status": "warn",
+                "detail": "Opcional sin configurar (MAIL_WEBHOOK_URL / MAIL_WEBHOOK_KEY / MAIL_SOPORTE). Configúralo para recibir alertas por fallos o sesiones expiradas.",
+            })
+
         err_count = sum(1 for c in checks if c["status"] == "error")
         warn_count = sum(1 for c in checks if c["status"] == "warn")
         return {
@@ -1513,6 +1576,60 @@ class BotBridge:
                 "message": f"Fallo al conectar con SQL Server: {exc}. Verifique que la VPN esté conectada.",
             }
 
+    def test_mail_webhook(self) -> dict[str, Any]:
+        from itacamba_reportes.core.notifications.webhook_mail import (
+            WebhookMailService,
+            parse_recipient_list,
+        )
+        from itacamba_reportes.core.settings import EnvConfig
+
+        if ENV_FILE_PATH.exists():
+            EnvConfig.sync_from_env_file(ENV_FILE_PATH)
+
+        url = (os.getenv("MAIL_WEBHOOK_URL") or "").strip()
+        key = (os.getenv("MAIL_WEBHOOK_KEY") or "").strip()
+        to_list = parse_recipient_list(os.getenv("MAIL_SOPORTE") or os.getenv("MAIL_GENERAL"))
+        cc_list = parse_recipient_list(os.getenv("MAIL_COPIA_SOPORTE") or os.getenv("MAIL_COPIA_GENERAL"))
+        timeout = int(os.getenv("MAIL_WEBHOOK_TIMEOUT") or 30)
+
+        missing = [
+            name for name, val in (
+                ("MAIL_WEBHOOK_URL", url),
+                ("MAIL_WEBHOOK_KEY", key),
+                ("MAIL_SOPORTE/MAIL_GENERAL", to_list),
+            )
+            if not val
+        ]
+        if missing:
+            return {
+                "ok": False,
+                "message": f"Falta configurar {', '.join(missing)} en Configuración (.env) para enviar alertas.",
+            }
+
+        try:
+            service = WebhookMailService(url=url, key=key, timeout=timeout, attempts=2)
+            ok = service.enviar(
+                asunto="[PRUEBA] Alerta Operativa Bot Itacamba Reportes",
+                cuerpo=(
+                    "<p>Correo de prueba enviado correctamente desde <b>Bot Itacamba Reportes</b> "
+                    "vía el servicio Webhook de Power Automate.</p>"
+                ),
+                to=to_list,
+                cc=cc_list,
+                es_html=True,
+            )
+            if ok:
+                return {
+                    "ok": True,
+                    "message": f"Correo de prueba enviado correctamente vía Webhook a: {', '.join(to_list)}.",
+                }
+            return {
+                "ok": False,
+                "message": "El Webhook Power Automate rechazó o no respondió al envío. Revisa URL, x-api-key y logs.",
+            }
+        except Exception as exc:
+            return {"ok": False, "message": f"Error probando Webhook de correo: {exc}"}
+
     # -------------------------------------------------------------------------
     # 5. GESTIÓN DE VARIABLES .ENV (PERSISTENCIA REAL EN DISCO)
     # -------------------------------------------------------------------------
@@ -1534,9 +1651,10 @@ class BotBridge:
                 ("sap", "SAP GUI & LOGON (SCRIPTING RPA)"),
                 ("db", "BASE DE DATOS SQL SERVER"),
                 ("rutas", "RUTAS SEGMENTADAS (FIJOS, DINAMICOS, REPORTES)"),
+                ("notificaciones", "NOTIFICACIONES DE ERROR (WEBHOOK POWER AUTOMATE)"),
                 ("api", "APIS Y SERVICIOS EXTERNOS"),
                 ("custom", "VARIABLES PERSONALIZADAS"),
-                ("obsoletas", "VARIABLES OBSOLETAS (OCR / CORREO)"),
+                ("obsoletas", "VARIABLES OBSOLETAS (SMTP ANTIGUO / OCR / LEGADAS)"),
             ]
 
             for cat_id, cat_title in cats:
@@ -1569,10 +1687,9 @@ class BotBridge:
             with open(ENV_FILE_PATH, "w", encoding="utf-8") as f:
                 f.write("\n".join(lines).strip() + "\n")
 
-            load_dotenv(ENV_FILE_PATH, override=True)
             from itacamba_reportes.core.settings import EnvConfig
             from itacamba_reportes.core.db.connection import set_engine
-            EnvConfig.reload(ENV_FILE_PATH)
+            EnvConfig.sync_from_env_file(ENV_FILE_PATH)
             set_engine(None)
             return {"status": "ok", "message": "Archivo .env guardado en disco y aplicado en memoria."}
         except Exception as exc:
@@ -1797,9 +1914,11 @@ class BotBridge:
 
     def open_folder(self, path_key: str) -> dict[str, Any]:
         paths = self._resolve_storage_paths()
-        folder = (os.getenv(path_key) or paths.get(path_key) or "").strip()
-        if not folder or not Path(folder).exists():
-            folder = str(PROJECT_ROOT)
+        folder = (paths.get(path_key) or os.getenv(path_key) or "").strip()
+        if not folder:
+            return {"status": "error", "message": f"La variable {path_key} no está configurada en .env."}
+        if not Path(folder).exists():
+            return {"status": "error", "message": f"La carpeta configurada en {path_key} no existe en disco: {folder}"}
         try:
             os.startfile(folder)
             return {"status": "ok", "folder": folder}
@@ -1807,7 +1926,10 @@ class BotBridge:
             return {"status": "error", "message": str(exc)}
 
     def open_file_excel(self, file_name: str) -> dict[str, Any]:
-        reportes_path = Path(self._resolve_storage_paths()["PATH_REPORTES_SALIDA"])
+        raw_rep = (self._resolve_storage_paths().get("PATH_REPORTES_SALIDA") or "").strip()
+        if not raw_rep:
+            return {"status": "error", "message": "La variable PATH_REPORTES_SALIDA no está configurada en .env."}
+        reportes_path = Path(raw_rep)
         target = reportes_path / file_name
 
         if not target.exists():
@@ -1837,29 +1959,17 @@ class BotBridge:
         if not folder.exists():
             return results
 
-        try:
-            import openpyxl
-        except ImportError:
-            openpyxl = None
+        from itacamba_reportes.core.io.reader import EXCEL_EXTENSIONS, is_excel_file, list_excel_sheets
 
         try:
-            for entry in folder.glob("*.xlsx"):
-                if entry.name.startswith("~$"):
-                    continue
+            seen_entries: list[Path] = [e for e in folder.iterdir() if is_excel_file(e)]
+            seen_entries.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            for entry in seen_entries:
                 size_kb = entry.stat().st_size / 1024
                 size_str = f"{size_kb / 1024:.2f} MB" if size_kb >= 1024 else f"{size_kb:.1f} KB"
                 mtime = datetime.fromtimestamp(entry.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
 
-                # Obtener hojas reales del archivo si openpyxl está disponible
-                sheets: list[str] = []
-                if openpyxl is not None:
-                    try:
-                        wb = openpyxl.load_workbook(entry, read_only=True)
-                        sheets = wb.sheetnames[:4]
-                    except Exception:
-                        sheets = ["Data"]
-                else:
-                    sheets = ["Data"]
+                sheets = list_excel_sheets(entry)[:4] or ["Data"]
 
                 results.append({
                     "nombre": entry.name,
@@ -1895,8 +2005,8 @@ class BotBridge:
                     elif any(k in sline.upper() for k in ("PATH", "ONEDRIVE", "RUTA")) and sline.startswith("#"):
                         current_category = "rutas"
                         continue
-                    elif any(k in sline.upper() for k in ("MAIL", "SMTP", "CORREO")) and sline.startswith("#"):
-                        current_category = "mail"
+                    elif any(k in sline.upper() for k in ("WEBHOOK", "NOTIFICACION", "ALERTA", "MAIL", "CORREO")) and sline.startswith("#"):
+                        current_category = "notificaciones"
                         continue
 
                     if sline.startswith("#") and not sline.startswith("# [DESACTIVADA]"):
@@ -1931,24 +2041,60 @@ class BotBridge:
             (
                 "PATH_INSUMOS_FIJOS",
                 "Ruta de archivos fijos (REFERENCIAS.xlsx, PROYECCION-SEMANAL.xlsx)",
+                "rutas",
+                False,
             ),
             (
                 "PATH_INSUMOS_DINAMICOS",
                 "Ruta de insumos dinámicos (descargas SAP GD20/QUERY y CARTERA.xlsx)",
+                "rutas",
+                False,
             ),
             (
                 "PATH_REPORTES_SALIDA",
                 "Ruta de entrega de reportes BI generados (VENTAS_BI, DESPACHO_BI, HISTORIAL)",
+                "rutas",
+                False,
+            ),
+            (
+                "MAIL_WEBHOOK_URL",
+                "URL HTTP del Webhook Power Automate para alertas de error",
+                "notificaciones",
+                False,
+            ),
+            (
+                "MAIL_WEBHOOK_KEY",
+                "Clave x-api-key del Webhook Power Automate",
+                "notificaciones",
+                True,
+            ),
+            (
+                "MAIL_SOPORTE",
+                "Destinatarios principales para alertas de error (separados por coma)",
+                "notificaciones",
+                False,
+            ),
+            (
+                "MAIL_COPIA_SOPORTE",
+                "Destinatarios en copia (CC) para alertas (opcional)",
+                "notificaciones",
+                False,
+            ),
+            (
+                "MAIL_ALERT_ON_ERROR",
+                "Enviar alerta automática al fallar una corrida o caducar sesión (yes/no)",
+                "notificaciones",
+                False,
             ),
         )
-        for key_name, desc_text in default_route_vars:
+        for key_name, desc_text, cat_name, is_secret in default_route_vars:
             if key_name not in existing_keys:
                 result.append({
                     "clave": key_name,
-                    "valor": "",
+                    "valor": "yes" if key_name == "MAIL_ALERT_ON_ERROR" else "",
                     "descripcion": desc_text,
-                    "categoria": "rutas",
-                    "esSecreto": False,
+                    "categoria": cat_name,
+                    "esSecreto": is_secret,
                     "activa": True,
                     "revelado": False,
                 })
@@ -1959,8 +2105,10 @@ class BotBridge:
         "MAIL_PORT",
         "MAIL_USER",
         "MAIL_PASSWORD",
-        "MAIL_GENERAL",
-        "MAIL_SOPORTE",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASSWORD",
         "CLICK_CONFIDENCE",
         "CLICK_TIMEOUT",
         "CLICK_REGION_TIMEOUT",
@@ -1968,6 +2116,8 @@ class BotBridge:
         "SAP_PROCESS",
         "SAP_PROCCESS",
         "SAP_WINDOW_TITLE",
+        "DATA_PATH",
+        "EXPORT_PATH",
         "PROCESSED_PATH",
         "ARCHIVE_PATH",
     })
@@ -1996,8 +2146,10 @@ class BotBridge:
     @classmethod
     def _infer_category(cls, clave: str, fallback: str) -> str:
         u = clave.upper()
-        if u in cls.OBSOLETE_ENV_KEYS or u.startswith("CLICK_") or u.startswith("MAIL_") or "SMTP" in u:
+        if u in cls.OBSOLETE_ENV_KEYS or u.startswith("CLICK_") or "SMTP" in u:
             return "obsoletas"
+        if u.startswith("MAIL_"):
+            return "notificaciones"
         if u.startswith("SAP_"):
             return "sap"
         if u.startswith("DB_") or "DATABASE" in u:

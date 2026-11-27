@@ -857,7 +857,7 @@
       <div class="banner warn" x-show="!api" x-cloak style="margin-bottom:18px">
         <span x-html="icono('info')"></span>
         <div>
-          <b>Modo demostración en navegador.</b> Abierto fuera del entorno ejecutable de Python. Al iniciar el bot mediante <code>Iniciar_Bot_Reportes.bat</code> o <code>python run_gui.py</code>, se conectará al motor nativo con SQL Server y archivos físicos reales.
+          <b>Modo demostración en navegador.</b> Abierto fuera del entorno ejecutable de Python. Al iniciar el bot mediante <code>python run_gui.py</code>, se conectará al motor nativo con SQL Server y tus rutas reales del archivo <code>.env</code>.
         </div>
       </div>
 
@@ -1234,7 +1234,7 @@
                 <!-- Footer de la Card -->
                 <div class="card-b" style="padding-top:0">
                   <div class="row between" style="border-top:1px solid var(--line-soft); padding-top:12px; gap:8px">
-                    <span class="hint mono" style="word-break:break-all" x-text="'Ruta: ' + (rutas.PATH_INSUMOS_DINAMICOS ? rutas.PATH_INSUMOS_DINAMICOS.replace(/[\\/]+$/, '') + '\\' : 'dinamicos/') + t.destino"></span>
+                    <span class="hint mono" style="word-break:break-all" x-text="'Ruta: ' + (rutas.PATH_INSUMOS_DINAMICOS ? rutas.PATH_INSUMOS_DINAMICOS.replace(/[\\/]+$/, '') + '\\' : 'Sin PATH_INSUMOS_DINAMICOS en .env → ') + t.destino"></span>
                     <button type="button" class="btn btn-primary btn-sm" @click="descargarSap(t)" :disabled="descargaSapInvalida(t)">
                       <span x-html="icono('download')"></span> Descargar
                     </button>
@@ -1321,7 +1321,7 @@
         <div class="banner warn" x-show="variablesDe('obsoletas').length > 0" x-cloak>
           <span x-html="icono('alert')"></span>
           <div style="flex:1">
-            <b>Se detectaron <span x-text="variablesDe('obsoletas').length"></span> variable(s) obsoleta(s) de OCR/Correo</b> que el motor SAP GUI Scripting ya no utiliza (`CLICK_*`, `MAIL_*`, etc.).
+            <b>Se detectaron <span x-text="variablesDe('obsoletas').length"></span> variable(s) obsoleta(s) de OCR/Correo/Rutas legadas</b> que ya no se utilizan (`CLICK_*`, `MAIL_*`, `DATA_PATH`, `EXPORT_PATH`, etc.).
           </div>
           <button type="button" class="btn btn-sm btn-danger" @click="limpiarVariablesObsoletas()">Limpiar obsoletas del .env</button>
         </div>
@@ -2023,9 +2023,9 @@ function hoyISO(delta = 0) {
 
 const DEMO = {
   paths: {
-    PATH_INSUMOS_FIJOS: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\fijos',
-    PATH_INSUMOS_DINAMICOS: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\dinamicos',
-    PATH_REPORTES_SALIDA: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\reports',
+    PATH_INSUMOS_FIJOS: 'C:\\Ejemplo\\Itacamba\\fijos',
+    PATH_INSUMOS_DINAMICOS: 'C:\\Ejemplo\\Itacamba\\dinamicos',
+    PATH_REPORTES_SALIDA: 'C:\\Ejemplo\\Itacamba\\reports',
   },
   archivos_fijos: [
     { nombre: 'REFERENCIAS.xlsx', tamano: '21.2 KB', modificado: haceDias(9), hojas: ['Almacen', 'Centros', 'Material', 'Equipo'] },
@@ -2054,9 +2054,9 @@ const DEMO = {
     { clave: 'DB_NAME', valor: 'Reportes_Itacamba', descripcion: 'Base de datos de producción', categoria: 'db', esSecreto: false, activa: true },
     { clave: 'DB_USER', valor: 'sa_bot', descripcion: 'Usuario SQL Server', categoria: 'db', esSecreto: false, activa: true },
     { clave: 'DB_PASSWORD', valor: 'demo', descripcion: 'Contraseña SQL Server', categoria: 'db', esSecreto: true, activa: true },
-    { clave: 'PATH_INSUMOS_FIJOS', valor: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\fijos', descripcion: 'Carpeta de insumos fijos (Referencias, Proyección)', categoria: 'rutas', esSecreto: false, activa: true },
-    { clave: 'PATH_INSUMOS_DINAMICOS', valor: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\dinamicos', descripcion: 'Carpeta de insumos diarios (GD20, QUERY, CARTERA)', categoria: 'rutas', esSecreto: false, activa: true },
-    { clave: 'PATH_REPORTES_SALIDA', valor: 'C:\\Users\\joseg_iog5jdg\\OneDrive - Tecorp\\Documentos ITACAMBA\\Archivos\\reports', descripcion: 'Destino de los reportes BI generados', categoria: 'rutas', esSecreto: false, activa: true },
+    { clave: 'PATH_INSUMOS_FIJOS', valor: 'C:\\Ejemplo\\Itacamba\\fijos', descripcion: 'Carpeta de insumos fijos (Referencias, Proyección)', categoria: 'rutas', esSecreto: false, activa: true },
+    { clave: 'PATH_INSUMOS_DINAMICOS', valor: 'C:\\Ejemplo\\Itacamba\\dinamicos', descripcion: 'Carpeta de insumos diarios (GD20, QUERY, CARTERA)', categoria: 'rutas', esSecreto: false, activa: true },
+    { clave: 'PATH_REPORTES_SALIDA', valor: 'C:\\Ejemplo\\Itacamba\\reports', descripcion: 'Destino de los reportes BI generados', categoria: 'rutas', esSecreto: false, activa: true },
   ],
   execution_profiles: [
     {
@@ -2194,6 +2194,7 @@ document.addEventListener('alpine:init', () => {
     conexiones: {
       sql: { estado: 'unknown', mensaje: 'Sin probar' },
       sap: { estado: 'unknown', mensaje: 'Sin probar' },
+      mail: { estado: 'unknown', mensaje: 'Sin probar' },
     },
     schedulerActivo: false,
     cronogramaActivo: false,
@@ -2274,8 +2275,9 @@ document.addEventListener('alpine:init', () => {
       { id: 'sap', titulo: 'SAP GUI & Scripting', prueba: 'sap' },
       { id: 'db', titulo: 'Base de Datos SQL Server', prueba: 'sql' },
       { id: 'rutas', titulo: 'Rutas Segmentadas (Fijos / Dinámicos / Reportes)' },
+      { id: 'notificaciones', titulo: 'Notificaciones de Error (Webhook Correo)', prueba: 'mail' },
       { id: 'custom', titulo: 'Otras Variables' },
-      { id: 'obsoletas', titulo: 'Variables obsoletas sin uso (OCR / Correo)' },
+      { id: 'obsoletas', titulo: 'Variables obsoletas sin uso (SMTP antiguo / OCR / Legadas)' },
     ],
     dialogo: null,
     borrador: {},
@@ -2470,11 +2472,12 @@ document.addEventListener('alpine:init', () => {
       let r;
       if (!this.api) {
         await new Promise(res => setTimeout(res, 500));
-        r = cual === 'sql'
-          ? { ok: true, message: 'Demostración: SQL Server simulado OK.' }
-          : { ok: true, message: 'Demostración: SAP GUI simulado OK.' };
+        if (cual === 'sql') r = { ok: true, message: 'Demostración: SQL Server simulado OK.' };
+        else if (cual === 'mail') r = { ok: true, message: 'Demostración: Webhook de correo simulado OK.' };
+        else r = { ok: true, message: 'Demostración: SAP GUI simulado OK.' };
       } else {
-        r = await this.llamar(cual === 'sql' ? 'test_sql_connection' : 'test_sap_logon');
+        const fn = cual === 'sql' ? 'test_sql_connection' : (cual === 'mail' ? 'test_mail_webhook' : 'test_sap_logon');
+        r = await this.llamar(fn);
       }
 
       if (!r) {

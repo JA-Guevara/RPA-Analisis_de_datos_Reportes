@@ -42,14 +42,32 @@ def cached_table_rows_if_unchanged(
     engine_obj: Any,
     force: bool = False,
 ) -> int | None:
-    if force or file_path is None or has_file_changed(key, file_path):
+    counts = cached_tables_if_unchanged(key, file_path, (table_name,), engine_obj, force=force)
+    if counts is None:
+        return None
+    return counts.get(table_name)
+
+
+def cached_tables_if_unchanged(
+    key: str,
+    file_path: Path | None,
+    table_names: tuple[str, ...] | list[str],
+    engine_obj: Any,
+    force: bool = False,
+) -> dict[str, int] | None:
+    if force or file_path is None or not table_names or has_file_changed(key, file_path):
         return None
     from sqlalchemy import text
 
+    counts: dict[str, int] = {}
     try:
         with engine_obj.connect() as conn:
-            count = conn.execute(text(f"SELECT COUNT(*) FROM [{table_name}]")).scalar() or 0
-        return int(count) if count > 0 else None
+            for tbl in table_names:
+                cnt = conn.execute(text(f"SELECT COUNT(*) FROM [{tbl}]")).scalar() or 0
+                if int(cnt) <= 0:
+                    return None
+                counts[tbl] = int(cnt)
+        return counts
     except Exception:
         return None
 

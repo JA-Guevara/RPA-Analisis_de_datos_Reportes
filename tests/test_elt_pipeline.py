@@ -655,7 +655,7 @@ class TestEltPipeline(unittest.TestCase):
              patch("itacamba_reportes.cli.ensure_schema_current"):
             result = main([])
             self.assertEqual(result, 0)
-            mock_run_all.assert_called_once_with(force_cartera=False, is_fin_de_mes=False, corte_fecha=None)
+            mock_run_all.assert_called_once_with(force=False, force_cartera=False, is_fin_de_mes=False, corte_fecha=None)
 
     def test_ventas_bi_scd2_update_with_expire(self):
         from datetime import datetime, timedelta
@@ -840,10 +840,24 @@ class TestEltPipeline(unittest.TestCase):
         from itacamba_reportes.core.settings import EnvConfig
 
         with tempfile.TemporaryDirectory() as tmp:
-            env_path = Path(tmp) / ".env"
-            exp_dir = Path(tmp) / "exports"
-            exp_dir.mkdir()
-            env_path.write_text(f"EXPORT_PATH={exp_dir}\nSAP_SISTEMA=QAS\n", encoding="utf-8")
+            root = Path(tmp)
+            env_empty = root / ".env.empty"
+            env_empty.write_text("", encoding="utf-8")
+            env_path = root / ".env"
+            fijos_dir = root / "fijos_env"
+            din_dir = root / "dinamicos_env"
+            exp_dir = root / "no_creada_aun" / "reports"
+            fijos_dir.mkdir()
+            din_dir.mkdir()
+            env_path.write_text(
+                "\n".join([
+                    f"PATH_INSUMOS_FIJOS={fijos_dir}",
+                    f"PATH_INSUMOS_DINAMICOS={din_dir}",
+                    f"PATH_REPORTES_SALIDA={exp_dir}",
+                    "SAP_SISTEMA=QAS",
+                ]),
+                encoding="utf-8",
+            )
             env_clean = {
                 k: v for k, v in os.environ.items()
                 if k not in (
@@ -853,16 +867,31 @@ class TestEltPipeline(unittest.TestCase):
                     "EXPORT_PATH",
                     "DATA_PATH",
                     "SAP_SISTEMA",
+                    "SAP_SYSTEM",
                 )
             }
             try:
                 with patch.dict(os.environ, env_clean, clear=True):
-                    EnvConfig.reload(env_path)
-                    self.assertEqual(EnvConfig.EXPORT_PATH, exp_dir)
+                    EnvConfig.sync_from_env_file(env_empty)
+                    self.assertIsNone(EnvConfig.FIXED_INPUTS_PATH)
+                    self.assertIsNone(EnvConfig.DYNAMIC_INPUTS_PATH)
+                    self.assertIsNone(EnvConfig.REPORTS_OUTPUT_PATH)
+                    self.assertIsNone(EnvConfig.DATA_PATH)
+                    with self.assertRaises(ValueError):
+                        EnvConfig.require_fixed_inputs_path()
+                    with self.assertRaises(ValueError):
+                        EnvConfig.require_dynamic_inputs_path()
+                    with self.assertRaises(ValueError):
+                        EnvConfig.require_reports_output_path()
+
+                    EnvConfig.sync_from_env_file(env_path)
+                    self.assertEqual(EnvConfig.FIXED_INPUTS_PATH, fijos_dir)
+                    self.assertEqual(EnvConfig.DYNAMIC_INPUTS_PATH, din_dir)
                     self.assertEqual(EnvConfig.REPORTS_OUTPUT_PATH, exp_dir)
+                    self.assertEqual(EnvConfig.EXPORT_PATH, exp_dir)
                     self.assertEqual(EnvConfig.SAP_SISTEMA, "QAS")
             finally:
-                EnvConfig.reload()
+                EnvConfig.sync_from_env_file()
 
     def test_transform_query_sql_placeholders(self):
         from unittest.mock import MagicMock, patch
@@ -1409,7 +1438,7 @@ class TestEltPipeline(unittest.TestCase):
             self.assertFalse(res_bad["ok"])
             self.assertGreaterEqual(res_bad["errors"], 2)
 
-            # Tambien resuelve correctamente cuando .env solo define DATA_PATH + EXPORT_PATH
+            # Si .env solo define DATA_PATH + EXPORT_PATH sin las 3 rutas segmentadas, debe exigirlas con error
             env_alt = root / ".env.alt"
             env_alt.write_text(
                 "\n".join([
@@ -1427,14 +1456,19 @@ class TestEltPipeline(unittest.TestCase):
                 k: v for k, v in os.environ.items()
                 if k not in ("PATH_INSUMOS_FIJOS", "PATH_INSUMOS_DINAMICOS", "PATH_REPORTES_SALIDA", "PATH_LOGS_STORAGE")
             }
-            with patch.dict(os.environ, env_clean, clear=True), \
-                 patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_alt), \
-                 patch.object(bridge, "test_sql_connection", return_value={"ok": True, "message": "SQL OK"}), \
-                 patch.object(bridge, "test_sap_logon", return_value={"ok": True, "message": "SAP OK"}):
-                res_alt = bridge.validate_web_configuration(profile_id="diaria")
-            self.assertTrue(res_alt["ok"], res_alt["checks"])
-            self.assertEqual(res_alt["sap_resolved"]["gd20_year"], "2026")
-            self.assertEqual(res_alt["sap_resolved"]["gd20_period"], "11")
+            try:
+                with patch.dict(os.environ, env_clean, clear=True), \
+                     patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_alt), \
+                     patch.object(bridge, "test_sql_connection", return_value={"ok": True, "message": "SQL OK"}), \
+                     patch.object(bridge, "test_sap_logon", return_value={"ok": True, "message": "SAP OK"}):
+                    res_alt = bridge.validate_web_configuration(profile_id="diaria")
+                self.assertFalse(res_alt["ok"])
+                seg_err = next(c for c in res_alt["checks"] if c["id"] == "routes_segmentation")
+                self.assertEqual(seg_err["status"], "error")
+                self.assertTrue(all(rt["origin"] == "no configurada" and rt["status"] == "error" for rt in res_alt["routes_summary"]))
+            finally:
+                from itacamba_reportes.core.settings import EnvConfig
+                EnvConfig.sync_from_env_file()
 
     def test_win_dialogs_security_popup_and_excel_closer(self):
         from itacamba_reportes.sap.win_dialogs import (
@@ -1798,7 +1832,6 @@ class TestEltPipeline(unittest.TestCase):
             with patch.object(state, "STATE_PATH", state_file), \
                  patch.object(EnvConfig, "FIXED_INPUTS_PATH", fijos_dir), \
                  patch.object(EnvConfig, "DYNAMIC_INPUTS_PATH", din_dir), \
-                 patch.object(EnvConfig, "DATA_PATH", data_legacy), \
                  patch.object(cartera_pl, "engine", mock_eng), \
                  patch.object(ref_pl, "engine", mock_eng), \
                  patch.object(proy_pl, "engine", mock_eng), \
@@ -1996,6 +2029,8 @@ class TestEltPipeline(unittest.TestCase):
                     "CLICK_TIMEOUT=10",
                     "SAP_PROCESS=saplogon.exe",
                     "SAP_WINDOW_TITLE=SAP Logon 770",
+                    "DATA_PATH=C:\\legacy\\data",
+                    "EXPORT_PATH=C:\\legacy\\exports",
                     f"PATH_INSUMOS_FIJOS={root}",
                 ]),
                 encoding="utf-8",
@@ -2005,19 +2040,24 @@ class TestEltPipeline(unittest.TestCase):
                      patch("itacamba_reportes.core.db.connection.set_engine"):
                     items = bridge._read_env_file()
                     obs = [it["clave"] for it in items if it["categoria"] == "obsoletas"]
-                    self.assertEqual(set(obs), {"MAIL_HOST", "MAIL_PASSWORD", "CLICK_CONFIDENCE", "CLICK_TIMEOUT", "SAP_PROCESS", "SAP_WINDOW_TITLE"})
+                    self.assertEqual(
+                        set(obs),
+                        {"MAIL_HOST", "MAIL_PASSWORD", "CLICK_CONFIDENCE", "CLICK_TIMEOUT", "SAP_PROCESS", "SAP_WINDOW_TITLE", "DATA_PATH", "EXPORT_PATH"},
+                    )
 
                     clean_res = bridge.clean_obsolete_env_variables()
                     self.assertEqual(clean_res["status"], "ok")
-                    self.assertEqual(clean_res["removed"], 6)
+                    self.assertEqual(clean_res["removed"], 8)
 
                     saved_txt = env_file.read_text(encoding="utf-8")
                     self.assertIn("SAP_AMBIENT=PRD", saved_txt)
                     self.assertIn("SAP_USER=bot_sap", saved_txt)
                     self.assertNotIn("CLICK_CONFIDENCE", saved_txt)
                     self.assertNotIn("MAIL_HOST", saved_txt)
+                    self.assertNotIn("DATA_PATH", saved_txt)
+                    self.assertNotIn("EXPORT_PATH", saved_txt)
             finally:
-                EnvConfig.reload()
+                EnvConfig.sync_from_env_file()
 
     def test_bulk_insert_mssql_fast_executemany_direct(self):
         from unittest.mock import MagicMock
@@ -2052,6 +2092,260 @@ class TestEltPipeline(unittest.TestCase):
         self.assertIsNone(captured["params"][1][2])
         self.assertIsNone(captured["params"][1][3])
         fake_cursor.close.assert_called_once()
+
+    def test_webhook_mail_service_and_bridge_notifications(self):
+        from itacamba_reportes.core.notifications.webhook_mail import (
+            WebhookMailService,
+            classify_alert_category,
+            notify_error_alert_from_env,
+        )
+        from itacamba_reportes.ui.bridge import BotBridge
+        from itacamba_reportes.core.settings import EnvConfig
+
+        sent_reqs = []
+
+        class _Resp:
+            status = 200
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+
+        def _fake_urlopen(req, timeout=30):
+            sent_reqs.append({
+                "url": req.full_url,
+                "headers": dict(req.header_items()),
+                "body": json.loads(req.data.decode("utf-8")),
+                "timeout": timeout,
+            })
+            return _Resp()
+
+        cat_auth, act_auth = classify_alert_category("[AUTH_SAP] Contraseña SAP vencida")
+        self.assertIn("SAP", cat_auth)
+        self.assertIn("SAP_PASSWORD", act_auth)
+
+        cat_dir, _ = classify_alert_category("[WinError 5] Acceso denegado: 'C:\\Users\\joseg_iog5jdg'")
+        self.assertIn("OneDrive", cat_dir)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            env_file = Path(tmp) / ".env"
+            env_file.write_text(
+                "\n".join([
+                    "MAIL_WEBHOOK_URL=https://example.powerplatform.com/webhook",
+                    "MAIL_WEBHOOK_KEY=secret_key_123",
+                    "MAIL_SOPORTE=soporte@itacamba.com, ti@conecta.com.bo",
+                    "MAIL_COPIA_SOPORTE=copia@conecta.com.bo",
+                    "MAIL_ALERT_ON_ERROR=yes",
+                    "MAIL_HOST=smtp.office365.com",
+                ]),
+                encoding="utf-8",
+            )
+            try:
+                bridge = BotBridge()
+                with patch("itacamba_reportes.ui.bridge.ENV_FILE_PATH", env_file), \
+                     patch("urllib.request.urlopen", side_effect=_fake_urlopen):
+                    items = bridge._read_env_file()
+                    cat_map = {it["clave"]: it["categoria"] for it in items}
+                    self.assertEqual(cat_map["MAIL_WEBHOOK_URL"], "notificaciones")
+                    self.assertEqual(cat_map["MAIL_SOPORTE"], "notificaciones")
+                    self.assertEqual(cat_map["MAIL_HOST"], "obsoletas")
+
+                    res_test = bridge.test_mail_webhook()
+                    self.assertTrue(res_test["ok"], res_test)
+
+                    res_alert = notify_error_alert_from_env(
+                        stage="Paso 1: SAP",
+                        error_message="[AUTH_SAP] Usuario bloqueado",
+                        profile_name="Diaria",
+                    )
+                    self.assertTrue(res_alert["sent"])
+
+                self.assertEqual(len(sent_reqs), 2)
+                self.assertEqual(sent_reqs[0]["body"]["destinatarios"], "soporte@itacamba.com;ti@conecta.com.bo")
+                self.assertEqual(sent_reqs[0]["body"]["copia"], "copia@conecta.com.bo")
+                headers_lower = {k.lower(): v for k, v in sent_reqs[0]["headers"].items()}
+                self.assertEqual(headers_lower.get("x-api-key"), "secret_key_123")
+                self.assertIn("[ALERTA BOT REPORTES]", sent_reqs[1]["body"]["asunto"])
+                self.assertIn("Usuario bloqueado", sent_reqs[1]["body"]["cuerpo_html"])
+            finally:
+                EnvConfig.sync_from_env_file()
+
+    def test_referencias_atomic_replace_and_validation_on_file_update(self):
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.pool import StaticPool
+        import itacamba_reportes.core.db.connection as conn_mod
+        import itacamba_reportes.core.state as state_mod
+        import itacamba_reportes.inputs.referencias.ingest as ref_ing
+        import itacamba_reportes.inputs.referencias.pipeline as ref_pl
+        from itacamba_reportes.core.db.base import Base
+        from itacamba_reportes.core.settings import EnvConfig
+
+        mem_eng = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(mem_eng)
+        orig_eng = conn_mod._engine
+        conn_mod.set_engine(mem_eng)
+
+        def _write_ref_book(path: Path, material_code: int, bad_material_sheet: bool = False) -> None:
+            with pd.ExcelWriter(path, engine="openpyxl") as writer:
+                pd.DataFrame([{"DESCRIPCION SAP": "ALM1", "CANAL": "C1", "SEGMENTO": "S1"}]).to_excel(writer, sheet_name="Almacen", index=False)
+                pd.DataFrame([{"CENTRO": "C001", "NOMBRE": "Planta", "CODIGO SAP CLIENTE": 10, "TIPO": "P"}]).to_excel(writer, sheet_name="Centros", index=False)
+                if bad_material_sheet:
+                    pd.DataFrame([{"COL_INCORRECTA": 1}]).to_excel(writer, sheet_name="Material", index=False)
+                else:
+                    pd.DataFrame([{"CODIGO": material_code, "DESCRIPCION": f"Cemento {material_code}"}]).to_excel(writer, sheet_name="Material", index=False)
+                pd.DataFrame([{"VENDEDOR SAP": "V1", "VENDEDOR": "Juan", "VENDEDOR OK": "Juan", "GRUPO VENDEDORES": "G1", "EQUIPO": "E1", "GERENCIA": "SCZ"}]).to_excel(writer, sheet_name="Equipo", index=False)
+                pd.DataFrame([{"LOCALIDAD DESPACHO": "LD1", "LOCALIDAD IM": "SCZ"}]).to_excel(writer, sheet_name="Localidades", index=False)
+                pd.DataFrame([{"DIA": 1, "SEMANA": "S1"}]).to_excel(writer, sheet_name="Semanas", index=False)
+                pd.DataFrame([{"CODIGO RUTA": "R1", "RUTA": "Ruta 1", "DEPARTAMENTO": "SCZ", "LOCALIDAD": "Cotoca"}]).to_excel(writer, sheet_name="Rutas", index=False)
+
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                fijos = root / "fijos"
+                fijos.mkdir()
+                ref_file = fijos / "REFERENCIAS.xlsx"
+                _write_ref_book(ref_file, material_code=1001)
+
+                state_file = root / "state.json"
+                with patch.object(state_mod, "STATE_PATH", state_file), \
+                     patch.object(EnvConfig, "FIXED_INPUTS_PATH", fijos), \
+                     patch.object(ref_pl, "engine", mem_eng), \
+                     patch("itacamba_reportes.core.audit.tracker.record_execution"):
+                    # 1. Carga inicial
+                    res1 = ref_pl.run_pipeline()
+                    self.assertEqual(res1["int_ref_material"], 1)
+
+                    # 2. Segunda corrida sin cambios usa cache (todas las 7 tablas existen con filas)
+                    res2 = ref_pl.run_pipeline()
+                    self.assertEqual(res2["int_ref_material"], 1)
+
+                    # 3. Modificacion con hoja corrupta: debe fallar SIN truncar ni borrar lo que ya existia en BD
+                    _write_ref_book(ref_file, material_code=1001, bad_material_sheet=True)
+                    with self.assertRaises(Exception):
+                        ref_pl.run_pipeline()
+                    with mem_eng.connect() as conn:
+                        code_before = conn.execute(text("SELECT codigo FROM int_ref_material")).scalar()
+                        alm_before = conn.execute(text("SELECT COUNT(*) FROM int_ref_almacen")).scalar()
+                    self.assertEqual(code_before, 1001)
+                    self.assertEqual(alm_before, 1)
+
+                    # 4. Modificacion valida del archivo fijo: reemplaza atomicamente los datos nuevos en BD
+                    _write_ref_book(ref_file, material_code=2002, bad_material_sheet=False)
+                    res3 = ref_pl.run_pipeline()
+                    self.assertEqual(res3["int_ref_material"], 1)
+                    with mem_eng.connect() as conn:
+                        code_after = conn.execute(text("SELECT codigo FROM int_ref_material")).scalar()
+                    self.assertEqual(code_after, 2002)
+        finally:
+            conn_mod.set_engine(orig_eng)
+
+    def test_sap_expired_password_modal_raises_auth_alert(self):
+        from itacamba_reportes.sap.actions.login_action import execute_login
+        from itacamba_reportes.sap.exceptions import SapLoginError
+
+        mgr = MagicMock()
+        mgr.element_exists.return_value = True
+        wnd1 = MagicMock()
+        wnd1.Name = "wnd[1]"
+        wnd1.Text = "Modificar clave de acceso"
+        mgr.session.ActiveWindow = wnd1
+
+        with self.assertRaises(SapLoginError) as ctx:
+            execute_login(mgr, user="CRPACOM09", password="old_password")
+        self.assertIn("[AUTH_SAP]", str(ctx.exception))
+
+    def test_cartera_xls_formats_and_cli_run_all_force(self):
+        from itacamba_reportes.core.io.reader import FastExcelReader, find_matching_excel_files
+        from itacamba_reportes.inputs.cartera.ingest import CARTERA_SPEC
+        from itacamba_reportes import cli
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # 1. Archivo .xls (contenido OOXML guardado como CARTERA.xls)
+            cartera_xls = root / "CARTERA.xls"
+            tmp_xlsx = root / "_tmp.xlsx"
+            with pd.ExcelWriter(tmp_xlsx, engine="openpyxl") as writer:
+                pad = pd.DataFrame([[""] * 5] * 6)
+                pad.to_excel(writer, sheet_name="Q_VCBO_ZSDI_I03_CAD_CLIENTE_000", index=False, header=False)
+                df_data = pd.DataFrame([{
+                    "Cliente": 1001,
+                    "Unnamed: 1": "FERRETERIA TEST",
+                    "Vendedor": "JUAN",
+                    "Unnamed: 32": "JUAN",
+                    "Equipo": "EQ1",
+                    "Unnamed: 30": "EQ1",
+                    "Región": "SCZ",
+                    "Unnamed: 8": "SANTA CRUZ",
+                }])
+                df_data.to_excel(writer, sheet_name="Q_VCBO_ZSDI_I03_CAD_CLIENTE_000", index=False, startrow=6)
+            cartera_xls.write_bytes(tmp_xlsx.read_bytes())
+            tmp_xlsx.unlink()
+
+            resolved = FastExcelReader(CARTERA_SPEC, root).resolve_path()
+            self.assertEqual(resolved, cartera_xls)
+            df_read = FastExcelReader(CARTERA_SPEC, root).read_raw()
+            self.assertEqual(len(df_read), 1)
+            self.assertEqual(int(df_read.iloc[0]["cliente"]), 1001)
+
+            # 2. Archivo .xls en formato SpreadsheetML XML 2003
+            xml_xls = root / "CARTERA_XML.xls"
+            cartera_xls.unlink()
+            xml_xls.write_text(
+                """<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Worksheet ss:Name="Q_VCBO_ZSDI_I03_CAD_CLIENTE_000">
+  <Table>
+   <Row ss:Index="7">
+    <Cell><Data ss:Type="String">Cliente</Data></Cell>
+    <Cell><Data ss:Type="String">Unnamed: 1</Data></Cell>
+    <Cell><Data ss:Type="String">Unnamed: 32</Data></Cell>
+    <Cell><Data ss:Type="String">Unnamed: 30</Data></Cell>
+    <Cell><Data ss:Type="String">Unnamed: 8</Data></Cell>
+   </Row>
+   <Row>
+    <Cell><Data ss:Type="Number">2002</Data></Cell>
+    <Cell><Data ss:Type="String">CONSTRUCTORA XML</Data></Cell>
+    <Cell><Data ss:Type="String">ANA</Data></Cell>
+    <Cell><Data ss:Type="String">EQ2</Data></Cell>
+    <Cell><Data ss:Type="String">LA PAZ</Data></Cell>
+   </Row>
+  </Table>
+ </Worksheet>
+</Workbook>""",
+                encoding="utf-8",
+            )
+            df_xml = FastExcelReader(CARTERA_SPEC, root).read_raw()
+            self.assertEqual(len(df_xml), 1)
+            self.assertEqual(int(df_xml.iloc[0]["cliente"]), 2002)
+
+            # 3. Preferencia por archivo mas reciente entre .xls y .xlsx
+            newer_xlsx = root / "CARTERA_NUEVA.xlsx"
+            newer_xlsx.write_bytes(b"placeholder")
+            matches = find_matching_excel_files(root, "CARTERA*.xlsx")
+            self.assertEqual(matches[0], newer_xlsx)
+
+        # 4. Verificar que run-all --force propague force=True a todas las etapas
+        with patch.object(cli, "ensure_schema_current"), \
+             patch.object(cli, "run_referencias") as m_ref, \
+             patch.object(cli, "run_cartera") as m_cart, \
+             patch.object(cli, "run_query") as m_qry, \
+             patch.object(cli, "run_proyeccion") as m_proy, \
+             patch.object(cli, "run_gd20") as m_gd20, \
+             patch.object(cli, "run_ventas_bi"), \
+             patch.object(cli, "run_despacho_bi"), \
+             patch.object(cli, "run_despacho_mes"), \
+             patch.object(cli, "export_all_reports_parallel"):
+            rc = cli.main(["run-all", "--force"])
+        self.assertEqual(rc, 0)
+        m_ref.assert_called_once_with(force=True)
+        m_cart.assert_called_once_with(force=True)
+        m_qry.assert_called_once_with(corte_fecha=None, is_fin_de_mes=False, force=True)
+        m_proy.assert_called_once_with(force=True)
+        m_gd20.assert_called_once_with(is_fin_de_mes=False, corte_fecha=None, force=True)
 
 
 if __name__ == "__main__":

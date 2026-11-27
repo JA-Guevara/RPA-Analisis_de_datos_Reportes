@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 from itacamba_reportes.sap.exceptions import (
@@ -97,6 +98,10 @@ class SapSessionManager:
 
         executable = sap_path or os.getenv("SAP_LOGON_PATH") or os.getenv("SAP_URL") or EnvConfig.SAP_LOGON_PATH
         if not cls.is_saplogon_running():
+            if not executable:
+                raise SapConnectionError("La variable SAP_LOGON_PATH no está configurada en el archivo .env.")
+            if not Path(executable).is_file():
+                raise SapConnectionError(f"El ejecutable saplogon.exe no existe en SAP_LOGON_PATH: {executable}")
             logger.info("Iniciando SAP Logon desde: %s", executable)
             subprocess.Popen([executable])
             time.sleep(3.0)
@@ -119,6 +124,8 @@ class SapSessionManager:
 
         raw_ambient = ambient or os.getenv("SAP_AMBIENT") or EnvConfig.SAP_AMBIENT
         target_ambient = str(raw_ambient).strip().strip('"').strip("'")
+        if not target_ambient:
+            raise SapConnectionError("La variable SAP_AMBIENT no está configurada en el archivo .env.")
         logger.info("Abriendo conexion SAP al ambiente: %s", target_ambient)
 
         if self._application is None:
@@ -181,6 +188,20 @@ class SapSessionManager:
                 user=EnvConfig.SAP_USER,
                 password=EnvConfig.SAP_PASSWORD,
             )
+
+        # Validar que la sesión realmente quedó autenticada (SSO o login clásico)
+        try:
+            info = getattr(session, "Info", None)
+            usr_live = str(getattr(info, "User", "") or "").strip()
+            client_live = str(getattr(info, "Client", "") or "").strip()
+            if self.element_exists(SELECTORES_SAP.login.usuario, timeout=0.0) or (not usr_live and client_live in ("", "000")):
+                from itacamba_reportes.sap.exceptions import SapLoginError
+                raise SapLoginError(
+                    "[AUTH_SAP] Sesión SAP/SSO expirada o no autenticada automáticamente; requiere re-autenticación del usuario."
+                )
+        except Exception as exc:
+            if type(exc).__name__ == "SapLoginError":
+                raise
 
         return session
 

@@ -20,7 +20,7 @@ def run_pipeline(force: bool = False) -> dict[str, int]:
     t0 = perf_counter()
     logger.info("=== Iniciando pipeline CARTERA ===")
     try:
-        reader = FastExcelReader(CARTERA_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH)
+        reader = FastExcelReader(CARTERA_SPEC, EnvConfig.require_dynamic_inputs_path())
         file_path = reader.resolve_path()
 
         cached_count = cached_table_rows_if_unchanged("cartera", file_path, "int_cartera", engine, force=force)

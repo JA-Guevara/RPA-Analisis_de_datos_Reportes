@@ -55,19 +55,33 @@ def execute_login(
         # Paso 3: Gestion de concurrencia y sesiones previas (Multi-Logon)
         session_manager.handle_multilogon_if_present(selectors=sel)
 
-        # Paso 4: Cerrar modal informativo si existe (ej. password por vencer, avisos)
+        # Paso 4: Validar modal informativo vs cambio obligatorio de clave / bloqueo
         try:
-            active_name = getattr(session_manager.session.ActiveWindow, "Name", "")
+            active_wnd = session_manager.session.ActiveWindow
+            active_name = getattr(active_wnd, "Name", "")
+            active_text = str(getattr(active_wnd, "Text", "") or "").lower()
             if active_name != "wnd[0]":
+                if any(k in active_text for k in ("clave", "contrase", "password", "caduc", "expir")):
+                    raise SapLoginError(
+                        f"[AUTH_SAP] SAP requiere cambio manual o renovación de contraseña ({active_wnd.Text})."
+                    )
                 session_manager.session.findById(f"{active_name}/tbar[0]/btn[0]").press()
                 time.sleep(0.5)
+        except SapLoginError:
+            raise
         except Exception:
             pass
 
-        # Paso 5: Validacion de mensajes de error en barra de estado
+        # Paso 5: Validacion de mensajes de error en barra de estado y sesión autenticada
         msg_type, msg_text = session_manager.get_status_message()
         if msg_type in ("E", "A"):
+            txt_l = str(msg_text or "").lower()
+            if any(k in txt_l for k in ("clave", "password", "bloquead", "locked", "caduc", "expir", "logon", "authorization", "no autorizado")):
+                raise SapLoginError(f"[AUTH_SAP] Error de autenticación en SAP: {msg_text}")
             raise SapLoginError(f"Error de login en SAP: {msg_text}")
+
+        if session_manager.element_exists(sel.usuario, timeout=0.5):
+            raise SapLoginError("[AUTH_SAP] El usuario sigue en la pantalla de login de SAP tras enviar credenciales.")
 
         logger.info("Autenticacion en SAP completada exitosamente")
     else:

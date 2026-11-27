@@ -26,7 +26,7 @@ def run_pipeline(
     logger.info("=== Iniciando pipeline GD20 (BASE PANEL) ===")
     try:
         try:
-            file_path = FastExcelReader(GD20_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH).resolve_path()
+            file_path = FastExcelReader(GD20_SPEC, EnvConfig.require_dynamic_inputs_path()).resolve_path()
         except FileNotFoundError:
             file_path = None
 

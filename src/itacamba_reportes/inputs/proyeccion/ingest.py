@@ -3,11 +3,16 @@ from __future__ import annotations
 import logging
 import re
 from pathlib import Path
-import openpyxl
 import pandas as pd
 
 from itacamba_reportes.core.db.bulk import bulk_insert_df
-from itacamba_reportes.core.io.reader import MissingColumnsError, SheetNotFoundError
+from itacamba_reportes.core.io.reader import (
+    MissingColumnsError,
+    SheetNotFoundError,
+    find_matching_excel_files,
+    list_excel_sheets,
+    read_excel_sheet,
+)
 from itacamba_reportes.core.settings import EnvConfig
 from itacamba_reportes.inputs.proyeccion.models import ProyeccionStgModel
 
@@ -15,32 +20,25 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_proyeccion_path() -> Path:
-    candidates = [
-        EnvConfig.FIXED_INPUTS_PATH / "PROYECCION-SEMANAL.xlsx",
-        EnvConfig.DATA_PATH / "fijos" / "PROYECCION-SEMANAL.xlsx",
-        EnvConfig.DATA_PATH / "PROYECCION-SEMANAL.xlsx",
-        EnvConfig.PROJECT_ROOT / "storage" / "input" / "PROYECCION-SEMANAL.xlsx",
-    ]
-    for p in candidates:
-        if p.exists():
-            return p
-    for search_dir in (EnvConfig.FIXED_INPUTS_PATH, EnvConfig.DATA_PATH):
-        if search_dir.exists():
-            matches = sorted(search_dir.glob("*PROYECCION*SEMANAL*.xlsx"))
-            if matches:
-                return max(matches, key=lambda p: p.stat().st_mtime)
+    fixed_dir = EnvConfig.require_fixed_inputs_path()
+    matches = find_matching_excel_files(fixed_dir, "PROYECCION-SEMANAL.xlsx")
+    if matches:
+        return matches[0]
+    wildcard_matches = find_matching_excel_files(fixed_dir, "*PROYECCION*SEMANAL*.xlsx")
+    if wildcard_matches:
+        return wildcard_matches[0]
     raise FileNotFoundError(
-        f"No se encontró PROYECCION-SEMANAL.xlsx en {EnvConfig.FIXED_INPUTS_PATH} ni en rutas configuradas"
+        f"No se encontró PROYECCION-SEMANAL (.xlsx/.xls) en PATH_INSUMOS_FIJOS ({fixed_dir})"
     )
 
 
 def find_target_sheet(path: Path) -> str:
-    wb = openpyxl.load_workbook(path, read_only=True)
-    for sheet in wb.sheetnames:
+    sheets = list_excel_sheets(path)
+    for sheet in sheets:
         if re.search(r"^RF\s*AJUSTADO\s*SEMANAL", sheet, re.IGNORECASE):
             return sheet
     raise SheetNotFoundError(
-        f"No se encontró una hoja que inicie con 'RF AJUSTADO SEMANAL' en '{path.name}'. Hojas disponibles: {wb.sheetnames}"
+        f"No se encontró una hoja que inicie con 'RF AJUSTADO SEMANAL' en '{path.name}'. Hojas disponibles: {sheets}"
     )
 
 
@@ -49,10 +47,7 @@ def ingest_proyeccion() -> int:
     sheet_name = find_target_sheet(path)
     logger.info("Leyendo Proyección desde %s (hoja=%s)", path.name, sheet_name)
 
-    try:
-        df = pd.read_excel(path, sheet_name=sheet_name, engine="calamine")
-    except Exception:
-        df = pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
+    df = read_excel_sheet(path, sheet=sheet_name, header_row=0)
 
     renames = {
         "GERENCIA": "gerencia",
@@ -92,7 +87,12 @@ def ingest_proyeccion() -> int:
 
     model_cols = [c.name for c in ProyeccionStgModel.__table__.columns if c.name not in ("id", "created_at", "updated_at")]
     valid_cols = [c for c in model_cols if c in df.columns]
+    df_clean = df[valid_cols].dropna(how="all")
+    if df_clean.empty:
+        raise ValueError(
+            f"El archivo '{path.name}' (hoja '{sheet_name}') no contiene filas válidas; se conserva stg_proyeccion intacta."
+        )
 
-    rows = bulk_insert_df(ProyeccionStgModel, df[valid_cols], truncate_first=True)
+    rows = bulk_insert_df(ProyeccionStgModel, df_clean, truncate_first=True)
     logger.info("Ingesta de Proyección a stg_proyeccion: %d filas", rows)
     return rows

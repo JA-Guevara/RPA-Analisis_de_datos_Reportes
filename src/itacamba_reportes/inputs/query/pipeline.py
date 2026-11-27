@@ -26,7 +26,7 @@ def run_pipeline(
     logger.info("=== Iniciando pipeline QUERY (ZVCSD381) ===")
     try:
         try:
-            file_path = FastExcelReader(QUERY_SPEC, EnvConfig.DYNAMIC_INPUTS_PATH).resolve_path()
+            file_path = FastExcelReader(QUERY_SPEC, EnvConfig.require_dynamic_inputs_path()).resolve_path()
         except FileNotFoundError:
             file_path = None
 
