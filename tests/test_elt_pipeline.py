@@ -2328,6 +2328,56 @@ class TestEltPipeline(unittest.TestCase):
             matches = find_matching_excel_files(root, "CARTERA*.xlsx")
             self.assertEqual(matches[0], newer_xlsx)
 
+            # 3b. Archivo MHTML SAP .xls con colspan=2, quoted-printable y nombre de hoja CARTERA
+            mhtml_xls = root / "CARTERA.xls"
+            newer_xlsx.unlink()
+            # Ajustar colspan segun posicion esperada de columnas Unnamed: 1, 8, 30, 32, 34, 36
+            spacer_cells = "".join(f"<td>COL_{i}</td>" for i in range(9, 29))
+            spacer_vals = "".join(f"<td>V_{i}</td>" for i in range(9, 29))
+            mhtml_payload = (
+                "MIME-Version: 1.0\r\n"
+                "X-Document-Type: Worksheet\r\n"
+                "Content-Type: multipart/related; boundary=\"NEXTMIME\"\r\n\r\n"
+                "--NEXTMIME\r\n"
+                "Content-Type: text/html; charset=\"UTF-8\"\r\n"
+                "Content-Transfer-Encoding: quoted-printable\r\n\r\n"
+                "<html><body><table>"
+                "<tr><td>VCBO</td></tr><tr><td></td></tr><tr><td>Fec</td></tr>"
+                "<tr><td></td></tr><tr><td></td></tr><tr><td></td></tr>"
+                "<tr>"
+                "<td colspan=3D2>Cliente</td>"
+                "<td>Attribute 10</td><td>Poblaci=C3=B3n</td><td>Barrio</td><td>Attribute 7</td><td>Attribute 6</td>"
+                "<td colspan=3D2>Regi=C3=B3n</td>"
+                f"{spacer_cells}"
+                "<td colspan=3D2>Grupo de vendedores</td>"
+                "<td colspan=3D2>Representante ventas</td>"
+                "<td colspan=3D2>Coordenador Ventas</td>"
+                "<td colspan=3D2>Trilha</td>"
+                "</tr>"
+                "<tr>"
+                "<td>4492</td><td>EMPRESA MHTML S.A.</td>"
+                "<td>A10</td><td>SCZ</td><td>SN</td><td>A7</td><td>A6</td>"
+                "<td>SC</td><td>Santa Cruz</td>"
+                f"{spacer_vals}"
+                "<td>4B2</td><td>Desarrolladores SCZ</td>"
+                "<td>#</td><td>Carlos Ruiz</td>"
+                "<td>#</td><td>Coord Test</td>"
+                "<td>400</td><td>AC</td>"
+                "</tr>"
+                "</table></body></html>\r\n"
+                "--NEXTMIME--\r\n"
+            )
+            mhtml_xls.write_bytes(mhtml_payload.encode("utf-8"))
+            df_mhtml = FastExcelReader(CARTERA_SPEC, root).read_raw()
+            self.assertEqual(len(df_mhtml), 1)
+            self.assertEqual(int(df_mhtml.iloc[0]["cliente"]), 4492)
+            self.assertEqual(df_mhtml.iloc[0]["nombre_cliente"], "EMPRESA MHTML S.A.")
+            self.assertEqual(df_mhtml.iloc[0]["region_nombre"], "Santa Cruz")
+            self.assertEqual(df_mhtml.iloc[0]["equipo"], "Desarrolladores SCZ")
+            self.assertEqual(df_mhtml.iloc[0]["vendedor"], "Carlos Ruiz")
+            self.assertEqual(df_mhtml.iloc[0]["coordinador"], "Coord Test")
+            self.assertEqual(df_mhtml.iloc[0]["canal"], "AC")
+
         # 4. Verificar que run-all --force propague force=True a todas las etapas
         with patch.object(cli, "ensure_schema_current"), \
              patch.object(cli, "run_referencias") as m_ref, \
